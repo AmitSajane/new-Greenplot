@@ -82,6 +82,16 @@ You've successfully run and modified your React Native App. :partying_face:
 - If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
 - If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
 
+# Shift Booking 
+
+This repository now implements the requested Shift Booking application:
+
+- `My Shifts` tab lists all booked shifts grouped by date with the ability to cancel.
+
+- `Available` tab lets you filter shifts by city, view them grouped by date, and book or cancel directly from the feed.
+- Data flows through `ShiftsProvider`, which talks to a mock API implemented in `src/services/shiftService.ts` (backed by `src/constants/mockShifts.ts`). The provider handles optimistic updates, loading states, and action-level spinners.
+
+
 # Troubleshooting
 
 If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
