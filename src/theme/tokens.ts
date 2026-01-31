@@ -3,23 +3,29 @@ export const colors = {
   surface: '#FFFFFF',
   primary: '#2F8F46',
   primaryDark: '#256F37',
+  info: '#0B5ED7',
+  infoDark: '#0A4FB4',
   textPrimary: '#1F2937',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   success: '#1BBE64',
   warning: '#F97316',
+  danger: '#EF4444',
   border: '#E5E7EB',
   softGreen: '#E7F3EA',
   softOrange: '#FEF1E5',
+  softBlue: '#E7F0FF',
 };
 
 export const spacing = {
   xs: 4,
   sm: 8,
   md: 12,
+  m:10,
   lg: 16,
   xl: 24,
   xxl: 32,
+
 };
 
 export const radius = {
@@ -38,6 +44,8 @@ export const shadow = {
     elevation: 3,
   },
 };
+
+
 
 
 

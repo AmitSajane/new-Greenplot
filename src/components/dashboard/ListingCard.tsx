@@ -7,7 +7,7 @@ interface ListingCardProps {
   status: string;
   title: string;
   subtitle: string;
-  imageUrl: string;
+  imageUrl: string | number; // Can be a string URL or require() number
   onEdit?: () => void;
   onView?: () => void;
 }
@@ -44,7 +44,10 @@ export function ListingCard({
           />
         </View>
       </View>
-      <Image source={{ uri: imageUrl }} style={styles.thumbnail} />
+      <Image
+        source={typeof imageUrl === 'string' ? { uri: imageUrl } : imageUrl}
+        style={styles.thumbnail}
+      />
     </View>
   );
 }

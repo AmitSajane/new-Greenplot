@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { DashboardHeader } from '../components/dashboard/DashboardHeader';
 import { DashboardButton } from '../components/dashboard/DashboardButton';
 import { HighlightInfoCard } from '../components/dashboard/HighlightInfoCard';
@@ -8,6 +10,7 @@ import { ListingCard } from '../components/dashboard/ListingCard';
 import { TabSwitcher } from '../components/dashboard/TabSwitcher';
 import { colors, radius, spacing } from '../theme/tokens';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { HomeStackParamList } from '../navigation/HomeStack';
 
 const ACTIVE_LISTINGS = [
   {
@@ -30,7 +33,10 @@ const ACTIVE_LISTINGS = [
 
 const PAST_LISTINGS: typeof ACTIVE_LISTINGS = [];
 
+type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
+
 export default function HomeScreen() {
+  const navigation = useNavigation<NavigationProp>();
   const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
 
   const listingsToDisplay = useMemo(
@@ -47,7 +53,7 @@ export default function HomeScreen() {
         <DashboardHeader name="Ramesh" />
         <DashboardButton
           label="List Your Land"
-          onPress={() => {}}
+          onPress={() => navigation.navigate('LeaseLand')}
           style={styles.primaryCta}
           textStyle={styles.primaryCtaLabel}
         />
@@ -59,7 +65,7 @@ export default function HomeScreen() {
             description="View and manage your 3 active digital rent agreements."
             actionLabel="View Agreements"
             badgeLabel="3 active"
-            onPress={() => {}}
+            onPress={() => navigation.navigate('LeaseAgreements')}
           />
           <View style={styles.cardSpacer} />
           <HighlightInfoCard

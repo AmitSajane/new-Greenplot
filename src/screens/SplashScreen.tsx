@@ -9,7 +9,7 @@ export default function SplashScreen({ navigation }: Props) {
   useEffect(() => {
     const t = setTimeout(() => {
       // TODO: replace with real auth check
-      navigation.replace('Login');
+      navigation.replace('Welcome');
     }, 1200);
     return () => clearTimeout(t);
   }, [navigation]);
