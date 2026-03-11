@@ -17,7 +17,7 @@ import { Labor } from '../types';
 import { LaborConnectStackParamList } from '../navigation/LaborConnectStack';
 
 Mapbox.setAccessToken(
-  'pk.eyJ1IjoiYW1pdHNhamFuZSIsImEiOiJjbWw5c3hnd2EwNjB0M2dzNW01ZnpjbXFnIn0.-eHiTGD9m9p03RuOD1BXvA'
+  ''
 );
 
 const MAP_CENTER: [number, number] = [74.9171, 16.5909];
