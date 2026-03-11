@@ -18,7 +18,7 @@ type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
   key: string;
   name: string;
-  params: { selectedLeaseTypeId?: string };
+  params: { selectedLeaseTypeId?: string; propertyId?: string };
 };
 
 interface LeaseComparison {
@@ -169,7 +169,8 @@ const COMPARISON_LEASES: LeaseComparison[] = [
 export default function CompareLeasesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { selectedLeaseTypeId } = route.params || {};
+  const { selectedLeaseTypeId, propertyId } = route.params || {};
+  const isOwnerFlow = propertyId != null;
 
   const renderLeaseCard = ({ item }: { item: LeaseComparison }) => {
     const isSelected = selectedLeaseTypeId === item.id;
@@ -299,14 +300,24 @@ export default function CompareLeasesScreen() {
         <TouchableOpacity
           style={styles.selectCardButton}
           onPress={() => {
-            navigation.navigate('LeaseConfirmation', {
-              leaseTypeId: item.id,
-              leaseTypeTitle: item.title,
-            });
+            if (isOwnerFlow && propertyId) {
+              navigation.navigate('LeaseDetailView', {
+                leaseTypeId: item.id,
+                leaseTypeTitle: item.title,
+                propertyId,
+              });
+            } else {
+              navigation.navigate('LeaseConfirmation', {
+                leaseTypeId: item.id,
+                leaseTypeTitle: item.title,
+              });
+            }
           }}
           activeOpacity={0.7}
         >
-          <Text style={styles.selectCardButtonText}>Select This Lease</Text>
+          <Text style={styles.selectCardButtonText}>
+            {isOwnerFlow ? 'View details / Update lease type' : 'Select This Lease'}
+          </Text>
         </TouchableOpacity>
       </View>
     );

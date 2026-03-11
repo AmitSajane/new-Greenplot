@@ -3,12 +3,15 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { MyCropsStackParamList } from '../../navigation/MyCropsStack';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 
 type PlotStatus = 'Healthy' | 'Needs Water';
 
 const DUMMY_PLOTS: Array<{
   id: string;
+  cropCycleId: string;
   plotName: string;
   areaAcres: number;
   landlord: string;
@@ -20,6 +23,7 @@ const DUMMY_PLOTS: Array<{
 }> = [
   {
     id: '1',
+    cropCycleId: 'CC001',
     plotName: 'Kagal Village Plot A',
     areaAcres: 5.0,
     landlord: 'Mr. Sanjay Patil',
@@ -31,6 +35,7 @@ const DUMMY_PLOTS: Array<{
   },
   {
     id: '2',
+    cropCycleId: 'CC002',
     plotName: 'Murgud Road Plot B',
     areaAcres: 3.5,
     landlord: 'Mrs. Sunita Deshmukh',
@@ -42,6 +47,7 @@ const DUMMY_PLOTS: Array<{
   },
   {
     id: '3',
+    cropCycleId: 'CC003',
     plotName: 'Radhanagari Field C',
     areaAcres: 10.0,
     landlord: 'Self Owned',
@@ -54,7 +60,7 @@ const DUMMY_PLOTS: Array<{
 ];
 
 export default function MyCropsScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<MyCropsStackParamList, 'MyCrops'>>();
 
   const overview = useMemo(() => {
     const activePlots = DUMMY_PLOTS.length;
@@ -130,7 +136,12 @@ export default function MyCropsScreen() {
         </View>
 
         <View style={styles.sectionRow}>
-          <Text style={styles.sectionTitle}>Active Land Plots</Text>
+          <View style={styles.sectionTitleRow}>
+            <Text style={styles.sectionTitle}>Active Land Plots</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('WorkList')}>
+              <Text style={styles.workListLink}>Work List</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             onPress={onAddNew}
             accessibilityRole="button"
@@ -189,7 +200,11 @@ export default function MyCropsScreen() {
                 style={styles.viewDetailsBtn}
                 accessibilityRole="button"
                 accessibilityLabel={`View details for ${plot.plotName}`}
-                onPress={() => {}}
+                onPress={() =>
+                  navigation.navigate('CropDetails', {
+                    cropCycleId: plot.cropCycleId,
+                  })
+                }
               >
                 <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
                 <Icon name="arrow-forward" size={18} color="#FFFFFF" />
@@ -318,10 +333,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.md,
   },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: '800',
     color: colors.textPrimary,
+  },
+  workListLink: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.primary,
   },
   addNewBtn: {
     flexDirection: 'row',

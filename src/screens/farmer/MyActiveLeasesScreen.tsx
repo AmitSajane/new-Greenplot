@@ -8,8 +8,12 @@ import { SearchBar } from '../../components/farmerHome/SearchBar';
 import { LeaseCard, LeaseListItem, LeaseStatus } from '../../components/leases/LeaseCard';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { MyLeasesStackParamList } from '../../navigation/MyLeasesStack';
 
-type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'MyActiveLeases'>;
+type Props = NativeStackScreenProps<
+  FarmerHomeStackParamList | MyLeasesStackParamList,
+  'MyActiveLeases'
+>;
 
 const LEASES: LeaseListItem[] = [
   {
@@ -68,13 +72,17 @@ export default function MyActiveLeasesScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
+        {navigation.canGoBack() ? (
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.7}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.backButton} />
+        )}
         <View style={styles.headerCenter}>
           <Text style={styles.headerTitle}>My Active Leases</Text>
           <Text style={styles.headerSubtitle}>{filtered.length} agreements</Text>

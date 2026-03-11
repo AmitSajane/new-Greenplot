@@ -18,7 +18,7 @@ type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
   key: string;
   name: string;
-  params: { selectedLeaseType?: string };
+  params: { selectedLeaseType?: string; propertyId?: string };
 };
 
 interface LeaseType {
@@ -262,10 +262,13 @@ export default function LeaseTypeDetailsScreen() {
         <View style={styles.buttonContainer}>
           <TouchableOpacity
             style={styles.viewDetailsButton}
-            onPress={() => navigation.navigate('LeaseDetailView', {
-              leaseTypeId: leaseType.id,
-              leaseTypeTitle: leaseType.title,
-            })}
+            onPress={() =>
+              navigation.navigate('LeaseDetailView', {
+                leaseTypeId: leaseType.id,
+                leaseTypeTitle: leaseType.title,
+                ...(route.params?.propertyId != null && { propertyId: route.params.propertyId }),
+              })
+            }
             activeOpacity={0.7}
           >
             <Text style={styles.viewDetailsButtonText}>View Details</Text>

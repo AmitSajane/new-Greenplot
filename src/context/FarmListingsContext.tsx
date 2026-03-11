@@ -22,6 +22,17 @@ export interface FarmListing {
   acresLabel?: string;
   locationLabel?: string;
   image?: ImageSourcePropType;
+  // Property details / history (for owner property details screen)
+  lastYearCrop?: string;
+  lastYearEarnings?: string;
+  lastYearYield?: string;
+  // Geo / monitoring metadata
+  plotGeoJSON?: any;
+  areaAcres?: number;
+  currentCrop?: string;
+  irrigationSchedule?: string;
+  pesticideSchedule?: string;
+  expectedHarvest?: string;
 }
 
 interface FarmListingsContextType {
@@ -58,6 +69,9 @@ const INITIAL_LISTINGS: FarmListing[] = [
     ownerName: 'Suresh Yadav',
     createdAt: new Date('2024-01-15'),
     status: 'active',
+    lastYearCrop: 'Wheat',
+    lastYearYield: '22 quintals',
+    lastYearEarnings: '₹1,32,000',
   },
   {
     id: 'initial-2',
@@ -78,6 +92,9 @@ const INITIAL_LISTINGS: FarmListing[] = [
     ownerName: 'Ramesh Kumar',
     createdAt: new Date('2024-02-10'),
     status: 'active',
+    lastYearCrop: 'Paddy',
+    lastYearYield: '18 quintals',
+    lastYearEarnings: '₹98,000',
   },
   {
     id: 'initial-3',
@@ -98,6 +115,9 @@ const INITIAL_LISTINGS: FarmListing[] = [
     ownerName: 'Prakash Patil',
     createdAt: new Date('2024-03-05'),
     status: 'active',
+    lastYearCrop: 'Cotton',
+    lastYearYield: '12 quintals',
+    lastYearEarnings: '₹2,10,000',
   },
 ];
 

@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "டாஷ்போர்டு",
+    "totalLand": "மொத்த நிலம்",
+    "activeCrops": "செயலில் உள்ள பயிர்கள்",
+    "findLand": "உங்கள் அருகே நிலம் தேடுங்கள்",
+    "quickActions": "விரைவு செயல்கள்",
+    "featuredListings": "சிறப்பு பட்டியல்",
+    "newsUpdates": "செய்திகள் & அப்டேட்கள்",
+    "yourActivity": "உங்கள் செயல்பாடு",
+    "browseByCrop": "பயிர் அடிப்படையில் நிலம்"
+  },
+  "labor": {
+    "moduleTitle": "லேபர் கனெக்ட்",
+    "postWork": "வேலை பதிவு செய்யவும்",
+    "findLabor": "தொழிலாளர்கள் தேடவும்",
+    "myJobs": "என் வேலைகள்",
+    "applications": "விண்ணப்பங்கள்",
+    "attendance": "வருகை",
+    "browseJobs": "வேலைகளைப் பாருங்கள்",
+    "createWork": "வேலை உருவாக்கு"
+  },
+  "satellite": {
+    "title": "செயற்கைக் கோள் கண்காணிப்பு",
+    "loading": "வரைபடம் ஏறுகிறது..."
+  },
+  "settings": {
+    "title": "அமைப்புகள்",
+    "account": "கணக்கு",
+    "name": "பெயர்",
+    "phone": "தொலைபேசி",
+    "role": "பங்கு",
+    "preferences": "விருப்பங்கள்",
+    "notifications": "அறிவிப்புகள்",
+    "language": "மொழி",
+    "helpSupport": "உதவி & ஆதரவு",
+    "logout": "லாக்அவுட்",
+    "logoutConfirmTitle": "லாக்அவுட்",
+    "logoutConfirmMessage": "நீங்கள் நிச்சயமாக வெளியேற விரும்புகிறீர்களா?"
+  },
+  "common": {
+    "confirm": "உறுதிப்படுத்து",
+    "cancel": "ரத்து செய்",
+    "ok": "சரி",
+    "land": "நிலம்",
+    "crop": "பயிர்",
+    "work": "வேலை",
+    "labor": "தொழிலாளி",
+    "payments": "பணம்",
+    "attendance": "வருகை"
+  }
+}

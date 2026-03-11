@@ -61,12 +61,13 @@ export default function OTPScreen({ navigation, route }: Props) {
       inputRef.current?.focus();
       return;
     }
-    
+
     const result = await login(phoneNumber, code);
     if (result.success) {
       rootNavigation?.replace('Main');
+    } else if (result.isNewUser) {
+      navigation.replace('ProfileSetup', { phoneNumber, role: undefined });
     } else {
-      // Handle error - could show an alert here
       setCode('');
       inputRef.current?.focus();
     }

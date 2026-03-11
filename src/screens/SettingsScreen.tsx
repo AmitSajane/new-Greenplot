@@ -7,12 +7,15 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useAuth } from '../context/AuthContext';
 import { colors, radius, spacing } from '../theme/tokens';
 import { RootStackParamList } from '../navigation/AppNavigator';
+import { SettingsStackParamList } from '../navigation/SettingsStack';
 
 type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
+type SettingsNavProp = NativeStackNavigationProp<SettingsStackParamList, 'SettingsMain'>;
 
 export default function SettingsScreen() {
   const { user, logout } = useAuth();
   const navigation = useNavigation<NavigationProp>();
+  const settingsNav = useNavigation<SettingsNavProp>();
 
   const handleLogout = () => {
     Alert.alert(
@@ -85,7 +88,11 @@ export default function SettingsScreen() {
             <Icon name="chevron-right" size={24} color={colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.settingItem}
+            activeOpacity={0.7}
+            onPress={() => settingsNav.navigate('LanguageSelection', { fromAuth: false })}
+          >
             <Icon name="language" size={24} color={colors.textSecondary} />
             <Text style={styles.settingText}>Language</Text>
             <Icon name="chevron-right" size={24} color={colors.textMuted} />
@@ -94,6 +101,24 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
             <Icon name="help" size={24} color={colors.textSecondary} />
             <Text style={styles.settingText}>Help & Support</Text>
+            <Icon name="chevron-right" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
+            <Icon name="edit" size={24} color={colors.textSecondary} />
+            <Text style={styles.settingText}>Edit profile</Text>
+            <Icon name="chevron-right" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
+            <Icon name="privacy-tip" size={24} color={colors.textSecondary} />
+            <Text style={styles.settingText}>Privacy policy</Text>
+            <Icon name="chevron-right" size={24} color={colors.textMuted} />
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
+            <Icon name="description" size={24} color={colors.textSecondary} />
+            <Text style={styles.settingText}>Consent logs</Text>
             <Icon name="chevron-right" size={24} color={colors.textMuted} />
           </TouchableOpacity>
         </View>

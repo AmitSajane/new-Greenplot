@@ -6,7 +6,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string }>;
+  login: (phoneNumber: string, otp: string) => Promise<{ success: boolean; error?: string; isNewUser?: boolean }>;
+  completeProfile: (phoneNumber: string, name: string, role: UserRole, email?: string) => void;
   logout: () => void;
   getUserRole: (phoneNumber: string) => UserRole | null;
 }
@@ -25,12 +26,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setUser(result.user);
         return { success: true };
       }
+      if (result.error === 'User not found' || result.notRegistered) {
+        return { success: false, error: result.error, isNewUser: true };
+      }
       return { success: false, error: result.error || 'Login failed' };
     } catch (error) {
       return { success: false, error: 'An error occurred during login' };
     } finally {
       setIsLoading(false);
     }
+  }, []);
+
+  const completeProfile = useCallback((phoneNumber: string, name: string, role: UserRole, email?: string) => {
+    setUser({
+      id: `new-${phoneNumber}`,
+      name: name.trim(),
+      phoneNumber,
+      role,
+      email: email?.trim() || undefined,
+    });
   }, []);
 
   const logout = useCallback(() => {
@@ -48,6 +62,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isAuthenticated: !!user,
         isLoading,
         login,
+        completeProfile,
         logout,
         getUserRole,
       }}

@@ -4,3 +4,4 @@ export { DashboardStatsCard } from './DashboardStatsCard';
 export { TotalViewsCard } from './TotalViewsCard';
 export { RecentActivityItem } from './RecentActivityItem';
 export { FloatingMicButton } from './FloatingMicButton';
+export { AlertsNotificationCard } from './AlertsNotificationCard';

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-nati
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 
@@ -62,15 +62,15 @@ export default function MyLeasesScreen() {
 
             <View style={styles.leaseDetails}>
               <View style={styles.detailRow}>
-                <Icon name="straighten" size={18} color={colors.textSecondary} />
+                <Icon name="document-text-outline" size={18} color={colors.textSecondary} />
                 <Text style={styles.detailText}>{lease.area}</Text>
               </View>
               <View style={styles.detailRow}>
-                <Icon name="attach-money" size={18} color={colors.textSecondary} />
+                <Icon name="cash-outline" size={18} color={colors.textSecondary} />
                 <Text style={styles.detailText}>{lease.monthlyRent}/month</Text>
               </View>
               <View style={styles.detailRow}>
-                <Icon name="event" size={18} color={colors.textSecondary} />
+                <Icon name="calendar-outline" size={18} color={colors.textSecondary} />
                 <Text style={styles.detailText}>{lease.duration}</Text>
               </View>
             </View>

@@ -52,7 +52,7 @@ export const verifyOTP = async (
 
   const user = DUMMY_USERS[phoneNumber];
   if (!user) {
-    return { success: false, error: 'User not found' };
+    return { success: false, error: 'User not found', notRegistered: true };
   }
 
   return { success: true, user };

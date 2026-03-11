@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
+    "totalLand": "ಒಟ್ಟು ಭೂಮಿ",
+    "activeCrops": "ಸಕ್ರಿಯ ಬೆಳೆಗಳು",
+    "findLand": "ನಿಮ್ಮ ಹತ್ತಿರದ ಜಮೀನು ಹುಡುಕಿ",
+    "quickActions": "ತ್ವರಿತ ಕ್ರಮಗಳು",
+    "featuredListings": "ಫೀಚರ್ಡ್ ಲಿಸ್ಟಿಂಗ್",
+    "newsUpdates": "ಸುದ್ದಿ ಮತ್ತು ಅಪ್‌ಡೇಟ್‌ಗಳು",
+    "yourActivity": "ನಿಮ್ಮ ಚಟುವಟಿಕೆ",
+    "browseByCrop": "ಬೆಳೆ ಆಧಾರಿತ ಭೂಮಿ"
+  },
+  "labor": {
+    "moduleTitle": "ಲೇಬರ್ ಕನೆಕ್ಟ್",
+    "postWork": "ಕೆಲಸದ ಪ್ರಕಟಣೆ",
+    "findLabor": "ಕಾರ್ಮಿಕರನ್ನು ಹುಡುಕಿ",
+    "myJobs": "ನನ್ನ ಕೆಲಸಗಳು",
+    "applications": "ಅರ್ಜಿ",
+    "attendance": "ಹಾಜರಾತಿ",
+    "browseJobs": "ಕೆಲಸಗಳನ್ನು ನೋಡಿ",
+    "createWork": "ಕೆಲಸ ರಚಿಸಿ"
+  },
+  "satellite": {
+    "title": "ಉಪಗ್ರಹ ನೋಡಿಕೆ",
+    "loading": "ಮ್ಯಾಪ್ ಲೋಡ್ ಆಗುತ್ತಿದೆ..."
+  },
+  "settings": {
+    "title": "ಸೆಟ್ಟಿಂಗ್‌ಗಳು",
+    "account": "ಖಾತೆ",
+    "name": "ಹೆಸರು",
+    "phone": "ಫೋನ್",
+    "role": "ಪಾತ್ರ",
+    "preferences": "ಆಯ್ಕೆಗಳು",
+    "notifications": "ಅಧಿಸೂಚನೆಗಳು",
+    "language": "ಭಾಷೆ",
+    "helpSupport": "ಸಹಾಯ ಮತ್ತು ಬೆಂಬಲ",
+    "logout": "ಲಾಗ್‌ಔಟ್",
+    "logoutConfirmTitle": "ಲಾಗ್‌ಔಟ್",
+    "logoutConfirmMessage": "ನೀವು ನಿಜವಾಗಿಯೂ ಲಾಗ್‌ಔಟ್ ಆಗುವಿರಾ?"
+  },
+  "common": {
+    "confirm": "ಖಚಿತಪಡಿಸಿ",
+    "cancel": "ರದ್ದು ಮಾಡಿ",
+    "ok": "ಸರಿ",
+    "land": "ಭೂಮಿ",
+    "crop": "ಬೆಳೆ",
+    "work": "ಕೆಲಸ",
+    "labor": "ಕಾರ್ಮಿಕ",
+    "payments": "ಪಾವತಿಗಳು",
+    "attendance": "ಹಾಜರಾತಿ"
+  }
+}

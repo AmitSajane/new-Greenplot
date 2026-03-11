@@ -45,6 +45,9 @@ export const shadow = {
   },
 };
 
+/** Minimum touch target size for rural UX (44pt recommended) */
+export const minTouchTargetSize = 44;
+
 
 
 

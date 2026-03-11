@@ -8,6 +8,7 @@ import OwnerTabNavigator from './OwnerTabNavigator';
 import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
+  LanguageSelection: undefined;
   Auth: undefined;
   Main: undefined;
 };
@@ -33,6 +34,7 @@ export default function AppNavigator() {
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
+        {/* <RootStack.Screen name="LanguageSelection" component={require("../screens/LanguageSelectionScreen").default} /> */}
         <RootStack.Screen name="Auth" component={AuthStack} />
         <RootStack.Screen name="Main" component={MainNavigator} />
       </RootStack.Navigator>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -18,6 +18,8 @@ import { FeaturedListingCard } from '../../components/farmerHome/FeaturedListing
 import { NewsUpdateRow } from '../../components/farmerHome/NewsUpdateRow';
 import { ActivityCard } from '../../components/farmerHome/ActivityCard';
 import { BrowseByCropRow } from '../../components/farmerHome/BrowseByCropRow';
+import { SatelliteMonitoringCard } from '../../components/satelliteMap';
+import { LaborConnectCard } from '../../components/laborConnect/LaborConnectCard';
 import {
   BROWSE_BY_CROP,
   HomeFeaturedListing,
@@ -72,12 +74,16 @@ export default function FarmerHomeScreen() {
           locationLabel={(user as any)?.location || 'Purnea, Bihar'}
           onMenuPress={() => {}}
           onLanguagePress={() => {}}
-          onNotificationsPress={() => {}}
+          onNotificationsPress={() => navigation.navigate('NotificationsCenter')}
         />
 
         <View style={styles.heroTitleSpacer} />
 
-        <SearchBar value={query} onChangeText={setQuery} onMicPress={() => {}} />
+        <SearchBar
+          value={query}
+          onChangeText={setQuery}
+          onMicPress={() => navigation.navigate('AIAssistant')}
+        />
 
         <View style={styles.sectionGap} />
 
@@ -107,6 +113,35 @@ export default function FarmerHomeScreen() {
 
         <View style={styles.sectionGap} />
 
+        <SectionHeader title="My Dashboard" />
+        <View style={styles.dashboardRow}>
+          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('MyActiveLeases')}>
+            <Text style={styles.dashValue}>2</Text>
+            <Text style={styles.dashLabel}>Leased Lands</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('MyCrops')}>
+            <Text style={styles.dashValue}>3</Text>
+            <Text style={styles.dashLabel}>Active Crops</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('LaborConnect')}>
+            <Text style={styles.dashValue}>5</Text>
+            <Text style={styles.dashLabel}>Work Tasks</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.dashboardRow}>
+          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('LaborConnect')}>
+            <Text style={styles.dashValue}>8</Text>
+            <Text style={styles.dashLabel}>Labor Hired</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.dashCard}>
+            <Text style={styles.dashValue}>₹24k</Text>
+            <Text style={styles.dashLabel}>Expenses</Text>
+          </TouchableOpacity>
+          <View style={[styles.dashCard, styles.dashCardPlaceholder]} />
+        </View>
+
+        <View style={styles.sectionGap} />
+
         <SectionHeader title="Find Land Near You" />
         <View style={styles.chipsRow}>
           {nearbyChips.map((c) => (
@@ -121,37 +156,45 @@ export default function FarmerHomeScreen() {
 
         <View style={styles.sectionGap} />
 
+        <SatelliteMonitoringCard onPress={() => navigation.navigate('SatelliteMap')} />
+
+        <View style={styles.sectionGap} />
+
+        <LaborConnectCard onPress={() => navigation.navigate('LaborConnect')} />
+
+        <View style={styles.sectionGap} />
+
         <SectionHeader title="Quick Actions" />
         <View style={styles.quickActionsSpacer} />
         <QuickActionsGrid
           actions={[
             {
               id: 'qa1',
-              label: 'List My Land',
+              label: 'Add Crop',
               icon: 'add-circle-outline',
               tint: 'green',
-              onPress: () => {},
+              onPress: () => (navigation.getParent() as any)?.navigate('MyCrops'),
             },
             {
               id: 'qa2',
-              label: 'My Leases',
+              label: 'Create Work',
               icon: 'document-text-outline',
               tint: 'blue',
-              onPress: () => navigation.navigate('MyActiveLeases'),
+              onPress: () => (navigation.getParent() as any)?.navigate('MyCrops'),
             },
             {
               id: 'qa3',
-              label: 'Messages',
+              label: 'Hire Labor',
               icon: 'mail-outline',
               tint: 'orange',
-              onPress: () => {},
+              onPress: () => navigation.navigate('LaborConnect'),
             },
             {
               id: 'qa4',
-              label: 'Help',
+              label: 'Lease Status',
               icon: 'help-circle-outline',
               tint: 'purple',
-              onPress: () => {},
+              onPress: () => navigation.navigate('LeaseStatus'),
             },
           ]}
         />
@@ -261,4 +304,21 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
+  dashboardRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  dashCard: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dashCardPlaceholder: { backgroundColor: colors.background, borderColor: 'transparent' },
+  dashValue: { fontSize: 20, fontWeight: '800', color: colors.primary },
+  dashLabel: { fontSize: 11, color: colors.textSecondary, marginTop: spacing.xs },
 });

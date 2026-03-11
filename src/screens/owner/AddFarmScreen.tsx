@@ -12,13 +12,14 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { OwnerHomeStackParamList } from '../../navigation/OwnerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
+import locationHierarchy, { type StateItem } from '../../data/locationHierarchy';
 
 type NavigationProp = NativeStackNavigationProp<OwnerHomeStackParamList>;
 
@@ -59,15 +60,27 @@ interface MediaItem {
 
 export default function AddFarmScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const route = useRoute<any>();
   const { addListing } = useFarmListings();
   const { user } = useAuth();
 
   const [title, setTitle] = useState('');
-  const [acres, setAcres] = useState('');
-  const [location, setLocation] = useState('');
-  const [district, setDistrict] = useState('');
+  const [acres, setAcres] = useState(() => {
+    const initialAcres = route?.params?.acres;
+    return initialAcres ? String(initialAcres) : '';
+  });
   const [state, setState] = useState('');
+  const [district, setDistrict] = useState('');
+  const [taluk, setTaluk] = useState('');
+  const [hobli, setHobli] = useState('');
+  const [village, setVillage] = useState('');
+  const [location, setLocation] = useState('');
   const [soilType, setSoilType] = useState('');
+  const [showStatePicker, setShowStatePicker] = useState(false);
+  const [showDistrictPicker, setShowDistrictPicker] = useState(false);
+  const [showTalukPicker, setShowTalukPicker] = useState(false);
+  const [showHobliPicker, setShowHobliPicker] = useState(false);
+  const [showVillagePicker, setShowVillagePicker] = useState(false);
   const [tenure, setTenure] = useState('');
   const [leaseType, setLeaseType] = useState('');
   const [pricePerYear, setPricePerYear] = useState('');
@@ -77,10 +90,86 @@ export default function AddFarmScreen() {
   const [showLeaseTypePicker, setShowLeaseTypePicker] = useState(false);
   const [selectedCrops, setSelectedCrops] = useState<string[]>([]);
   const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
+  const [irrigationSchedule, setIrrigationSchedule] = useState('');
+  const [pesticideSchedule, setPesticideSchedule] = useState('');
+  const [expectedHarvest, setExpectedHarvest] = useState('');
+  const [govtSurveyNumber, setGovtSurveyNumber] = useState('');
+  const [surveyFetched, setSurveyFetched] = useState(false);
+  const [fraudBadge, setFraudBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
+  const [blockchainBadge, setBlockchainBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
+
+  const statesData = locationHierarchy.states;
+
+  const districtOptions = useMemo(() => {
+    if (!state) return [];
+    const s = statesData.find((st) => st.name === state);
+    return s ? s.districts.map((d) => d.name) : [];
+  }, [state, statesData]);
+
+  const talukOptions = useMemo(() => {
+    if (!state || !district) return [];
+    const s = statesData.find((st) => st.name === state);
+    const d = s?.districts.find((dist) => dist.name === district);
+    return d ? d.taluks.map((t) => t.name) : [];
+  }, [state, district, statesData]);
+
+  const hobliOptions = useMemo(() => {
+    if (!state || !district || !taluk) return [];
+    const s = statesData.find((st) => st.name === state);
+    const d = s?.districts.find((dist) => dist.name === district);
+    const t = d?.taluks.find((tl) => tl.name === taluk);
+    return t ? t.hoblis.map((h) => h.name) : [];
+  }, [state, district, taluk, statesData]);
+
+  const villageOptions = useMemo(() => {
+    if (!state || !district || !taluk || !hobli) return [];
+    const s = statesData.find((st) => st.name === state);
+    const d = s?.districts.find((dist) => dist.name === district);
+    const t = d?.taluks.find((tl) => tl.name === taluk);
+    const h = t?.hoblis.find((hb) => hb.name === hobli);
+    return h ? h.villages : [];
+  }, [state, district, taluk, hobli, statesData]);
+
+  const handleStateSelect = useCallback((value: string) => {
+    setState(value);
+    setDistrict('');
+    setTaluk('');
+    setHobli('');
+    setVillage('');
+    setShowStatePicker(false);
+  }, []);
+
+  const handleDistrictSelect = useCallback((value: string) => {
+    setDistrict(value);
+    setTaluk('');
+    setHobli('');
+    setVillage('');
+    setShowDistrictPicker(false);
+  }, []);
+
+  const handleTalukSelect = useCallback((value: string) => {
+    setTaluk(value);
+    setHobli('');
+    setVillage('');
+    setShowTalukPicker(false);
+  }, []);
+
+  const handleHobliSelect = useCallback((value: string) => {
+    setHobli(value);
+    setVillage('');
+    setShowHobliPicker(false);
+  }, []);
+
+  const handleVillageSelect = useCallback((value: string) => {
+    setVillage(value);
+    setShowVillagePicker(false);
+  }, []);
 
   const handleSubmit = () => {
-    if (!title || !acres || !location || !district || !state || !soilType || !tenure || !pricePerYear || !leaseType) {
-      Alert.alert('Missing Fields', 'Please fill in all required fields including lease type.');
+    const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
+    const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
+    if (!title || !acres || !state || !district || !soilType || !tenure || !pricePerYear || !leaseType) {
+      Alert.alert('Missing Fields', 'Please select State, District and fill other required fields.');
       return;
     }
 
@@ -89,9 +178,12 @@ export default function AddFarmScreen() {
       title,
       soilType,
       acres,
-      location,
+      location: locationText,
       district,
       state,
+      taluk: taluk || undefined,
+      hobli: hobli || undefined,
+      village: village || undefined,
       tenure,
       leaseType,
       pricePerYear: `₹${pricePerYear}`,
@@ -100,10 +192,22 @@ export default function AddFarmScreen() {
       ownerId: user?.id || 'current-owner',
       ownerName: user?.name || 'Owner',
       status: 'active',
+      plotGeoJSON: route?.params?.plotGeoJSON,
+      areaAcres: acres ? parseFloat(acres) || undefined : undefined,
     };
     
     if (selectedCrops.length > 0) {
       listingData.crops = selectedCrops;
+      listingData.currentCrop = selectedCrops[0];
+    }
+    if (irrigationSchedule) {
+      listingData.irrigationSchedule = irrigationSchedule;
+    }
+    if (pesticideSchedule) {
+      listingData.pesticideSchedule = pesticideSchedule;
+    }
+    if (expectedHarvest) {
+      listingData.expectedHarvest = expectedHarvest;
     }
     if (mediaItems.length > 0) {
       listingData.media = mediaItems;
@@ -262,6 +366,51 @@ export default function AddFarmScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Govt survey fetch */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Govt Survey Number (optional)</Text>
+            <View style={styles.surveyRow}>
+              <TextInput
+                style={[styles.input, styles.surveyInput]}
+                placeholder="e.g. Survey 123/45"
+                placeholderTextColor={colors.textMuted}
+                value={govtSurveyNumber}
+                onChangeText={setGovtSurveyNumber}
+              />
+              <TouchableOpacity
+                style={styles.fetchBtn}
+                onPress={() => {
+                  if (govtSurveyNumber.trim()) {
+                    setSurveyFetched(true);
+                    setFraudBadge('verified');
+                    setBlockchainBadge('verified');
+                  }
+                }}
+              >
+                <Text style={styles.fetchBtnText}>Fetch</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Verification badges */}
+          <View style={styles.badgesRow}>
+            <View style={[styles.badge, fraudBadge === 'verified' && styles.badgeVerified]}>
+              <Ionicons name={fraudBadge === 'verified' ? 'shield-checkmark' : 'shield-outline'} size={18} color={fraudBadge === 'verified' ? colors.success : colors.textMuted} />
+              <Text style={[styles.badgeText, fraudBadge === 'verified' && styles.badgeTextVerified]}>Fraud check</Text>
+            </View>
+            <View style={[styles.badge, blockchainBadge === 'verified' && styles.badgeVerified]}>
+              <Ionicons name={blockchainBadge === 'verified' ? 'link' : 'link-outline'} size={18} color={blockchainBadge === 'verified' ? colors.success : colors.textMuted} />
+              <Text style={[styles.badgeText, blockchainBadge === 'verified' && styles.badgeTextVerified]}>Blockchain</Text>
+            </View>
+          </View>
+
+          {/* Boundary satellite preview */}
+          <TouchableOpacity style={styles.boundaryPreview} onPress={() => navigation.navigate('SatelliteMap')}>
+            <Ionicons name="map" size={24} color={colors.primary} />
+            <Text style={styles.boundaryPreviewText}>View boundary on satellite map</Text>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+
           {/* Form Fields */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Farm Title *</Text>
@@ -293,37 +442,39 @@ export default function AddFarmScreen() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Village/Town *</Text>
+            <Text style={styles.label}>State *</Text>
+            {renderDropdown(state, 'Select State', () => setShowStatePicker(true))}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>District *</Text>
+            {renderDropdown(district, 'Select District', () => state && setShowDistrictPicker(true))}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Taluk *</Text>
+            {renderDropdown(taluk, 'Select Taluk', () => district && setShowTalukPicker(true))}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Hobli *</Text>
+            {renderDropdown(hobli, 'Select Hobli', () => taluk && setShowHobliPicker(true))}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Village *</Text>
+            {renderDropdown(village, 'Select Village', () => hobli && setShowVillagePicker(true))}
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Location / Landmark (optional)</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g., Paramanandawadi"
+              placeholder="e.g., Near main road, plot no."
               placeholderTextColor={colors.textMuted}
               value={location}
               onChangeText={setLocation}
             />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>District *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Belgaum"
-                placeholderTextColor={colors.textMuted}
-                value={district}
-                onChangeText={setDistrict}
-              />
-            </View>
-            <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>State *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Karnataka"
-                placeholderTextColor={colors.textMuted}
-                value={state}
-                onChangeText={setState}
-              />
-            </View>
           </View>
 
           <View style={styles.row}>
@@ -361,6 +512,40 @@ export default function AddFarmScreen() {
               multiline
               numberOfLines={4}
               textAlignVertical="top"
+            />
+          </View>
+
+          {/* Crop Care Schedule */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Irrigation Schedule (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Irrigate every 5 days, next on 15 Feb"
+              placeholderTextColor={colors.textMuted}
+              value={irrigationSchedule}
+              onChangeText={setIrrigationSchedule}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Pesticide / Fertilizer Schedule (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Spray neem-based pesticide on 20 Feb"
+              placeholderTextColor={colors.textMuted}
+              value={pesticideSchedule}
+              onChangeText={setPesticideSchedule}
+            />
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Expected Harvest Window (Optional)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g., Harvest between 10–20 May"
+              placeholderTextColor={colors.textMuted}
+              value={expectedHarvest}
+              onChangeText={setExpectedHarvest}
             />
           </View>
 
@@ -434,6 +619,11 @@ export default function AddFarmScreen() {
       </KeyboardAvoidingView>
 
       {/* Picker Modals */}
+      {renderPickerModal(showStatePicker, statesData.map((s) => s.name), handleStateSelect, () => setShowStatePicker(false))}
+      {renderPickerModal(showDistrictPicker, districtOptions, handleDistrictSelect, () => setShowDistrictPicker(false))}
+      {renderPickerModal(showTalukPicker, talukOptions, handleTalukSelect, () => setShowTalukPicker(false))}
+      {renderPickerModal(showHobliPicker, hobliOptions, handleHobliSelect, () => setShowHobliPicker(false))}
+      {renderPickerModal(showVillagePicker, villageOptions, handleVillageSelect, () => setShowVillagePicker(false))}
       {renderPickerModal(showSoilPicker, SOIL_TYPES, setSoilType, () => setShowSoilPicker(false))}
       {renderPickerModal(showTenurePicker, TENURE_OPTIONS, setTenure, () => setShowTenurePicker(false))}
       {renderPickerModal(showLeaseTypePicker, LEASE_TYPE_OPTIONS, setLeaseType, () => setShowLeaseTypePicker(false))}
@@ -724,4 +914,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: spacing.xs,
   },
+  surveyRow: { flexDirection: 'row', gap: spacing.sm },
+  surveyInput: { flex: 1 },
+  fetchBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.md,
+    justifyContent: 'center',
+  },
+  fetchBtnText: { fontSize: 14, fontWeight: '700', color: colors.surface },
+  badgesRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  badgeVerified: { borderColor: colors.success, backgroundColor: colors.softGreen },
+  badgeText: { fontSize: 13, color: colors.textMuted },
+  badgeTextVerified: { color: colors.success, fontWeight: '600' },
+  boundaryPreview: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.softBlue,
+    padding: spacing.lg,
+    borderRadius: radius.lg,
+    marginBottom: spacing.lg,
+    gap: spacing.sm,
+  },
+  boundaryPreviewText: { flex: 1, fontSize: 15, fontWeight: '600', color: colors.textPrimary },
 });

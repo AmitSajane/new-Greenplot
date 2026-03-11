@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "totalLand": "Total Land",
+    "activeCrops": "Active Crops",
+    "findLand": "Find Land Near You",
+    "quickActions": "Quick Actions",
+    "featuredListings": "Featured Listings",
+    "newsUpdates": "News & Updates",
+    "yourActivity": "Your Activity",
+    "browseByCrop": "Browse Land by Crop"
+  },
+  "labor": {
+    "moduleTitle": "Labor Connect",
+    "postWork": "Post Work",
+    "findLabor": "Find Labor",
+    "myJobs": "My Jobs",
+    "applications": "Applications",
+    "attendance": "Attendance",
+    "browseJobs": "Browse Jobs",
+    "createWork": "Create Work"
+  },
+  "satellite": {
+    "title": "Satellite Monitoring",
+    "loading": "Loading map..."
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "name": "Name",
+    "phone": "Phone",
+    "role": "Role",
+    "preferences": "Preferences",
+    "notifications": "Notifications",
+    "language": "Language",
+    "helpSupport": "Help & Support",
+    "logout": "Logout",
+    "logoutConfirmTitle": "Logout",
+    "logoutConfirmMessage": "Are you sure you want to logout?"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "land": "Land",
+    "crop": "Crop",
+    "work": "Work",
+    "labor": "Labor",
+    "payments": "Payments",
+    "attendance": "Attendance"
+  }
+}

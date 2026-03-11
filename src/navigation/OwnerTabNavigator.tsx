@@ -3,10 +3,10 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../theme/tokens';
 import OwnerHomeStack from './OwnerHomeStack';
-import MyPropertiesScreen from '../screens/owner/MyPropertiesScreen';
+import MyPropertiesStack from './MyPropertiesStack';
 import TenantsScreen from '../screens/owner/TenantsScreen';
 import HubStack from './HubStack';
-import SettingsScreen from '../screens/SettingsScreen';
+import SettingsStack from './SettingsStack';
 
 export type OwnerTabParamList = {
   OwnerHome: undefined;
@@ -47,10 +47,10 @@ export default function OwnerTabNavigator() {
       })}
     >
       <Tab.Screen name="OwnerHome" component={OwnerHomeStack} />
-      <Tab.Screen name="MyProperties" component={MyPropertiesScreen} />
+      <Tab.Screen name="MyProperties" component={MyPropertiesStack} />
       <Tab.Screen name="Tenants" component={TenantsScreen} />
       <Tab.Screen name="Hub" component={HubStack} />
-      <Tab.Screen name="Settings" component={SettingsScreen} />
+      <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>
   );
 }

@@ -12,12 +12,13 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
+import { useFarmListings } from '../context/FarmListingsContext';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
   key: string;
   name: string;
-  params: { leaseTypeId: string; leaseTypeTitle: string };
+  params: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
 };
 
 interface LeaseTypeDetail {
@@ -132,7 +133,10 @@ const LEASE_TYPE_DETAILS: Record<string, LeaseTypeDetail> = {
 export default function LeaseDetailViewScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<RouteProp>();
-  const { leaseTypeId, leaseTypeTitle } = route.params || {};
+  const { leaseTypeId, leaseTypeTitle, propertyId } = route.params || {};
+  const { updateListing } = useFarmListings();
+
+  const isOwnerFlow = propertyId != null;
 
   // Get lease type detail or use a default
   let leaseDetail = LEASE_TYPE_DETAILS[leaseTypeId || 'fixed-rent'] || LEASE_TYPE_DETAILS['fixed-rent'];
@@ -143,15 +147,22 @@ export default function LeaseDetailViewScreen() {
   }
 
   const handleSelectLease = () => {
-    navigation.navigate('LeaseConfirmation', {
-      leaseTypeId: leaseDetail.id,
-      leaseTypeTitle: leaseDetail.title,
-    });
+    if (isOwnerFlow && propertyId) {
+      updateListing(propertyId, { leaseType: leaseDetail.title });
+      // Redirect to PropertyDetails (owner stack); navigate pops back to that screen
+      (navigation as any).navigate('PropertyDetails', { propertyId });
+    } else {
+      navigation.navigate('LeaseConfirmation', {
+        leaseTypeId: leaseDetail.id,
+        leaseTypeTitle: leaseDetail.title,
+      });
+    }
   };
 
   const handleCompareLeases = () => {
     navigation.navigate('CompareLeases', {
       selectedLeaseTypeId: leaseDetail.id,
+      ...(propertyId != null && { propertyId }),
     });
   };
 
@@ -275,7 +286,9 @@ export default function LeaseDetailViewScreen() {
           onPress={handleSelectLease}
           activeOpacity={0.8}
         >
-          <Text style={styles.selectButtonText}>Select This Lease</Text>
+          <Text style={styles.selectButtonText}>
+            {isOwnerFlow ? 'Update the lease type' : 'Select This Lease'}
+          </Text>
           <Ionicons name="arrow-forward" size={20} color={colors.surface} />
         </TouchableOpacity>
         <TouchableOpacity

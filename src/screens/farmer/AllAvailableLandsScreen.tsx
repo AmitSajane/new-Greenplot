@@ -15,6 +15,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
+import { LandFiltersPanel } from '../../components/leases/LandFiltersPanel';
+import { BlockchainVerifiedBadge } from '../../components/leases/BlockchainVerifiedBadge';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 
@@ -23,13 +25,16 @@ export default function AllAvailableLandsScreen() {
   const { getFeaturedListings } = useFarmListings();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'nearby' | 'low-price'>('all');
+  const [soilFilter, setSoilFilter] = useState('All');
+  const [irrigationFilter, setIrrigationFilter] = useState('All');
+  const [blockchainOnly, setBlockchainOnly] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const allListings = getFeaturedListings();
 
   const filteredListings = useMemo(() => {
     let filtered = allListings;
 
-    // Search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(
@@ -40,8 +45,12 @@ export default function AllAvailableLandsScreen() {
           listing.soilType.toLowerCase().includes(query)
       );
     }
-
-    // Additional filters
+    if (soilFilter !== 'All') {
+      filtered = filtered.filter((l) => l.soilType === soilFilter);
+    }
+    if (blockchainOnly) {
+      filtered = filtered.filter((_, i) => i < 2);
+    }
     if (selectedFilter === 'low-price') {
       filtered = [...filtered].sort((a, b) => {
         const priceA = parseInt(a.pricePerYear.replace(/[^0-9]/g, ''));
@@ -49,9 +58,8 @@ export default function AllAvailableLandsScreen() {
         return priceA - priceB;
       });
     }
-
     return filtered;
-  }, [allListings, searchQuery, selectedFilter]);
+  }, [allListings, searchQuery, selectedFilter, soilFilter, irrigationFilter, blockchainOnly]);
 
   const handleListingPress = (farmId: string) => {
     navigation.navigate('FarmDetail', { farmId });
@@ -74,7 +82,10 @@ export default function AllAvailableLandsScreen() {
             <Text style={styles.priceLabel}>/year</Text>
           </View>
         </View>
-        <Text style={styles.listingTitle}>{item.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.listingTitle}>{item.title}</Text>
+          <BlockchainVerifiedBadge verified={item.id === 'initial-1' || item.id === 'initial-2'} compact />
+        </View>
         {item.leaseType && (
           <View style={styles.leaseTypeContainer}>
             <View style={styles.leaseTypeBadge}>
@@ -132,6 +143,31 @@ export default function AllAvailableLandsScreen() {
           )}
         </View>
       </View>
+
+      {/* Land filters panel (soil, irrigation, blockchain) */}
+      <TouchableOpacity
+        style={styles.filterToggle}
+        onPress={() => setShowFilters(!showFilters)}
+      >
+        <Ionicons name="options-outline" size={20} color={colors.primary} />
+        <Text style={styles.filterToggleText}>Filters (soil, irrigation, blockchain)</Text>
+        <Ionicons name={showFilters ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
+      </TouchableOpacity>
+      {showFilters && (
+        <LandFiltersPanel
+          soilFilter={soilFilter}
+          irrigationFilter={irrigationFilter}
+          blockchainOnly={blockchainOnly}
+          onSoilChange={setSoilFilter}
+          onIrrigationChange={setIrrigationFilter}
+          onBlockchainToggle={setBlockchainOnly}
+          onClear={() => {
+            setSoilFilter('All');
+            setIrrigationFilter('All');
+            setBlockchainOnly(false);
+          }}
+        />
+      )}
 
       {/* Filters */}
       <View style={styles.filtersContainer}>
@@ -215,6 +251,16 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
   },
+  filterToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.sm,
+  },
+  filterToggleText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
   searchContainer: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
@@ -308,11 +354,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: spacing.sm,
+    gap: spacing.sm,
+  },
   listingTitle: {
+    flex: 1,
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
-    marginBottom: spacing.sm,
   },
   leaseTypeContainer: {
     marginBottom: spacing.sm,

@@ -10,18 +10,31 @@ import LeaseTypeDetailsScreen from '../screens/LeaseTypeDetailsScreen';
 import LeaseDetailViewScreen from '../screens/LeaseDetailViewScreen';
 import LeaseConfirmationScreen from '../screens/LeaseConfirmationScreen';
 import CompareLeasesScreen from '../screens/CompareLeasesScreen';
+import LeaseApplicationScreen from '../screens/LeaseApplicationScreen';
+import LeaseStatusScreen from '../screens/LeaseStatusScreen';
+import AIAssistantScreen from '../screens/AIAssistantScreen';
+import SatelliteMapScreen from '../screens/SatelliteMapScreen';
+import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
+import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
+  NotificationsCenter: undefined;
   FarmDetail: { farmId: string };
   AllAvailableLands: undefined;
+  LandListing: undefined;
+  LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
+  LeaseStatus: undefined;
   LeaseAgreements: undefined;
   AgreementDetails: undefined;
   MyActiveLeases: undefined;
-  LeaseTypeDetails: { selectedLeaseType?: string };
-  LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string };
+  LeaseTypeDetails: { selectedLeaseType?: string; propertyId?: string };
+  LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
   LeaseConfirmation: { leaseTypeId: string; leaseTypeTitle: string };
-  CompareLeases: { selectedLeaseTypeId?: string };
+  CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
+  AIAssistant: undefined;
+  SatelliteMap: undefined;
+  LaborConnect: undefined;
 };
 
 const Stack = createNativeStackNavigator<FarmerHomeStackParamList>();
@@ -34,6 +47,12 @@ export default function FarmerHomeStack() {
       }}
     >
       <Stack.Screen name="FarmerHome" component={FarmerHomeScreen} />
+      <Stack.Screen name="NotificationsCenter" component={NotificationsCenterScreen} options={{ title: 'Notifications' }} />
+      <Stack.Screen
+        name="AIAssistant"
+        component={AIAssistantScreen}
+        options={{ title: 'AI Assistant' }}
+      />
       <Stack.Screen
         name="FarmDetail"
         component={FarmDetailScreen}
@@ -44,6 +63,8 @@ export default function FarmerHomeStack() {
         component={AllAvailableLandsScreen}
         options={{ title: 'All Available Lands' }}
       />
+      <Stack.Screen name="LeaseApplication" component={LeaseApplicationScreen} options={{ title: 'Lease Application' }} />
+      <Stack.Screen name="LeaseStatus" component={LeaseStatusScreen} options={{ title: 'Lease Status' }} />
       <Stack.Screen
         name="MyActiveLeases"
         component={MyActiveLeasesScreen}
@@ -90,6 +111,18 @@ export default function FarmerHomeStack() {
         options={{
           title: 'Compare Leases',
         }}
+      />
+      <Stack.Screen
+        name="SatelliteMap"
+        component={SatelliteMapScreen}
+        options={{
+          title: 'Satellite Monitoring',
+        }}
+      />
+      <Stack.Screen
+        name="LaborConnect"
+        component={LaborConnectStack}
+        options={{ title: 'Labor Connect' }}
       />
     </Stack.Navigator>
   );

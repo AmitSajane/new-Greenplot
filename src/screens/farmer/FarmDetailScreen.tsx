@@ -138,6 +138,30 @@ export default function FarmDetailScreen() {
           </View>
         )}
 
+        {/* Crop & Care Schedule */}
+        {(farm.currentCrop ||
+          farm.irrigationSchedule ||
+          farm.pesticideSchedule ||
+          farm.expectedHarvest) && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Crop & Care Schedule</Text>
+            {farm.currentCrop && (
+              <Text style={styles.description}>Current Crop: {farm.currentCrop}</Text>
+            )}
+            {farm.irrigationSchedule && (
+              <Text style={styles.description}>Irrigation: {farm.irrigationSchedule}</Text>
+            )}
+            {farm.pesticideSchedule && (
+              <Text style={styles.description}>
+                Pesticide / Fertilizer: {farm.pesticideSchedule}
+              </Text>
+            )}
+            {farm.expectedHarvest && (
+              <Text style={styles.description}>Expected Harvest: {farm.expectedHarvest}</Text>
+            )}
+          </View>
+        )}
+
         {/* Owner Info */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Owner Information</Text>

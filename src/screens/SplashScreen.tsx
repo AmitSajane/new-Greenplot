@@ -8,8 +8,8 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
 export default function SplashScreen({ navigation }: Props) {
   useEffect(() => {
     const t = setTimeout(() => {
-      // TODO: replace with real auth check
-      navigation.replace('Welcome');
+      // Optional: go to Language selection first, then Welcome. For now direct to Welcome.
+      navigation.replace('LanguageSelection');
     }, 1200);
     return () => clearTimeout(t);
   }, [navigation]);

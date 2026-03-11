@@ -2,20 +2,14 @@ import React from 'react';
 import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
-import { CompositeNavigationProp } from '@react-navigation/native';
-import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../../theme/tokens';
-import { OwnerTabParamList } from '../../navigation/OwnerTabNavigator';
-import { OwnerHomeStackParamList } from '../../navigation/OwnerHomeStack';
+import { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
 
-type NavigationProp = CompositeNavigationProp<
-  BottomTabNavigationProp<OwnerTabParamList, 'MyProperties'>,
-  NativeStackNavigationProp<OwnerHomeStackParamList>
->;
+type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
 
 export default function MyPropertiesScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -51,15 +45,7 @@ export default function MyPropertiesScreen() {
           <TouchableOpacity
             key={property.id}
             style={styles.propertyCard}
-            onPress={() => {
-              // Navigate through the tab navigator to the home stack
-              const parent = navigation.getParent();
-              if (parent) {
-                (parent as any).navigate('OwnerHome', {
-                  screen: 'AgreementDetails',
-                });
-              }
-            }}
+            onPress={() => navigation.navigate('PropertyDetails', { propertyId: property.id })}
             activeOpacity={0.7}
           >
             <View style={styles.propertyHeader}>

@@ -24,7 +24,7 @@ export default function App() {
     }
   };
 
-  const renderItem = useCallback(({ item }) => {
+  const renderItem = useCallback(({ item }: { item: any }) => {
     const imageUrl = item['im:image']?.[1]?.label;
 
     return (

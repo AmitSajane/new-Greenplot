@@ -5,12 +5,20 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface DashboardStatsCardProps {
-  icon: 'seedling' | 'tractor';
-  value: number;
+  icon: 'seedling' | 'tractor' | 'cash' | 'leaf' | 'document';
+  value: number | string;
   label: string;
   showBadge?: boolean;
   onPress?: () => void;
 }
+
+const iconConfig: Record<string, { bg: string; Icon: React.ComponentType<{ name: string; size: number; color: string }>; iconName: string; color: string }> = {
+  seedling: { bg: colors.softGreen, Icon: MaterialCommunityIcons, iconName: 'sprout', color: colors.primary },
+  tractor: { bg: colors.softOrange, Icon: MaterialCommunityIcons, iconName: 'tractor', color: colors.warning },
+  cash: { bg: colors.softGreen, Icon: Ionicons, iconName: 'cash-outline', color: colors.success },
+  leaf: { bg: colors.softGreen, Icon: Ionicons, iconName: 'leaf-outline', color: colors.primary },
+  document: { bg: colors.softBlue, Icon: Ionicons, iconName: 'document-text-outline', color: colors.info },
+};
 
 export function DashboardStatsCard({
   icon,
@@ -20,6 +28,8 @@ export function DashboardStatsCard({
   onPress,
 }: DashboardStatsCardProps) {
   const ContainerComponent = onPress ? TouchableOpacity : View;
+  const config = iconConfig[icon] || iconConfig.seedling;
+  const { Icon, iconName, color, bg } = config;
 
   return (
     <ContainerComponent
@@ -27,17 +37,8 @@ export function DashboardStatsCard({
       {...(onPress ? { onPress, activeOpacity: 0.8 } : {})}
     >
       {showBadge && <View style={styles.badge} />}
-      <View
-        style={[
-          styles.iconContainer,
-          { backgroundColor: icon === 'seedling' ? colors.softGreen : colors.softOrange },
-        ]}
-      >
-        {icon === 'seedling' ? (
-          <MaterialCommunityIcons name="sprout" size={28} color={colors.primary} />
-        ) : (
-          <MaterialCommunityIcons name="tractor" size={28} color={colors.warning} />
-        )}
+      <View style={[styles.iconContainer, { backgroundColor: bg }]}>
+        <Icon name={iconName as any} size={28} color={color} />
       </View>
       <Text style={styles.value}>{value}</Text>
       <Text style={styles.label}>{label}</Text>
