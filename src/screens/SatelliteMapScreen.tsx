@@ -33,7 +33,7 @@ import { getNDVITileUrl, getBhuvanVegetationUrl } from '../services/satelliteMap
 // See MAPBOX_SETUP.md for instructions
 Mapbox.setAccessToken(
   // process.env.MAPBOX_ACCESS_TOKEN || 
-  'pk.eyJ1IjoiYW1pdHNhamFuZSIsImEiOiJjbWw5c3hnd2EwNjB0M2dzNW01ZnpjbXFnIn0.-eHiTGD9m9p03RuOD1BXvA' // Replace with your token
+  '' // Replace with your token
 );
 
 // Approximate polygon area on Earth (in acres) from [lng, lat] coordinates
