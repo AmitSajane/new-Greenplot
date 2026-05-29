@@ -1,83 +1,70 @@
 import { User, UserRole } from '../types/auth';
 
-// Dummy phone numbers for role-based login
-const FARMER_PHONE = '8073584715';
-const OWNER_PHONE = '8217642715';
+/**
+ * In-memory user registry.
+ * Populated when a user completes sign-up via completeProfile().
+ * In a real app this would be backed by a server/database.
+ */
+const userRegistry: Record<string, User> = {};
 
-// Dummy user data
-const DUMMY_USERS: Record<string, User> = {
-  [FARMER_PHONE]: {
-    id: '1',
-    name: 'Ramesh Kumar',
-    phoneNumber: FARMER_PHONE,
-    role: 'farmer',
-    email: 'ramesh@example.com',
-  },
-  [OWNER_PHONE]: {
-    id: '2',
-    name: 'Rajesh Singh',
-    phoneNumber: OWNER_PHONE,
-    role: 'owner',
-    email: 'rajesh@example.com',
-  },
+/**
+ * Register (or update) a user in the in-memory store.
+ * Called by AuthContext.completeProfile after OTP is verified.
+ */
+export const registerUser = (user: User): void => {
+  userRegistry[user.phoneNumber] = user;
 };
 
 /**
- * Determines user role based on phone number
+ * Returns the role of a registered user by phone number, or null if unknown.
  */
 export const getUserRoleByPhone = (phoneNumber: string): UserRole | null => {
-  if (phoneNumber === FARMER_PHONE) {
-    return 'farmer';
-  }
-  if (phoneNumber === OWNER_PHONE) {
-    return 'owner';
-  }
-  return null;
+  return userRegistry[phoneNumber]?.role ?? null;
 };
 
 /**
- * Verifies OTP and returns user data
+ * Gets a registered user by phone number.
  */
-export const verifyOTP = async (
-  phoneNumber: string,
-  otp: string,
-): Promise<{ success: boolean; user?: User; error?: string }> => {
-  // Simulate API call delay
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  // Dummy OTP verification - accept any 4 digit OTP for demo
-  if (otp.length !== 4) {
-    return { success: false, error: 'Invalid OTP format' };
-  }
-
-  const user = DUMMY_USERS[phoneNumber];
-  if (!user) {
-    return { success: false, error: 'User not found', notRegistered: true };
-  }
-
-  return { success: true, user };
+export const getUserByPhone = (phoneNumber: string): User | null => {
+  return userRegistry[phoneNumber] ?? null;
 };
 
 /**
- * Sends OTP to phone number
+ * Simulates sending an OTP to the given phone number.
+ * Always succeeds — in a real app this would call your SMS gateway.
  */
 export const sendOTP = async (
-  phoneNumber: string,
+  _phoneNumber: string,
 ): Promise<{ success: boolean; error?: string }> => {
-  // Simulate API call delay
+  // Simulate network delay
   await new Promise(resolve => setTimeout(resolve, 500));
-
-  const role = getUserRoleByPhone(phoneNumber);
-  if (!role) {
-    return { success: false, error: 'Phone number not registered' };
-  }
-
   return { success: true };
 };
 
 /**
- * Gets user by phone number
+ * Verifies the OTP entered by the user.
+ *
+ * Rules (demo mode — no real OTP service):
+ *  - OTP must be exactly 4 digits (any combination accepted).
+ *  - If the phone number belongs to a registered user → login succeeds.
+ *  - If the phone number is not in the registry → user is new, must complete sign-up.
  */
-export const getUserByPhone = (phoneNumber: string): User | null => {
-  return DUMMY_USERS[phoneNumber] || null;
+export const verifyOTP = async (
+  phoneNumber: string,
+  otp: string,
+): Promise<{ success: boolean; user?: User; error?: string; notRegistered?: boolean }> => {
+  // Simulate API call delay
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  if (otp.length !== 4) {
+    return { success: false, error: 'Invalid OTP format' };
+  }
+
+  const user = userRegistry[phoneNumber];
+  if (!user) {
+    // Not yet registered — caller (OTPScreen) will redirect to ProfileSetup / RegisterScreen
+    return { success: false, error: 'User not found', notRegistered: true };
+  }
+
+  return { success: true, user };
 };

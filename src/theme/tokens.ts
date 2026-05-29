@@ -15,13 +15,14 @@ export const colors = {
   softGreen: '#E7F3EA',
   softOrange: '#FEF1E5',
   softBlue: '#E7F0FF',
+  skyBlue: '#87CEEB'
 };
 
 export const spacing = {
   xs: 4,
   sm: 8,
   md: 12,
-  m:10,
+  m: 10,
   lg: 16,
   xl: 24,
   xxl: 32,

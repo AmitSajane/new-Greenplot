@@ -26,9 +26,11 @@ export default function ProfileSetupScreen({ navigation, route }: Props) {
   const { user, completeProfile } = useAuth();
   const phoneNumber = route.params?.phoneNumber ?? user?.phoneNumber ?? '';
   const preselectedRole = route.params?.role as UserRole | undefined;
+  const prefilledName = route.params?.name ?? '';
+  const prefilledEmail = route.params?.email ?? '';
 
-  const [name, setName] = useState(user?.name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
+  const [name, setName] = useState(user?.name ?? prefilledName);
+  const [email, setEmail] = useState(user?.email ?? prefilledEmail);
   const [role, setRole] = useState<UserRole>(preselectedRole ?? user?.role ?? 'farmer');
 
   const handleComplete = () => {

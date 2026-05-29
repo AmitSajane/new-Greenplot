@@ -74,7 +74,7 @@ export default function WelcomeScreen({ navigation }: Props) {
 
           <TouchableOpacity
             style={styles.signUpButton}
-            onPress={() => navigation.navigate('RoleSelection')}
+            onPress={() => navigation.navigate('Register')}
             activeOpacity={0.9}
           >
             <Text style={styles.signUpButtonText}>Sign up</Text>

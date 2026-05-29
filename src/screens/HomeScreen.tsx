@@ -11,6 +11,7 @@ import { TabSwitcher } from '../components/dashboard/TabSwitcher';
 import { colors, radius, spacing } from '../theme/tokens';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { HomeStackParamList } from '../navigation/HomeStack';
+import { useAuth } from '../context/AuthContext';
 
 const ACTIVE_LISTINGS = [
   {
@@ -37,6 +38,7 @@ type NavigationProp = NativeStackNavigationProp<HomeStackParamList>;
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'active' | 'past'>('active');
 
   const listingsToDisplay = useMemo(
@@ -50,7 +52,7 @@ export default function HomeScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <DashboardHeader name="Ramesh" />
+        <DashboardHeader name={user?.name || ''} />
         <DashboardButton
           label="List Your Land"
           onPress={() => navigation.navigate('LeaseLand')}
@@ -75,7 +77,7 @@ export default function HomeScreen() {
             actionLabel="View Messages"
             accentColor={colors.warning}
             badgeLabel="2 new"
-            onPress={() => {}}
+            onPress={() => { }}
           />
         </View>
 

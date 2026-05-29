@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, ScrollView, StyleSheet, View, TouchableOpacity, Text } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { colors, radius, spacing } from '../../theme/tokens';
+import { colors, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useAuth } from '../../context/AuthContext';
 import { useFarmListings } from '../../context/FarmListingsContext';
@@ -11,15 +11,16 @@ import { HomeTopBar } from '../../components/farmerHome/HomeTopBar';
 import { SearchBar } from '../../components/farmerHome/SearchBar';
 import { WeatherCard } from '../../components/farmerHome/WeatherCard';
 import { MyActiveLeasesCard } from '../../components/farmerHome/MyActiveLeasesCard';
-import { SectionHeader } from '../../components/farmerHome/SectionHeader';
-import { Chip } from '../../components/farmerHome/Chip';
-import { QuickActionsGrid } from '../../components/farmerHome/QuickActionsGrid';
-import { FeaturedListingCard } from '../../components/farmerHome/FeaturedListingCard';
-import { NewsUpdateRow } from '../../components/farmerHome/NewsUpdateRow';
-import { ActivityCard } from '../../components/farmerHome/ActivityCard';
-import { BrowseByCropRow } from '../../components/farmerHome/BrowseByCropRow';
+import { DashboardMetricsSection } from '../../components/farmerHome/organisms/DashboardMetricsSection';
+import { FindLandSection } from '../../components/farmerHome/organisms/FindLandSection';
+import { QuickActionsSection } from '../../components/farmerHome/organisms/QuickActionsSection';
+import { FeaturedListingsSection } from '../../components/farmerHome/organisms/FeaturedListingsSection';
+import { NewsUpdatesSection } from '../../components/farmerHome/organisms/NewsUpdatesSection';
+import { ActivitySection } from '../../components/farmerHome/organisms/ActivitySection';
+import { BrowseByCropSection } from '../../components/farmerHome/organisms/BrowseByCropSection';
 import { SatelliteMonitoringCard } from '../../components/satelliteMap';
 import { LaborConnectCard } from '../../components/laborConnect/LaborConnectCard';
+import { SoilTestCard } from '../../components/organisms/SoilTestCard';
 import {
   BROWSE_BY_CROP,
   HomeFeaturedListing,
@@ -55,11 +56,11 @@ export default function FarmerHomeScreen() {
 
   const nearbyChips = useMemo(
     () =>
-      ([
-        { id: 'nearby', label: 'Nearby' as const },
-        { id: 'purnea', label: 'Purnea' as const },
-        { id: 'katihar', label: 'Katihar' as const },
-      ] as const),
+    ([
+      { id: 'nearby', label: 'Nearby' as const },
+      { id: 'purnea', label: 'Purnea' as const },
+      { id: 'katihar', label: 'Katihar' as const },
+    ] as const),
     [],
   );
 
@@ -72,8 +73,8 @@ export default function FarmerHomeScreen() {
         <HomeTopBar
           name={user?.name || 'Rajesh'}
           locationLabel={(user as any)?.location || 'Purnea, Bihar'}
-          onMenuPress={() => {}}
-          onLanguagePress={() => {}}
+          onMenuPress={() => { }}
+          onLanguagePress={() => { }}
           onNotificationsPress={() => navigation.navigate('NotificationsCenter')}
         />
 
@@ -113,46 +114,20 @@ export default function FarmerHomeScreen() {
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader title="My Dashboard" />
-        <View style={styles.dashboardRow}>
-          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('MyActiveLeases')}>
-            <Text style={styles.dashValue}>2</Text>
-            <Text style={styles.dashLabel}>Leased Lands</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('MyCrops')}>
-            <Text style={styles.dashValue}>3</Text>
-            <Text style={styles.dashLabel}>Active Crops</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('LaborConnect')}>
-            <Text style={styles.dashValue}>5</Text>
-            <Text style={styles.dashLabel}>Work Tasks</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.dashboardRow}>
-          <TouchableOpacity style={styles.dashCard} onPress={() => navigation.navigate('LaborConnect')}>
-            <Text style={styles.dashValue}>8</Text>
-            <Text style={styles.dashLabel}>Labor Hired</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.dashCard}>
-            <Text style={styles.dashValue}>₹24k</Text>
-            <Text style={styles.dashLabel}>Expenses</Text>
-          </TouchableOpacity>
-          <View style={[styles.dashCard, styles.dashCardPlaceholder]} />
-        </View>
+        <DashboardMetricsSection
+          onNavigateToLeases={() => navigation.navigate('MyActiveLeases')}
+          onNavigateToCrops={() => (navigation as any).navigate('MyCrops')}
+          onNavigateToTasks={() => navigation.navigate('LaborConnect')}
+          onNavigateToLabor={() => navigation.navigate('LaborConnect')}
+        />
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader title="Find Land Near You" />
-        <View style={styles.chipsRow}>
-          {nearbyChips.map((c) => (
-            <Chip
-              key={c.id}
-              label={c.label}
-              selected={selectedNearby === c.label}
-              onPress={() => setSelectedNearby(c.label)}
-            />
-          ))}
-        </View>
+        <FindLandSection
+          chips={nearbyChips}
+          selectedLabel={selectedNearby}
+          onSelect={setSelectedNearby}
+        />
 
         <View style={styles.sectionGap} />
 
@@ -164,9 +139,11 @@ export default function FarmerHomeScreen() {
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader title="Quick Actions" />
-        <View style={styles.quickActionsSpacer} />
-        <QuickActionsGrid
+        <SoilTestCard onPress={() => navigation.navigate('SoilTest')} />
+
+        <View style={styles.sectionGap} />
+
+        <QuickActionsSection
           actions={[
             {
               id: 'qa1',
@@ -201,66 +178,33 @@ export default function FarmerHomeScreen() {
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader
-          title="Featured Listings"
-          actionLabel="View All"
-          onActionPress={() => navigation.navigate('AllAvailableLands')}
-        />
-        <View style={styles.listSpacer} />
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={featuredListings}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={styles.hListContent}
-          ItemSeparatorComponent={() => <View style={{ width: spacing.md }} />}
-          renderItem={({ item }) => (
-            <FeaturedListingCard
-              item={item}
-              onPress={() => navigation.navigate('FarmDetail', { farmId: item.id })}
-            />
-          )}
-          initialNumToRender={3}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews
+        <FeaturedListingsSection
+          listings={featuredListings}
+          onViewAll={() => (navigation as any).navigate('AllAvailableLands')}
+          onListingPress={(id) => navigation.navigate('FarmDetail', { farmId: id })}
         />
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader title="News & Updates" />
-        <View style={styles.listSpacer} />
-        <View style={styles.vList}>
-          {NEWS_UPDATES.map((n) => (
-            <View key={n.id} style={styles.vListItem}>
-              <NewsUpdateRow item={n} onPress={() => {}} />
-            </View>
-          ))}
-        </View>
-
-        <View style={styles.sectionGap} />
-
-        <SectionHeader title="Your Activity" actionLabel="View All" onActionPress={() => {}} />
-        <View style={styles.listSpacer} />
-        <FlatList
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          data={YOUR_ACTIVITY}
-          keyExtractor={(i) => i.id}
-          contentContainerStyle={styles.hListContent}
-          ItemSeparatorComponent={() => <View style={{ width: spacing.md }} />}
-          renderItem={({ item }) => <ActivityCard item={item} onPress={() => {}} />}
-          initialNumToRender={3}
-          maxToRenderPerBatch={5}
-          windowSize={5}
-          removeClippedSubviews
+        <NewsUpdatesSection
+          news={NEWS_UPDATES}
+          onNewsPress={() => { }}
         />
 
         <View style={styles.sectionGap} />
 
-        <SectionHeader title="Browse Land by Crop" />
-        <View style={styles.listSpacer} />
-        <BrowseByCropRow crops={BROWSE_BY_CROP} onCropPress={() => {}} />
+        <ActivitySection
+          activities={YOUR_ACTIVITY}
+          onViewAll={() => { }}
+          onActivityPress={() => { }}
+        />
+
+        <View style={styles.sectionGap} />
+
+        <BrowseByCropSection
+          crops={BROWSE_BY_CROP}
+          onCropPress={() => { }}
+        />
       </ScrollView>
     </SafeAreaView>
   );
@@ -282,43 +226,4 @@ const styles = StyleSheet.create({
   sectionGap: {
     height: spacing.lg,
   },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  quickActionsSpacer: {
-    height: spacing.md,
-  },
-  listSpacer: {
-    height: spacing.md,
-  },
-  hListContent: {
-    paddingRight: spacing.xl,
-  },
-  vList: {
-    gap: spacing.md,
-  },
-  vListItem: {
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-  },
-  dashboardRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.sm,
-  },
-  dashCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  dashCardPlaceholder: { backgroundColor: colors.background, borderColor: 'transparent' },
-  dashValue: { fontSize: 20, fontWeight: '800', color: colors.primary },
-  dashLabel: { fontSize: 11, color: colors.textSecondary, marginTop: spacing.xs },
 });

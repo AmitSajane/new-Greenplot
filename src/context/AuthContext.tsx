@@ -1,6 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
 import { User, UserRole } from '../types/auth';
-import { verifyOTP, getUserRoleByPhone, getUserByPhone } from '../services/authService';
+import {
+  verifyOTP,
+  getUserRoleByPhone,
+  getUserByPhone,
+  registerUser,
+} from '../services/authService';
 
 interface AuthContextType {
   user: User | null;
@@ -37,15 +42,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, []);
 
-  const completeProfile = useCallback((phoneNumber: string, name: string, role: UserRole, email?: string) => {
-    setUser({
-      id: `new-${phoneNumber}`,
-      name: name.trim(),
-      phoneNumber,
-      role,
-      email: email?.trim() || undefined,
-    });
-  }, []);
+  /**
+   * Called after OTP verification when a new user completes sign-up,
+   * or when an existing user updates their profile.
+   *
+   * Saves the user into the in-memory registry so future logins succeed,
+   * then sets the current session user.
+   */
+  const completeProfile = useCallback(
+    (phoneNumber: string, name: string, role: UserRole, email?: string) => {
+      const newUser: User = {
+        id: `user-${phoneNumber}`,
+        name: name.trim(),
+        phoneNumber,
+        role,
+        email: email?.trim() || undefined,
+      };
+      // Persist into the auth service registry so login works next time
+      registerUser(newUser);
+      setUser(newUser);
+    },
+    [],
+  );
 
   const logout = useCallback(() => {
     setUser(null);

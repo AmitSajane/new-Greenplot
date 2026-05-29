@@ -38,7 +38,7 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
         {/* Status Badge and Agreement Title */}
         <View style={styles.statusSection}>
           <View style={styles.statusBadge}>
-            <Icon name="check-circle" size={16} color={colors.surface} />
+            <Icon name="check-circle" size={14} color={colors.surface} />
             <Text style={styles.statusText}>STATUS: ACTIVE</Text>
           </View>
           <Text style={styles.agreementTitle}>
@@ -223,22 +223,22 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
           <Text style={styles.sectionTitle}>Documents</Text>
           <View style={styles.documentsRow}>
             <TouchableOpacity style={styles.documentButton}>
-              <Icon name="description" size={24} color={colors.primary} />
+              <Icon name="description" size={20} color={colors.primary} />
               <Text style={styles.documentButtonText}>Download</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.documentButton}>
-              <Icon name="share" size={24} color={colors.primary} />
+              <Icon name="share" size={20} color={colors.primary} />
               <Text style={styles.documentButtonText}>Share</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.documentButton}>
-              <Icon name="print" size={24} color={colors.primary} />
+              <Icon name="print" size={20} color={colors.primary} />
               <Text style={styles.documentButtonText}>Print</Text>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Bottom Spacing */}
-        <View style={styles.bottomSpacing} />
+        {/* <View style={styles.bottomSpacing} /> */}
       </ScrollView>
 
       {/* Make Payment Button */}
@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
   },
   section: {
     backgroundColor: colors.surface,
-    marginHorizontal: spacing.xl,
+    marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
     padding: spacing.lg,
     borderRadius: radius.lg,

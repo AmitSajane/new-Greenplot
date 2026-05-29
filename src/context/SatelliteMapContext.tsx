@@ -28,7 +28,7 @@ export interface SatelliteMapState {
   
   // Timelapse animation
   isPlaying: boolean;
-  
+   
   // Plot GeoJSON
   plotGeoJSON: PlotGeoJSON | null;
   

@@ -48,5 +48,28 @@
     "labor": "Labor",
     "payments": "Payments",
     "attendance": "Attendance"
+  },
+  "soilTest": {
+    "title": "Soil Health Check",
+    "subtitle": "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ತಪಾಸಣೆ",
+    "analyzing": "Analyzing soil data...",
+    "error": "Failed to fetch soil data. Please try again.",
+    "retry": "Retry",
+    "getLocation": "Get My Location",
+    "idealFor": "Ideal for most crops",
+    "soilPh": "Soil pH / ಮಣ್ಣಿನ pH",
+    "nitrogen": "Nitrogen / ಸಾರಜನಕ",
+    "organic": "Organic / ಸಾವಯವ",
+    "viewGuide": "View Fertilizer Guide",
+    "acidic": "Acidic / ಆಮ್ಲಿಯ",
+    "neutral": "Neutral / ತಟಸ್ಥ",
+    "alkaline": "Alkaline / ಕ್ಷಾರೀಯ",
+    "high": "High / ಹೆಚ್ಚಿನ",
+    "medium": "Medium / ಮಧ್ಯಮ",
+    "low": "Low / ಕಡಿಮೆ",
+    "soilTypeMap": {
+      "Clay Loam": "Clay Loam / ಲೋಮಿ ಮಣ್ಣು",
+      "Loamy": "Loamy Soil / ಲೋಮಿ ಮಣ್ಣು"
+    }
   }
 }

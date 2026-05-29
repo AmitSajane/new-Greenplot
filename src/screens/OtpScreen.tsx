@@ -31,6 +31,7 @@ export default function OTPScreen({ navigation, route }: Props) {
     navigation.getParent<NativeStackNavigationProp<RootStackParamList>>();
   const { login } = useAuth();
   const phoneNumber = route.params.phoneNumber;
+  const signupData = route.params.signupData;
 
   const isValidOtp = code.length === OTP_LENGTH;
 
@@ -66,7 +67,12 @@ export default function OTPScreen({ navigation, route }: Props) {
     if (result.success) {
       rootNavigation?.replace('Main');
     } else if (result.isNewUser) {
-      navigation.replace('ProfileSetup', { phoneNumber, role: undefined });
+      navigation.replace('ProfileSetup', {
+        phoneNumber,
+        role: signupData?.role,
+        name: signupData?.name,
+        email: signupData?.email,
+      });
     } else {
       setCode('');
       inputRef.current?.focus();

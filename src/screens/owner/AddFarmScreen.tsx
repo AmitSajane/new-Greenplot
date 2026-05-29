@@ -195,7 +195,7 @@ export default function AddFarmScreen() {
       plotGeoJSON: route?.params?.plotGeoJSON,
       areaAcres: acres ? parseFloat(acres) || undefined : undefined,
     };
-    
+
     if (selectedCrops.length > 0) {
       listingData.crops = selectedCrops;
       listingData.currentCrop = selectedCrops[0];
@@ -212,7 +212,7 @@ export default function AddFarmScreen() {
     if (mediaItems.length > 0) {
       listingData.media = mediaItems;
     }
-    
+
     addListing(listingData);
 
     Alert.alert('Success', 'Your farm land has been listed successfully!', [
@@ -366,31 +366,7 @@ export default function AddFarmScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Govt survey fetch */}
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Govt Survey Number (optional)</Text>
-            <View style={styles.surveyRow}>
-              <TextInput
-                style={[styles.input, styles.surveyInput]}
-                placeholder="e.g. Survey 123/45"
-                placeholderTextColor={colors.textMuted}
-                value={govtSurveyNumber}
-                onChangeText={setGovtSurveyNumber}
-              />
-              <TouchableOpacity
-                style={styles.fetchBtn}
-                onPress={() => {
-                  if (govtSurveyNumber.trim()) {
-                    setSurveyFetched(true);
-                    setFraudBadge('verified');
-                    setBlockchainBadge('verified');
-                  }
-                }}
-              >
-                <Text style={styles.fetchBtnText}>Fetch</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+
 
           {/* Verification badges */}
           <View style={styles.badgesRow}>
@@ -466,6 +442,32 @@ export default function AddFarmScreen() {
             {renderDropdown(village, 'Select Village', () => hobli && setShowVillagePicker(true))}
           </View>
 
+          {/* Govt survey fetch */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Govt Survey Number (optional)</Text>
+            <View style={styles.surveyRow}>
+              <TextInput
+                style={[styles.input, styles.surveyInput]}
+                placeholder="e.g. Survey 123/45"
+                placeholderTextColor={colors.textMuted}
+                value={govtSurveyNumber}
+                onChangeText={setGovtSurveyNumber}
+              />
+              <TouchableOpacity
+                style={styles.fetchBtn}
+                onPress={() => {
+                  if (govtSurveyNumber.trim()) {
+                    setSurveyFetched(true);
+                    setFraudBadge('verified');
+                    setBlockchainBadge('verified');
+                  }
+                }}
+              >
+                <Text style={styles.fetchBtnText}>Fetch</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <View style={styles.formGroup}>
             <Text style={styles.label}>Location / Landmark (optional)</Text>
             <TextInput
@@ -516,7 +518,7 @@ export default function AddFarmScreen() {
           </View>
 
           {/* Crop Care Schedule */}
-          <View style={styles.formGroup}>
+          {/* <View style={styles.formGroup}>
             <Text style={styles.label}>Irrigation Schedule (Optional)</Text>
             <TextInput
               style={styles.input}
@@ -525,9 +527,9 @@ export default function AddFarmScreen() {
               value={irrigationSchedule}
               onChangeText={setIrrigationSchedule}
             />
-          </View>
+          </View> */}
 
-          <View style={styles.formGroup}>
+          {/* <View style={styles.formGroup}>
             <Text style={styles.label}>Pesticide / Fertilizer Schedule (Optional)</Text>
             <TextInput
               style={styles.input}
@@ -536,9 +538,9 @@ export default function AddFarmScreen() {
               value={pesticideSchedule}
               onChangeText={setPesticideSchedule}
             />
-          </View>
+          </View> */}
 
-          <View style={styles.formGroup}>
+          {/* <View style={styles.formGroup}>
             <Text style={styles.label}>Expected Harvest Window (Optional)</Text>
             <TextInput
               style={styles.input}
@@ -547,7 +549,7 @@ export default function AddFarmScreen() {
               value={expectedHarvest}
               onChangeText={setExpectedHarvest}
             />
-          </View>
+          </View> */}
 
           {/* Best Crops to Grow Section */}
           <View style={styles.formGroup}>
@@ -567,7 +569,7 @@ export default function AddFarmScreen() {
           {/* Add Photos & Video Section */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Add Photos & Video</Text>
-            
+
             {/* Media Previews */}
             {mediaItems.length > 0 && (
               <View style={styles.mediaPreviewsContainer}>

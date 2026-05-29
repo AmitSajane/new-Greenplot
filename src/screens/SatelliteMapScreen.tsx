@@ -33,7 +33,7 @@ import { getNDVITileUrl, getBhuvanVegetationUrl } from '../services/satelliteMap
 // See MAPBOX_SETUP.md for instructions
 Mapbox.setAccessToken(
   // process.env.MAPBOX_ACCESS_TOKEN || 
-  '' // Replace with your token
+  'pk.eyJ1IjoiYW1pdHNhamFuZSIsImEiOiJjbW9uMGJ3bTEwNDNmMnFzNjg4aDN4MmZzIn0.XFX729F8EQDVEGrO8lY3WQ' // Replace with your token
 );
 
 // Approximate polygon area on Earth (in acres) from [lng, lat] coordinates
@@ -43,38 +43,45 @@ const calculatePolygonAreaAcres = (coords: Array<[number, number]>): number => {
     return 0;
   }
 
-  // Ensure polygon is closed
-  const points =
-    coords[0][0] === coords[coords.length - 1][0] &&
-    coords[0][1] === coords[coords.length - 1][1]
-      ? coords
-      : [...coords, coords[0]];
-
   const R = 6371000; // Earth radius in meters
 
-  // Use first point as origin for a simple local projection
-  const [lng0, lat0] = points[0];
+  // Use first point as origin for a simple local projection.
+  // This helper is implemented without allocating a `projected[]` array
+  // (O(1) extra memory), to reduce temporary GC pressure.
+  const [lng0, lat0] = coords[0];
   const lambda0 = (lng0 * Math.PI) / 180;
   const phi0 = (lat0 * Math.PI) / 180;
   const cosPhi0 = Math.cos(phi0);
 
-  const projected = points.map(([lng, lat]) => {
+  const lastIdx = coords.length - 1;
+  const isClosed =
+    coords[0][0] === coords[lastIdx][0] && coords[0][1] === coords[lastIdx][1];
+  const effectiveN = isClosed ? lastIdx : coords.length; // unique vertices
+
+  if (effectiveN < 3) return 0;
+
+  // Shoelace formula in projected (meter) coordinates.
+  // Iterate edges without building an intermediate `projected[]` array.
+  let areaMeters2 = 0;
+
+  const first = coords[0];
+  let prevLambda = (first[0] * Math.PI) / 180;
+  let prevPhi = (first[1] * Math.PI) / 180;
+  let prevX = R * (prevLambda - lambda0) * cosPhi0;
+  let prevY = R * (prevPhi - phi0);
+
+  for (let i = 1; i <= effectiveN; i++) {
+    const [lng, lat] = coords[i % effectiveN];
     const lambda = (lng * Math.PI) / 180;
     const phi = (lat * Math.PI) / 180;
-
     const x = R * (lambda - lambda0) * cosPhi0;
     const y = R * (phi - phi0);
 
-    return { x, y };
-  });
-
-  // Shoelace formula for polygon area in projected (meter) coordinates
-  let areaMeters2 = 0;
-  for (let i = 0; i < projected.length - 1; i++) {
-    const p1 = projected[i];
-    const p2 = projected[i + 1];
-    areaMeters2 += p1.x * p2.y - p2.x * p1.y;
+    areaMeters2 += prevX * y - x * prevY;
+    prevX = x;
+    prevY = y;
   }
+
   areaMeters2 = Math.abs(areaMeters2) / 2;
 
   const ACRES_PER_SQ_METER = 1 / 4046.8564224;
@@ -116,6 +123,16 @@ export default function SatelliteMapScreen() {
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [zoomLevel, setZoomLevel] = useState(14);
 
+  // Prevent state updates after the screen is unmounted (common source of
+  // "setState on unmounted component" warnings).
+  const isMountedRef = React.useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchUserLocation = useCallback(() => {
     const requestLocationPermission = async () => {
       if (Platform.OS === 'android') {
@@ -132,12 +149,14 @@ export default function SatelliteMapScreen() {
       }
       Geolocation.getCurrentPosition(
         (position) => {
+          if (!isMountedRef.current) return;
           const { longitude, latitude } = position.coords;
           const coords: [number, number] = [longitude, latitude];
           setUserLocation(coords);
           setMapCenter(coords);
         },
         () => {
+          if (!isMountedRef.current) return;
           const fallback: [number, number] = [74.91711421195988, 16.59086417203163];
           setUserLocation(fallback);
           setMapCenter(fallback);
@@ -153,7 +172,9 @@ export default function SatelliteMapScreen() {
     const initialize = async () => {
       setIsLoading(true);
       await loadPlotData();
+      if (!isMountedRef.current) return;
       fetchUserLocation();
+      if (!isMountedRef.current) return;
       setIsLoading(false);
     };
     initialize();
