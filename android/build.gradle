@@ -68,7 +68,7 @@ allprojects {
             }
             credentials {
                 username = "mapbox"
-                password = project.properties[''] ?: ""
+            
             }
         }
     }
