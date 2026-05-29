@@ -33,7 +33,7 @@ import { getNDVITileUrl, getBhuvanVegetationUrl } from '../services/satelliteMap
 // See MAPBOX_SETUP.md for instructions
 Mapbox.setAccessToken(
   // process.env.MAPBOX_ACCESS_TOKEN || 
-  'pk.eyJ1IjoiYW1pdHNhamFuZSIsImEiOiJjbW9uMGJ3bTEwNDNmMnFzNjg4aDN4MmZzIn0.XFX729F8EQDVEGrO8lY3WQ' // Replace with your token
+  '' // Replace with your token
 );
 
 // Approximate polygon area on Earth (in acres) from [lng, lat] coordinates
@@ -352,7 +352,7 @@ export default function SatelliteMapScreen() {
             pitchEnabled={true}
             rotateEnabled={true}
             onPress={handleMapPress}
-            
+
           >
             <Mapbox.Camera
               centerCoordinate={mapCenter}
@@ -448,7 +448,7 @@ export default function SatelliteMapScreen() {
           <View style={styles.layerPanel}>
             <ScrollView showsVerticalScrollIndicator={false}>
               <Text style={styles.panelTitle}>Layers</Text>
-              
+
               <LayerToggle
                 label="NDVI"
                 icon="leaf"
@@ -458,21 +458,21 @@ export default function SatelliteMapScreen() {
                 opacity={ndviOpacity}
                 onOpacityChange={setNdviOpacity}
               />
-              
+
               <LayerToggle
                 label="Soil Moisture"
                 icon="water"
                 enabled={soilMoistureEnabled}
                 onToggle={setSoilMoistureEnabled}
               />
-              
+
               <LayerToggle
                 label="Weather"
                 icon="cloud"
                 enabled={weatherEnabled}
                 onToggle={setWeatherEnabled}
               />
-              
+
               <LayerToggle
                 label="ISRO Bhuvan"
                 icon="map"
