@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "డాష్‌బోర్డ్",
+    "totalLand": "మొత్తం భూమి",
+    "activeCrops": "క్రియాశీల పంటలు",
+    "findLand": "మీ దరిదాపుల్లో భూమి వెతకండి",
+    "quickActions": "త్వరిత చర్యలు",
+    "featuredListings": "ఫీచర్డ్ లిస్టింగ్స్",
+    "newsUpdates": "వార్తలు & అప్‌డేట్స్",
+    "yourActivity": "మీ కార్యాచరణ",
+    "browseByCrop": "పంట ఆధారంగా భూమి"
+  },
+  "labor": {
+    "moduleTitle": "లేబర్ కనెక్ట్",
+    "postWork": "పని పోస్ట్ చేయండి",
+    "findLabor": "లేబర్ కనుగొనండి",
+    "myJobs": "నా పనులు",
+    "applications": "అప్లికేషన్స్",
+    "attendance": "హాజరు",
+    "browseJobs": "పనులు చూడండి",
+    "createWork": "పని సృష్టించండి"
+  },
+  "satellite": {
+    "title": "ఉపగ్రహ మానిటరింగ్",
+    "loading": "మ్యాప్ లోడ్ అవుతోంది..."
+  },
+  "settings": {
+    "title": "సెట్టింగ్‌లు",
+    "account": "అకౌంట్",
+    "name": "పేరు",
+    "phone": "ఫోన్",
+    "role": "పాత్ర",
+    "preferences": "అభిరుచులు",
+    "notifications": "నోటిఫికేషన్‌లు",
+    "language": "భాష",
+    "helpSupport": "హెల్ప్ & సపోర్ట్",
+    "logout": "లాగ్ఔట్",
+    "logoutConfirmTitle": "లాగ్ఔట్",
+    "logoutConfirmMessage": "మీరు ఖచ్చితంగా లాగ్ఔట్ కావాలా?"
+  },
+  "common": {
+    "confirm": "కన్ఫర్మ్",
+    "cancel": "రద్దు",
+    "ok": "సరే",
+    "land": "భూమి",
+    "crop": "పంట",
+    "work": "పని",
+    "labor": "లేబర్",
+    "payments": "పేమెంట్స్",
+    "attendance": "హాజరు"
+  }
+}

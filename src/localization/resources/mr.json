@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "डॅशबोर्ड",
+    "totalLand": "एकूण जमीन",
+    "activeCrops": "सक्रिय पिके",
+    "findLand": "जवळची जमीन शोधा",
+    "quickActions": "जलद क्रिया",
+    "featuredListings": "फीचर्ड लिस्टिंग",
+    "newsUpdates": "बातम्या आणि अपडेट्स",
+    "yourActivity": "तुमची क्रियाकलाप",
+    "browseByCrop": "पिकानुसार जमीन"
+  },
+  "labor": {
+    "moduleTitle": "लेबर कनेक्ट",
+    "postWork": "काम टाका",
+    "findLabor": "मजूर शोधा",
+    "myJobs": "माझी कामे",
+    "applications": "अर्ज",
+    "attendance": "हजेरी",
+    "browseJobs": "कामे पहा",
+    "createWork": "काम तयार करा"
+  },
+  "satellite": {
+    "title": "सॅटेलाइट मॉनिटरिंग",
+    "loading": "नकाशा लोड होत आहे..."
+  },
+  "settings": {
+    "title": "सेटिंग्ज",
+    "account": "खाते",
+    "name": "नाव",
+    "phone": "फोन",
+    "role": "भूमिका",
+    "preferences": "प्राधान्ये",
+    "notifications": "सूचना",
+    "language": "भाषा",
+    "helpSupport": "मदत व समर्थन",
+    "logout": "लॉगआउट",
+    "logoutConfirmTitle": "लॉगआउट",
+    "logoutConfirmMessage": "तुम्हाला नक्की लॉगआउट करायचे आहे का?"
+  },
+  "common": {
+    "confirm": "कन्फर्म",
+    "cancel": "रद्द करा",
+    "ok": "ठीक आहे",
+    "land": "जमीन",
+    "crop": "पीक",
+    "work": "काम",
+    "labor": "मजूर",
+    "payments": "पेमेंट",
+    "attendance": "हजेरी"
+  }
+}

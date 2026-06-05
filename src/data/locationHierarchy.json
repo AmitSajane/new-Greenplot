@@ -1,0 +1,162 @@
+{
+  "states": [
+    {
+      "id": "KA",
+      "name": "Karnataka",
+      "districts": [
+        {
+          "id": "BLR",
+          "name": "Bengaluru Urban",
+          "taluks": [
+            {
+              "id": "BLR-N",
+              "name": "Bengaluru North",
+              "hoblis": [
+                { "id": "H1", "name": "Devanahalli", "villages": ["Devanahalli", "Bagepalli", "Kadabagere", "Kodigehalli", "Nandi Hills"] },
+                { "id": "H2", "name": "Hesaraghatta", "villages": ["Hesaraghatta", "Chikkajala", "Bagalur", "Seegehalli", "Jalahalli"] }
+              ]
+            },
+            {
+              "id": "BLR-S",
+              "name": "Bengaluru South",
+              "hoblis": [
+                { "id": "H3", "name": "Anekal", "villages": ["Anekal", "Hosur Road", "Jigani", "Bommasandra", "Attibele"] },
+                { "id": "H4", "name": "Bangarpet", "villages": ["Bangarpet", "Kolar", "Malur", "Srinivaspur", "Mulbagal"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "BEL",
+          "name": "Belagavi",
+          "taluks": [
+            {
+              "id": "BEL-1",
+              "name": "Belagavi",
+              "hoblis": [
+                { "id": "H5", "name": "Belagavi", "villages": ["Belagavi", "Khanapur", "Bailhongal", "Ramdurg", "Gokak"] },
+                { "id": "H6", "name": "Chikkodi", "villages": ["Chikkodi", "Athani", "Raibag", "Hukkeri", "Nipani"] }
+              ]
+            },
+            {
+              "id": "BEL-2",
+              "name": "Gokak",
+              "hoblis": [
+                { "id": "H7", "name": "Gokak", "villages": ["Gokak", "Sankeshwar", "Hukkeri", "Belgaum Rural", "Parasgad"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "MYS",
+          "name": "Mysuru",
+          "taluks": [
+            {
+              "id": "MYS-1",
+              "name": "Mysuru",
+              "hoblis": [
+                { "id": "H8", "name": "Mysuru", "villages": ["Mysuru", "Nanjangud", "H.D. Kote", "T. Narasipur", "K.R. Nagar"] },
+                { "id": "H9", "name": "Piriyapatna", "villages": ["Piriyapatna", "Hunsur", "Periyapatna", "K.R. Pet", "Saligrama"] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "BR",
+      "name": "Bihar",
+      "districts": [
+        {
+          "id": "PUR",
+          "name": "Purnia",
+          "taluks": [
+            {
+              "id": "PUR-1",
+              "name": "Purnia East",
+              "hoblis": [
+                { "id": "H10", "name": "Purnia", "villages": ["Purnia", "Kasba", "Banmankhi", "Dhamdaha", "Rupauli"] },
+                { "id": "H11", "name": "Baisi", "villages": ["Baisi", "Baisi Road", "Amour", "Krityanand Nagar", "Barsoi"] }
+              ]
+            },
+            {
+              "id": "PUR-2",
+              "name": "Purnia West",
+              "hoblis": [
+                { "id": "H12", "name": "Bhawanipur", "villages": ["Bhawanipur", "Srinagar", "Jalalgarh", "Dagarua", "Beltoli"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "PAT",
+          "name": "Patna",
+          "taluks": [
+            {
+              "id": "PAT-1",
+              "name": "Patna Sadar",
+              "hoblis": [
+                { "id": "H13", "name": "Patna", "villages": ["Patna", "Phulwari Sharif", "Danapur", "Maner", "Fatuha"] },
+                { "id": "H14", "name": "Masaurhi", "villages": ["Masaurhi", "Punpun", "Dulhin Bazar", "Naubatpur", "Paliganj"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "KAT",
+          "name": "Katihar",
+          "taluks": [
+            {
+              "id": "KAT-1",
+              "name": "Katihar",
+              "hoblis": [
+                { "id": "H15", "name": "Katihar", "villages": ["Katihar", "Korha", "Kadwa", "Barsoi", "Falka"] },
+                { "id": "H16", "name": "Manihari", "villages": ["Manihari", "Amdabad", "Balrampur", "Kursela", "Sameli"] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "MH",
+      "name": "Maharashtra",
+      "districts": [
+        {
+          "id": "PUN",
+          "name": "Pune",
+          "taluks": [
+            {
+              "id": "PUN-1",
+              "name": "Pune City",
+              "hoblis": [
+                { "id": "H17", "name": "Haveli", "villages": ["Pune", "Hinjewadi", "Shivane", "Kothrud", "Warje"] },
+                { "id": "H18", "name": "Mulshi", "villages": ["Mulshi", "Lavasa", "Tamhini", "Panshet", "Bhamburde"] }
+              ]
+            },
+            {
+              "id": "PUN-2",
+              "name": "Baramati",
+              "hoblis": [
+                { "id": "H19", "name": "Baramati", "villages": ["Baramati", "Indapur", "Daund", "Shirur", "Purandar"] }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "NGP",
+          "name": "Nagpur",
+          "taluks": [
+            {
+              "id": "NGP-1",
+              "name": "Nagpur Rural",
+              "hoblis": [
+                { "id": "H20", "name": "Nagpur", "villages": ["Nagpur", "Kamptee", "Umred", "Kalmeshwar", "Parseoni"] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

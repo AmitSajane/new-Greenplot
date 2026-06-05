@@ -1,0 +1,52 @@
+{
+  "dashboard": {
+    "title": "डैशबोर्ड",
+    "totalLand": "कुल जमीन",
+    "activeCrops": "सक्रिय फसलें",
+    "findLand": "अपने पास की जमीन खोजें",
+    "quickActions": "त्वरित क्रियाएँ",
+    "featuredListings": "विशेष लिस्टिंग",
+    "newsUpdates": "समाचार और अपडेट",
+    "yourActivity": "आपकी गतिविधि",
+    "browseByCrop": "फसल के अनुसार जमीन देखें"
+  },
+  "labor": {
+    "moduleTitle": "लेबर कनेक्ट",
+    "postWork": "काम पोस्ट करें",
+    "findLabor": "मज़दूर ढूँढें",
+    "myJobs": "मेरे काम",
+    "applications": "आवेदन",
+    "attendance": "हाज़िरी",
+    "browseJobs": "काम देखें",
+    "createWork": "काम बनाएँ"
+  },
+  "satellite": {
+    "title": "सैटेलाइट मॉनिटरिंग",
+    "loading": "मानचित्र लोड हो रहा है..."
+  },
+  "settings": {
+    "title": "सेटिंग्स",
+    "account": "खाता",
+    "name": "नाम",
+    "phone": "फ़ोन",
+    "role": "भूमिका",
+    "preferences": "प्राथमिकताएँ",
+    "notifications": "सूचनाएँ",
+    "language": "भाषा",
+    "helpSupport": "मदद और समर्थन",
+    "logout": "लॉगआउट",
+    "logoutConfirmTitle": "लॉगआउट",
+    "logoutConfirmMessage": "क्या आप वाकई लॉगआउट करना चाहते हैं?"
+  },
+  "common": {
+    "confirm": "पुष्टि करें",
+    "cancel": "रद्द करें",
+    "ok": "ठीक है",
+    "land": "जमीन",
+    "crop": "फसल",
+    "work": "काम",
+    "labor": "मज़दूर",
+    "payments": "भुगतान",
+    "attendance": "हाज़िरी"
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "dashboard": {
+    "title": "Dashboard",
+    "totalLand": "Total Land",
+    "activeCrops": "Active Crops",
+    "findLand": "Find Land Near You",
+    "quickActions": "Quick Actions",
+    "featuredListings": "Featured Listings",
+    "newsUpdates": "News & Updates",
+    "yourActivity": "Your Activity",
+    "browseByCrop": "Browse Land by Crop"
+  },
+  "labor": {
+    "moduleTitle": "Labor Connect",
+    "postWork": "Post Work",
+    "findLabor": "Find Labor",
+    "myJobs": "My Jobs",
+    "applications": "Applications",
+    "attendance": "Attendance",
+    "browseJobs": "Browse Jobs",
+    "createWork": "Create Work"
+  },
+  "satellite": {
+    "title": "Satellite Monitoring",
+    "loading": "Loading map..."
+  },
+  "settings": {
+    "title": "Settings",
+    "account": "Account",
+    "name": "Name",
+    "phone": "Phone",
+    "role": "Role",
+    "preferences": "Preferences",
+    "notifications": "Notifications",
+    "language": "Language",
+    "helpSupport": "Help & Support",
+    "logout": "Logout",
+    "logoutConfirmTitle": "Logout",
+    "logoutConfirmMessage": "Are you sure you want to logout?"
+  },
+  "common": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "ok": "OK",
+    "land": "Land",
+    "crop": "Crop",
+    "work": "Work",
+    "labor": "Labor",
+    "payments": "Payments",
+    "attendance": "Attendance"
+  },
+  "soilTest": {
+    "title": "Soil Health Check",
+    "subtitle": "ಮಣ್ಣಿನ ಆರೋಗ್ಯ ತಪಾಸಣೆ",
+    "analyzing": "Analyzing soil data...",
+    "error": "Failed to fetch soil data. Please try again.",
+    "retry": "Retry",
+    "getLocation": "Get My Location",
+    "idealFor": "Ideal for most crops",
+    "soilPh": "Soil pH / ಮಣ್ಣಿನ pH",
+    "nitrogen": "Nitrogen / ಸಾರಜನಕ",
+    "organic": "Organic / ಸಾವಯವ",
+    "viewGuide": "View Fertilizer Guide",
+    "acidic": "Acidic / ಆಮ್ಲಿಯ",
+    "neutral": "Neutral / ತಟಸ್ಥ",
+    "alkaline": "Alkaline / ಕ್ಷಾರೀಯ",
+    "high": "High / ಹೆಚ್ಚಿನ",
+    "medium": "Medium / ಮಧ್ಯಮ",
+    "low": "Low / ಕಡಿಮೆ",
+    "soilTypeMap": {
+      "Clay Loam": "Clay Loam / ಲೋಮಿ ಮಣ್ಣು",
+      "Loamy": "Loamy Soil / ಲೋಮಿ ಮಣ್ಣು"
+    }
+  }
+}
