@@ -1,7 +1,7 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme/tokens';
-import HubScreen from '../screens/HubScreen';
+import HubScreen from '../screens/hub';
 import FilterByCropScreen from '../screens/FilterByCropScreen';
 import LatestNewsScreen from '../screens/LatestNewsScreen';
 import ModernFarmingTechScreen from '../screens/ModernFarmingTechScreen';

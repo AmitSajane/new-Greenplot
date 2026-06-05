@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import OwnerHomeScreen from '../screens/owner/OwnerHomeScreen';
+import OwnerHomeScreen from '../screens/ownerHome';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
 import BudgetApprovalsScreen from '../screens/owner/BudgetApprovalsScreen';
 import MyCropsScreen from '../screens/farmer/MyCropsScreen';
@@ -10,7 +10,7 @@ import LeaseLandScreen from '../screens/LeaseLandScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import AIAssistantScreen from '../screens/AIAssistantScreen';
-import SatelliteMapScreen from '../screens/SatelliteMapScreen';
+import SatelliteMapScreen from '../screens/satelliteMap';
 import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import OwnerWorkReportScreen from '../screens/owner/OwnerWorkReportScreen';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';

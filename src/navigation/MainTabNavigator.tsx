@@ -2,7 +2,7 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import HomeStack from './HomeStack';
-import SettingsScreen from '../screens/SettingsScreen';
+import SettingsScreen from '../screens/settings';
 import BusinessScreen from '../screens/BusinessScreen';
 import MyShiftsScreen from '../screens/MyShiftsScreen';
 import AvailableShiftsScreen from '../screens/AvailableShiftsScreen';

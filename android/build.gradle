@@ -62,7 +62,14 @@ allprojects {
 
         // Mapbox Repo again (required)
         maven {
-     
+            url 'https://api.mapbox.com/downloads/v2/releases/maven'
+            authentication {
+                basic(BasicAuthentication)
+            }
+            credentials {
+                username = "mapbox"
+                password = project.properties['pk.eyJ1IjoiYW1pdHNhamFuZSIsImEiOiJjbW9uMGJ3bTEwNDNmMnFzNjg4aDN4MmZzIn0.XFX729F8EQDVEGrO8lY3WQ'] ?: ""
+            }
         }
     }
 }

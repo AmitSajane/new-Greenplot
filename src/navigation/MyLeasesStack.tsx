@@ -1,6 +1,6 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import MyActiveLeasesScreen from '../screens/farmer/MyActiveLeasesScreen';
+import MyActiveLeasesScreen from '../screens/leases/myActiveLeases';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 
 export type MyLeasesStackParamList = {

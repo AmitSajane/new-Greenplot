@@ -9,7 +9,7 @@ import RoleSelectionScreen from '../screens/RoleSelectionScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegisterScreen from '../screens/RegisterScreen';
 import OTPScreen from '../screens/OtpScreen';
-import ProfileSetupScreen from '../screens/ProfileSetupScreen';
+import ProfileSetupScreen from '../screens/profileSetup';
 
 export type AuthStackParamList = {
   Splash: undefined;
