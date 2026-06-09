@@ -7,11 +7,13 @@ import MyLeasesStack from './MyLeasesStack';
 import MyCropsStack from './MyCropsStack';
 import HubStack from './HubStack';
 import SettingsStack from './SettingsStack';
+import { MarketStack } from '../modules/market';
 
 export type FarmerTabParamList = {
   FarmerHome: undefined;
   MyLeases: undefined;
   MyCrops: undefined;
+  Market: undefined;
   Hub: undefined;
   Settings: undefined;
 };
@@ -25,6 +27,7 @@ const tabIconConfig: Record<
   FarmerHome: { active: 'home', inactive: 'home-outline', label: 'Home' },
   MyLeases: { active: 'document-text', inactive: 'document-text-outline', label: 'My Leases' },
   MyCrops: { active: 'leaf', inactive: 'leaf-outline', label: 'My Crops' },
+  Market: { active: 'bar-chart', inactive: 'bar-chart-outline', label: 'Market' },
   Hub: { active: 'grid', inactive: 'grid-outline', label: 'Hub' },
   Settings: { active: 'settings', inactive: 'settings-outline', label: 'Settings' },
 };
@@ -49,6 +52,7 @@ export default function FarmerTabNavigator() {
       <Tab.Screen name="FarmerHome" component={FarmerHomeStack} />
       <Tab.Screen name="MyLeases" component={MyLeasesStack} />
       <Tab.Screen name="MyCrops" component={MyCropsStack} />
+      <Tab.Screen name="Market" component={MarketStack} />
       <Tab.Screen name="Hub" component={HubStack} />
       <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>

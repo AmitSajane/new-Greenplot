@@ -45,6 +45,10 @@
 	<string>This app needs location access to show your plot on the satellite map</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs location access to show your plot on the satellite map</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kisan Mitra uses the microphone so you can ask farming questions by voice.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Kisan Mitra converts your spoken questions to text to answer them.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>

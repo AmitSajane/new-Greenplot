@@ -4,8 +4,14 @@ import MapboxGL from '@rnmapbox/maps';
 import { Button } from '../atoms/Button';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useTranslation } from 'react-i18next';
-import { colors, radius, spacing } from '../../theme/tokens';
+import { radius, spacing } from '../../theme/tokens';
 import { SoilLocation } from '../../types/soil';
+import { initMapbox } from '../../config/mapbox';
+
+// Ensure the Mapbox access token is set before this map renders, even when the
+// Soil Test screen is opened without first visiting the Satellite screen
+// (otherwise Mapbox tile requests return 401).
+initMapbox();
 
 interface MapSectionProps {
   location: SoilLocation | null;

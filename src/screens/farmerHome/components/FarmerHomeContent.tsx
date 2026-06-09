@@ -1,94 +1,75 @@
-import React from 'react';
-import { ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { HomeTopBar } from '../../../components/farmerHome/HomeTopBar';
-import { SearchBar } from '../../../components/farmerHome/SearchBar';
-import { WeatherCard } from '../../../components/farmerHome/WeatherCard';
-import { MyActiveLeasesCard } from '../../../components/farmerHome/MyActiveLeasesCard';
-import { DashboardMetricsSection } from '../../../components/farmerHome/organisms/DashboardMetricsSection';
-import { FindLandSection } from '../../../components/farmerHome/organisms/FindLandSection';
-import { QuickActionsSection } from '../../../components/farmerHome/organisms/QuickActionsSection';
-import { FeaturedListingsSection } from '../../../components/farmerHome/organisms/FeaturedListingsSection';
-import { NewsUpdatesSection } from '../../../components/farmerHome/organisms/NewsUpdatesSection';
-import { ActivitySection } from '../../../components/farmerHome/organisms/ActivitySection';
-import { BrowseByCropSection } from '../../../components/farmerHome/organisms/BrowseByCropSection';
-import { SatelliteMonitoringCard } from '../../../components/satelliteMap';
-import { LaborConnectCard } from '../../../components/laborConnect/LaborConnectCard';
-import { SoilTestCard } from '../../../components/organisms/SoilTestCard';
+import React, { useCallback } from 'react';
+import { ScrollView, TouchableOpacity, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { FarmerHomeViewModel } from '../hooks/useFarmerHome';
-import { farmerHomeStyles as styles } from '../styles/farmerHome.styles';
+import { farmerHomeStyles as s } from '../styles/farmerHome.styles';
+import {
+  AiAdvisoryCard,
+  BrowseByCropSection,
+  CropHealthSection,
+  FarmerHeader,
+  FarmSnapshot,
+  FindLandSection,
+  MarketTicker,
+  QuickActionsSection,
+  SchemesNewsSection,
+  TasksSection,
+  WeatherHero,
+} from './sections';
 
-export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = (vm) => (
-  <SafeAreaView style={styles.safeArea}>
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <HomeTopBar
-        name={vm.userName}
-        locationLabel={vm.locationLabel}
-        onMenuPress={vm.onMenuPress}
-        onLanguagePress={vm.onLanguagePress}
-        onNotificationsPress={vm.onNotificationsPress}
-      />
-      <View style={styles.heroTitleSpacer} />
-      <SearchBar value={vm.query} onChangeText={vm.setQuery} onMicPress={vm.onMicPress} />
-      <View style={styles.sectionGap} />
-      <WeatherCard
-        temperatureC={32}
-        conditionLabel="Sunny & Dry"
-        descriptionLabel="Good day for harvesting"
-        locationLabel="Purnea"
-        humidityPct={45}
-        windKmh={12}
-        forecast={[
-          { id: 'f1', day: 'Tomorrow', icon: 'sunny', tempC: 30 },
-          { id: 'f2', day: 'Wed', icon: 'rainy', tempC: 28 },
-          { id: 'f3', day: 'Thu', icon: 'rainy', tempC: 26 },
-        ]}
-      />
-      <View style={styles.sectionGap} />
-      <MyActiveLeasesCard
-        title="My Active Leases"
-        subtitle="चालू पट्टे"
-        countLabel="2 Agreements Active"
-        ctaLabel="TAP TO VIEW"
-        onPress={vm.onMyLeasesPress}
-      />
-      <View style={styles.sectionGap} />
-      <DashboardMetricsSection
-        onNavigateToLeases={vm.onLeasesMetrics}
-        onNavigateToCrops={vm.onCropsMetrics}
-        onNavigateToTasks={vm.onTasksMetrics}
-        onNavigateToLabor={vm.onLaborPress}
-      />
-      <View style={styles.sectionGap} />
-      <FindLandSection
-        chips={vm.nearbyChips}
-        selectedLabel={vm.selectedNearby}
-        onSelect={vm.setSelectedNearby}
-      />
-      <View style={styles.sectionGap} />
-      <SatelliteMonitoringCard onPress={vm.onSatellitePress} />
-      <View style={styles.sectionGap} />
-      <LaborConnectCard onPress={vm.onLaborPress} />
-      <View style={styles.sectionGap} />
-      <SoilTestCard onPress={vm.onSoilTestPress} />
-      <View style={styles.sectionGap} />
-      <QuickActionsSection actions={vm.quickActions} />
-      <View style={styles.sectionGap} />
-      <FeaturedListingsSection
-        listings={vm.featuredListings}
-        onViewAll={vm.onViewAllLands}
-        onListingPress={vm.onListingPress}
-      />
-      <View style={styles.sectionGap} />
-      <NewsUpdatesSection news={vm.news} onNewsPress={vm.onNewsPress} />
-      <View style={styles.sectionGap} />
-      <ActivitySection
-        activities={vm.activities}
-        onViewAll={vm.onActivityPress}
-        onActivityPress={vm.onActivityPress}
-      />
-      <View style={styles.sectionGap} />
-      <BrowseByCropSection crops={vm.browseCrops} onCropPress={vm.onCropPress} />
-    </ScrollView>
-  </SafeAreaView>
-);
+export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
+  const { onAction } = vm;
+
+  // Derived, stable handlers (onAction is memoised in the hook, so these are too).
+  const onSettings = useCallback(() => onAction('settings'), [onAction]);
+  const onNotifications = useCallback(() => onAction('notifications'), [onAction]);
+  const onWeather = useCallback(() => onAction('satellite'), [onAction]);
+  const onAi = useCallback(() => onAction(vm.aiAdvisory.action), [onAction, vm.aiAdvisory.action]);
+  const onMarket = useCallback(() => onAction('market'), [onAction]);
+  const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
+  const onCrops = useCallback(() => onAction('crops'), [onAction]);
+  const onAllLands = useCallback(() => onAction('allLands'), [onAction]);
+  const onNewsMore = useCallback(() => onAction('hub'), [onAction]);
+  const onMic = useCallback(() => onAction('aiAssistant'), [onAction]);
+
+  return (
+    <View style={s.safeArea}>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        <FarmerHeader
+          name={vm.userName}
+          location={vm.locationLabel}
+          onAvatar={onSettings}
+          onLanguage={onSettings}
+          onNotifications={onNotifications}
+        />
+        <WeatherHero weather={vm.weather} onPress={onWeather} />
+        <FarmSnapshot items={vm.snapshot} onAction={onAction} />
+        <AiAdvisoryCard
+          badge={vm.aiAdvisory.badge}
+          text={vm.aiAdvisory.text}
+          cta={vm.aiAdvisory.cta}
+          onPress={onAi}
+        />
+        <MarketTicker items={vm.ticker} onPressItem={vm.onTickerPress} onSeeAll={onMarket} />
+        <TasksSection items={vm.tasks} onAction={onAction} onViewAll={onTasksViewAll} />
+        <QuickActionsSection items={vm.quickActions} onAction={onAction} />
+        <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} />
+        <FindLandSection
+          listings={vm.featuredListings}
+          chips={vm.nearbyChips}
+          selected={vm.selectedNearby}
+          onSelectChip={vm.setSelectedNearby}
+          onListingPress={vm.onListingPress}
+          onSearch={onAllLands}
+          onViewAll={onAllLands}
+        />
+        <SchemesNewsSection items={vm.news} onAction={onAction} onMore={onNewsMore} />
+        <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />
+      </ScrollView>
+
+      <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onMic}>
+        <Ionicons name="mic" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+};

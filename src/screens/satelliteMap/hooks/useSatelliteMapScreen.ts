@@ -1,19 +1,28 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Alert, PermissionsAndroid, Platform } from 'react-native';
 import Geolocation from '@react-native-community/geolocation';
-import { useNavigation } from '@react-navigation/native';
-import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/SatelliteMapContext';
-import { useAuth } from '../../../context/AuthContext';
-import { getNDVITileUrl } from '../../../services/satelliteMapService';
-import { calculatePolygonAreaAcres, LngLat } from '../../../utils/geo';
 import { initMapbox } from '../../../config/mapbox';
+import { useAuth } from '../../../context/AuthContext';
+import { useFarmListings } from '../../../context/FarmListingsContext';
+import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/SatelliteMapContext';
+import { calculatePolygonAreaAcres, LngLat } from '../../../utils/geo';
+import { calculatePolygonCentroid, estimateZoomForPolygon } from '../../../utils/geo/polygonCentroid';
+import { getNDVITileUrl } from '../../../services/satelliteMapService';
+import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
+
+// Route will be accessed inside the hook
 
 initMapbox();
 
 export function useSatelliteMapScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
+  const route = useRoute<RouteProp<FarmerHomeStackParamList, 'SatelliteMap'>>();
+  const farmIdFromRoute = route.params?.farmId;
   const userRole = (user as { role?: 'farmer' | 'owner' })?.role;
+  // Access farm listings at top level (hook must be called unconditionally)
+  const { getListingById } = useFarmListings();
 
   const {
     ndviEnabled,
@@ -89,13 +98,29 @@ export function useSatelliteMapScreen() {
     const initialize = async () => {
       setIsLoading(true);
       await loadPlotData();
+      // If navigated with a farmId, load its GeoJSON and focus map
+      if (farmIdFromRoute) {
+        const listing = getListingById(farmIdFromRoute);
+        if (listing?.plotGeoJSON) {
+          setPlotGeoJSON(listing.plotGeoJSON);
+          // Determine centroid and appropriate zoom
+          const firstFeature = listing.plotGeoJSON.features?.[0];
+          const coords = firstFeature?.geometry?.coordinates?.[0] || [];
+          if (Array.isArray(coords) && coords.length > 0) {
+            const centroid = calculatePolygonCentroid(coords as any);
+            setMapCenter(centroid);
+            const zoom = estimateZoomForPolygon(coords as any);
+            setZoomLevel(zoom);
+          }
+        }
+      }
       if (!isMountedRef.current) return;
       fetchUserLocation();
       if (!isMountedRef.current) return;
       setIsLoading(false);
     };
     initialize();
-  }, [loadPlotData, fetchUserLocation]);
+  }, [loadPlotData, fetchUserLocation, farmIdFromRoute]);
 
   const selectedIndexRef = React.useRef(selectedDateIndex);
   selectedIndexRef.current = selectedDateIndex;

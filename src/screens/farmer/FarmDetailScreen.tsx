@@ -7,6 +7,7 @@ import {
   Image,
   TouchableOpacity,
   Linking,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -49,8 +50,13 @@ export default function FarmDetailScreen() {
   }
 
   const handleContactOwner = () => {
+    Alert.alert('Contact Owner', 'Are you sure you want to contact the owner?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Contact', onPress: () => {
+        Linking.openURL(`tel:+919876543210`);
+      } },
+    ]);
     // In a real app, this would open contact options
-    Linking.openURL(`tel:+919876543210`);
   };
 
   return (
@@ -186,6 +192,15 @@ export default function FarmDetailScreen() {
         >
           <Ionicons name="call" size={20} color={colors.surface} />
           <Text style={styles.contactButtonText}>Contact Owner</Text>
+        </TouchableOpacity>
+        {/* View in Map button */}
+        <TouchableOpacity
+          style={styles.viewMapButton}
+          onPress={() => navigation.navigate('SatelliteMap', { farmId })}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="map" size={20} color={colors.surface} />
+          <Text style={styles.contactButtonText}>View in Map</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -334,6 +349,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginHorizontal: spacing.xl,
     marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  viewMapButton: {
+    backgroundColor: colors.secondary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.md,
     gap: spacing.sm,
   },
   contactButtonText: {

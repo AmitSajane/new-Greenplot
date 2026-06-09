@@ -34,7 +34,7 @@ export type FarmerHomeStackParamList = {
   LeaseConfirmation: { leaseTypeId: string; leaseTypeTitle: string };
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
   AIAssistant: undefined;
-  SatelliteMap: undefined;
+  SatelliteMap: { farmId?: string } | undefined;
   LaborConnect: undefined;
   SoilTest: undefined;
 };
@@ -53,7 +53,7 @@ export default function FarmerHomeStack() {
       <Stack.Screen
         name="AIAssistant"
         component={AIAssistantScreen}
-        options={{ title: 'AI Assistant' }}
+        options={{ title: 'Kisan Mitra' }}
       />
       <Stack.Screen
         name="FarmDetail"

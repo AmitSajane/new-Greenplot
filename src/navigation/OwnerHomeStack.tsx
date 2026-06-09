@@ -14,10 +14,12 @@ import SatelliteMapScreen from '../screens/satelliteMap';
 import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import OwnerWorkReportScreen from '../screens/owner/OwnerWorkReportScreen';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
+import SoilTestScreen from '../screens/SoilTestScreen';
 
 export type OwnerHomeStackParamList = {
   OwnerHome: undefined;
   NotificationsCenter: undefined;
+  SoilTest: undefined;
   AddFarm:
     | {
         acres?: string;
@@ -51,7 +53,7 @@ export default function OwnerHomeStack() {
       <Stack.Screen
         name="AIAssistant"
         component={AIAssistantScreen}
-        options={{ title: 'AI Assistant' }}
+        options={{ title: 'Kisan Mitra' }}
       />
       <Stack.Screen
         name="AddFarm"
@@ -117,6 +119,11 @@ export default function OwnerHomeStack() {
         name="OwnerWorkReport"
         component={OwnerWorkReportScreen}
         options={{ title: 'Work Report' }}
+      />
+      <Stack.Screen
+        name="SoilTest"
+        component={SoilTestScreen}
+        options={{ title: 'Soil Test' }}
       />
     </Stack.Navigator>
   );

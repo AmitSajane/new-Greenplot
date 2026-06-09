@@ -1,118 +1,148 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import {
-  BROWSE_BY_CROP,
-  HomeFeaturedListing,
-  NEWS_UPDATES,
-  YOUR_ACTIVITY,
-} from '../../../constants/farmerHomeMockData';
+  FARMER_AI_ADVISORY,
+  FARMER_BROWSE_CROPS,
+  FARMER_CROP_HEALTH,
+  FARMER_NEARBY_CHIPS,
+  FARMER_NEWS,
+  FARMER_QUICK_ACTIONS,
+  FARMER_SNAPSHOT,
+  FARMER_TASKS,
+  FARMER_TICKER,
+  FARMER_WEATHER,
+  type FarmerAction,
+  type NearbyChip,
+} from '../constants/farmerDashboardData';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'FarmerHome'>;
 
-const NEARBY_CHIPS = [
-  { id: 'nearby', label: 'Nearby' as const },
-  { id: 'purnea', label: 'Purnea' as const },
-  { id: 'katihar', label: 'Katihar' as const },
-] as const;
+/** Minimal shape we need from the parent tab navigator for cross-tab routing. */
+type ParentNav = { navigate: (name: string, params?: object) => void };
+
+export interface FarmerListingCard {
+  id: string;
+  title: string;
+  priceLabel: string;
+  locationLabel: string;
+  acresLabel: string;
+  leaseType?: string;
+  imageUri?: string;
+}
 
 export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { getFeaturedListings } = useFarmListings();
+
   const [query, setQuery] = useState('');
-  const [selectedNearby, setSelectedNearby] = useState<'Nearby' | 'Purnea' | 'Katihar'>('Nearby');
+  const [selectedNearby, setSelectedNearby] = useState<NearbyChip>('Nearby');
 
-  const featuredListings: HomeFeaturedListing[] = useMemo(() => {
-    return getFeaturedListings().map((listing) => ({
-      id: listing.id,
-      title: listing.title,
-      pricePerYear: listing.pricePerYear,
-      locationLabel: listing.locationLabel || `${listing.location}, ${listing.district}`,
-      acresLabel: listing.acresLabel || `${listing.acres} Acres`,
-      image: { uri: listing.imageUrl },
-      leaseType: listing.leaseType,
-    }));
-  }, [getFeaturedListings]);
+  // Stable cross-tab navigation helper.
+  const goTab = useCallback(
+    (tab: string, params?: object) => (navigation.getParent() as ParentNav | undefined)?.navigate(tab, params),
+    [navigation],
+  );
 
-  const quickActions = useMemo(
-    () => [
-      {
-        id: 'qa1',
-        label: 'Add Crop',
-        icon: 'add-circle-outline' as const,
-        tint: 'green' as const,
-        onPress: () => (navigation.getParent() as { navigate?: (n: string) => void })?.navigate?.('MyCrops'),
-      },
-      {
-        id: 'qa2',
-        label: 'Create Work',
-        icon: 'document-text-outline' as const,
-        tint: 'blue' as const,
-        onPress: () => (navigation.getParent() as { navigate?: (n: string) => void })?.navigate?.('MyCrops'),
-      },
-      {
-        id: 'qa3',
-        label: 'Hire Labor',
-        icon: 'mail-outline' as const,
-        tint: 'orange' as const,
-        onPress: () => navigation.navigate('LaborConnect'),
-      },
-      {
-        id: 'qa4',
-        label: 'Lease Status',
-        icon: 'help-circle-outline' as const,
-        tint: 'purple' as const,
-        onPress: () => navigation.navigate('LeaseStatus'),
-      },
-    ],
-    [navigation]
+  /**
+   * Single source of truth for navigation. Every actionable item in the mock
+   * data carries a `FarmerAction`; this resolver maps it to a real screen so
+   * the data stays declarative and there are no per-item closures to leak.
+   */
+  const onAction = useCallback(
+    (action: FarmerAction) => {
+      switch (action) {
+        case 'leases':
+          return navigation.navigate('MyActiveLeases');
+        case 'crops':
+        case 'addCrop':
+        case 'createWork':
+          return goTab('MyCrops');
+        case 'tasks':
+        case 'labor':
+          return navigation.navigate('LaborConnect');
+        case 'satellite':
+          return navigation.navigate('SatelliteMap');
+        case 'soil':
+          return navigation.navigate('SoilTest');
+        case 'market':
+          return goTab('Market');
+        case 'marketAlert':
+          return goTab('Market', { screen: 'OversupplyAlert', params: { cropId: 'tomato' } });
+        case 'leaseStatus':
+          return navigation.navigate('LeaseStatus');
+        case 'aiAssistant':
+          return navigation.navigate('AIAssistant');
+        case 'allLands':
+          return navigation.navigate('AllAvailableLands');
+        case 'notifications':
+          return navigation.navigate('NotificationsCenter');
+        case 'hub':
+          return goTab('Hub');
+        case 'settings':
+          return goTab('Settings');
+        default:
+          return undefined;
+      }
+    },
+    [navigation, goTab],
+  );
+
+  const onTickerPress = useCallback(
+    (cropId: string) => goTab('Market', { screen: 'PriceTrend', params: { cropId } }),
+    [goTab],
+  );
+
+  const onListingPress = useCallback(
+    (farmId: string) => navigation.navigate('FarmDetail', { farmId }),
+    [navigation],
+  );
+
+  const featuredListings: FarmerListingCard[] = useMemo(
+    () =>
+      getFeaturedListings().map(listing => ({
+        id: listing.id,
+        title: listing.title,
+        priceLabel: `${listing.pricePerYear}/yr`,
+        locationLabel: listing.locationLabel || `${listing.location}, ${listing.district}`,
+        acresLabel: listing.acresLabel || `${listing.acres} Acres`,
+        leaseType: listing.leaseType,
+        imageUri: listing.imageUrl,
+      })),
+    [getFeaturedListings],
   );
 
   return {
-    userName: user?.name || 'Rajesh',
-    locationLabel: (user as { location?: string })?.location || 'Purnea, Bihar',
+    userName: user?.name || 'Rajesh Kumar',
+    locationLabel: (user as { location?: string })?.location || 'Purnea, Bihar · Kisan',
+
+    // Static (stable) content
+    weather: FARMER_WEATHER,
+    snapshot: FARMER_SNAPSHOT,
+    aiAdvisory: FARMER_AI_ADVISORY,
+    ticker: FARMER_TICKER,
+    tasks: FARMER_TASKS,
+    quickActions: FARMER_QUICK_ACTIONS,
+    cropHealth: FARMER_CROP_HEALTH,
+    news: FARMER_NEWS,
+    browseCrops: FARMER_BROWSE_CROPS,
+    nearbyChips: FARMER_NEARBY_CHIPS,
+
+    // Dynamic
+    featuredListings,
     query,
     setQuery,
-    nearbyChips: NEARBY_CHIPS,
     selectedNearby,
     setSelectedNearby,
-    featuredListings,
-    browseCrops: BROWSE_BY_CROP,
-    news: NEWS_UPDATES,
-    activities: YOUR_ACTIVITY,
-    quickActions,
-    onMenuPress: useCallback(() => {}, []),
-    onLanguagePress: useCallback(() => {}, []),
-    onNotificationsPress: useCallback(
-      () => navigation.navigate('NotificationsCenter'),
-      [navigation]
-    ),
-    onMicPress: useCallback(() => navigation.navigate('AIAssistant'), [navigation]),
-    onMyLeasesPress: useCallback(() => navigation.navigate('MyActiveLeases'), [navigation]),
-    onSatellitePress: useCallback(() => navigation.navigate('SatelliteMap'), [navigation]),
-    onLaborPress: useCallback(() => navigation.navigate('LaborConnect'), [navigation]),
-    onSoilTestPress: useCallback(() => navigation.navigate('SoilTest'), [navigation]),
-    onLeasesMetrics: useCallback(() => navigation.navigate('MyActiveLeases'), [navigation]),
-    onCropsMetrics: useCallback(
-      () => (navigation as { navigate: (n: string) => void }).navigate('MyCrops'),
-      [navigation]
-    ),
-    onTasksMetrics: useCallback(() => navigation.navigate('LaborConnect'), [navigation]),
-    onViewAllLands: useCallback(
-      () => (navigation as { navigate: (n: string) => void }).navigate('AllAvailableLands'),
-      [navigation]
-    ),
-    onListingPress: useCallback(
-      (id: string) => navigation.navigate('FarmDetail', { farmId: id }),
-      [navigation]
-    ),
-    onNewsPress: useCallback(() => {}, []),
-    onActivityPress: useCallback(() => {}, []),
-    onCropPress: useCallback(() => {}, []),
+
+    // Stable handlers
+    onAction,
+    onTickerPress,
+    onListingPress,
   };
 }
 

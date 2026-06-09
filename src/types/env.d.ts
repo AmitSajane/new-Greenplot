@@ -1,0 +1,7 @@
+/** Type declarations for environment variables exposed via react-native-dotenv. */
+declare module '@env' {
+  export const MAPBOX_ACCESS_TOKEN: string | undefined;
+  export const GEOCODE_API_KEY: string | undefined;
+  export const GEOCODE_BASE_URL: string | undefined;
+  export const SOIL_API_BASE_URL: string | undefined;
+}

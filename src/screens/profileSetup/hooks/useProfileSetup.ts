@@ -33,7 +33,7 @@ export function useProfileSetup({
 
   const phoneNumber = route.params?.phoneNumber ?? user?.phoneNumber ?? '';
   const preselectedRole = route.params?.role as UserRole | undefined;
-  const prefilledName = route.params?.name ?? '';
+  const prefilledName =  'Amit' //route.params?.name ?? '';
   const prefilledEmail = route.params?.email ?? '';
 
   const [name, setName] = useState(user?.name ?? prefilledName);

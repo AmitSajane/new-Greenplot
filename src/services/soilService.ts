@@ -1,8 +1,9 @@
 import { SoilResponse } from '../types/soil';
+import { ENV } from '../config/env';
 
 export const fetchSoilData = async (lat: number, lon: number): Promise<SoilResponse> => {
   try {
-    const response = await fetch(`https://www.kaegro.com/farms/api/soil?lat=${lat}&lon=${lon}`, {
+    const response = await fetch(`${ENV.soilApiBaseUrl}?lat=${lat}&lon=${lon}`, {
       method: 'GET',
       headers: {
         accept: '*/*',

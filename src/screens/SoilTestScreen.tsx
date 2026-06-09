@@ -1,115 +1,166 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Image, TouchableOpacity, SafeAreaView } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useTranslation } from 'react-i18next';
 
-import { colors, spacing, radius } from '../theme/tokens';
 import { fetchSoilData } from '../services/soilService';
 import { SoilResponse } from '../types/soil';
+import { buildSoilReport } from '../utils/soil/soilAdvisor';
+import { reverseGeocode, forwardGeocode } from '../utils/geo/geocoding';
+import { getCurrentCoords } from '../utils/geo/location';
 
 import { Text } from '../components/atoms/Text';
 import { Loader } from '../components/atoms/Loader';
 import { Button } from '../components/atoms/Button';
 import { MapSection } from '../components/organisms/MapSection';
-import { SoilSummaryCard } from '../components/organisms/SoilSummaryCard';
-import { SoilDetailsSection } from '../components/organisms/SoilDetailsSection';
+import { SoilReportView } from '../components/soil/SoilReport';
+
+// Fallback region used if location permission is denied / unavailable.
+const DEFAULT_COORDS = { lat: 16.591018669999993, lon: 74.91707610999997 };
 
 export default function SoilTestScreen() {
   const navigation = useNavigation();
-  const { t } = useTranslation();
-  const [loading, setLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(false);
+  const [locating, setLocating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<SoilResponse | null>(null);
+  const [coords, setCoords] = useState(DEFAULT_COORDS);
+  const [address, setAddress] = useState('');
 
-  // Mock location based on the cURL coordinates
-  const handleGetLocation = async () => {
+  const report = useMemo(() => (data ? buildSoilReport(data) : null), [data]);
+
+  const fetchForCoords = useCallback(async (lat: number, lon: number) => {
     setLoading(true);
     setError(null);
     try {
-      // In a real app, use Geolocation API here
-      const lat = 16.591018669999993;
-      const lon = 74.91707610999997;
-      
-      const soilData = await fetchSoilData(lat, lon);
-      setData(soilData);
-    } catch (err) {
+      const soil = await fetchSoilData(lat, lon);
+      setData(soil);
+    } catch {
       setError('Failed to fetch soil data. Please try again.');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleMapPress = async (lat: number, lon: number) => {
-    setLoading(true);
-    setError(null);
+  // Resolve the device location, label it, and load soil for that point.
+  const locateMe = useCallback(async () => {
+    setLocating(true);
+    let point = DEFAULT_COORDS;
     try {
-      const soilData = await fetchSoilData(lat, lon);
-      setData(soilData);
-    } catch (err) {
-      setError('Failed to fetch soil data for selected location. Please try again.');
-    } finally {
-      setLoading(false);
+      point = await getCurrentCoords();
+    } catch {
+      point = DEFAULT_COORDS; // permission denied / no GPS → fall back
     }
-  };
+    setCoords(point);
+    reverseGeocode(point.lat, point.lon)
+      .then(setAddress)
+      .catch(() => setAddress(`${point.lat.toFixed(4)}, ${point.lon.toFixed(4)}`));
+    setLocating(false);
+    await fetchForCoords(point.lat, point.lon);
+  }, [fetchForCoords]);
 
-  // Optionally fetch immediately or wait for user to press button.
-  // The design shows the location button on the map, so let's fetch on mount
-  // to match the populated UI in the screenshot.
+  // Forward-geocode the typed place and load soil for it.
+  const onSubmitAddress = useCallback(async () => {
+    const query = address.trim();
+    if (!query) return;
+    setLocating(true);
+    try {
+      const place = await forwardGeocode(query);
+      if (place) {
+        setCoords({ lat: place.lat, lon: place.lon });
+        setAddress(place.label);
+        await fetchForCoords(place.lat, place.lon);
+      } else {
+        setError('Location not found. Try a nearby town or village.');
+      }
+    } catch {
+      setError('Could not search that location. Please try again.');
+    } finally {
+      setLocating(false);
+    }
+  }, [address, fetchForCoords]);
+
+  const handleMapPress = useCallback(
+    (lat: number, lon: number) => {
+      setCoords({ lat, lon });
+      reverseGeocode(lat, lon)
+        .then(setAddress)
+        .catch(() => setAddress(`${lat.toFixed(4)}, ${lon.toFixed(4)}`));
+      fetchForCoords(lat, lon);
+    },
+    [fetchForCoords],
+  );
+
   useEffect(() => {
-    handleGetLocation();
+    locateMe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.primaryDark} />
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
+          <Ionicons name="arrow-back" size={22} color="#0F4A28" />
         </TouchableOpacity>
-        
         <View style={styles.headerTitleContainer}>
-          <Text variant="h2" weight="900" color={colors.primaryDark}>{t('soilTest.title')}</Text>
-          <Text variant="caption" weight="600" color={colors.textSecondary}>{t('soilTest.subtitle')}</Text>
+          <Text variant="h2" weight="900" color="#0F4A28">
+            Soil Test
+          </Text>
+          <Text variant="caption" weight="600" color="#6B8074">
+            Know your soil, grow more 🌱
+          </Text>
         </View>
-        
-        <Image 
-          source={{ uri: 'https://i.pravatar.cc/100?img=11' }} 
-          style={styles.profileImage} 
+        <View style={styles.headerIcon}>
+          <Ionicons name="flask" size={20} color="#1A6B3A" />
+        </View>
+      </View>
+
+      {/* Location bar */}
+      <View style={styles.locCard}>
+        <Ionicons name="location" size={18} color="#1A6B3A" />
+        <TextInput
+          style={styles.locInput}
+          value={address}
+          onChangeText={setAddress}
+          onSubmitEditing={onSubmitAddress}
+          placeholder="Enter your village or city…"
+          placeholderTextColor="#9EB8A8"
+          returnKeyType="search"
         />
+        <TouchableOpacity style={styles.locBtn} onPress={locateMe} activeOpacity={0.85} disabled={locating}>
+          {locating ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="locate" size={18} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {loading ? (
-          <Loader message={t('soilTest.analyzing')} />
+          <Loader message="Analyzing your soil…" />
         ) : error ? (
           <View style={styles.errorContainer}>
-            <Text color={colors.danger}>{t('soilTest.error')}</Text>
-            <Button label={t('soilTest.retry')} onPress={handleGetLocation} style={styles.retryButton} />
+            <Ionicons name="cloud-offline" size={40} color="#C8D8CC" />
+            <Text color="#C02828" style={styles.errorText}>
+              {error}
+            </Text>
+            <Button label="Try again" onPress={locateMe} style={styles.retryButton} />
           </View>
-        ) : data ? (
+        ) : data && report ? (
           <>
-            <MapSection 
-              location={data.location} 
-              onGetLocation={handleGetLocation} 
-              onMapPress={handleMapPress}
-            />
-            
-            <SoilSummaryCard 
-              soilType={data.soil_type.texture_class} 
-            />
-            
-            <SoilDetailsSection 
-              chemical={data.chemical} 
-            />
-            
-            <Button
-              label={t('soilTest.viewGuide')}
-              variant="brown"
-              icon={<Ionicons name="tractor-outline" size={20} color="white" />}
-              style={styles.footerButton}
-              onPress={() => {}}
-            />
+            <MapSection location={coords} onGetLocation={locateMe} onMapPress={handleMapPress} />
+            <View style={styles.reportGap} />
+            <SoilReportView report={report} />
           </>
         ) : null}
       </ScrollView>
@@ -118,45 +169,59 @@ export default function SoilTestScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#F8F9FA', // Light grayish background
-  },
+  safeArea: { flex: 1, backgroundColor: '#F4F8F5' },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#fff',
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: '#E8F0EC',
   },
   backButton: {
-    padding: spacing.xs,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    marginLeft: spacing.md,
-  },
-  profileImage: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  scrollContent: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xxl,
-  },
-  errorContainer: {
-    padding: spacing.xl,
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#E4F4EC',
     alignItems: 'center',
+    justifyContent: 'center',
   },
-  retryButton: {
-    marginTop: spacing.md,
+  headerTitleContainer: { flex: 1, marginLeft: 12 },
+  headerIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#E4F4EC',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  footerButton: {
-    marginTop: spacing.xl,
+  locCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 16,
+    marginTop: 12,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E8F0EC',
+    borderRadius: 14,
+    paddingLeft: 12,
+    paddingRight: 6,
+    paddingVertical: 6,
   },
+  locInput: { flex: 1, fontSize: 13, color: '#1C2E18', paddingVertical: 6 },
+  locBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 11,
+    backgroundColor: '#1A6B3A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scrollContent: { padding: 16, paddingBottom: 32 },
+  errorContainer: { paddingVertical: 48, alignItems: 'center', gap: 10 },
+  errorText: { textAlign: 'center' },
+  retryButton: { marginTop: 8 },
+  reportGap: { height: 16 },
 });

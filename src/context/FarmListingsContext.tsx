@@ -72,6 +72,28 @@ const INITIAL_LISTINGS: FarmListing[] = [
     lastYearCrop: 'Wheat',
     lastYearYield: '22 quintals',
     lastYearEarnings: '₹1,32,000',
+    // Owner-drawn field boundary (Purnea, Bihar area)
+    plotGeoJSON: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [87.4648, 25.7777],
+                [87.4700, 25.7777],
+                [87.4700, 25.7820],
+                [87.4648, 25.7820],
+                [87.4648, 25.7777],
+              ],
+            ],
+          },
+          properties: { name: 'Fertile Wheat Land', area: '5 acres' },
+        },
+      ],
+    },
   },
   {
     id: 'initial-2',
@@ -95,6 +117,28 @@ const INITIAL_LISTINGS: FarmListing[] = [
     lastYearCrop: 'Paddy',
     lastYearYield: '18 quintals',
     lastYearEarnings: '₹98,000',
+    // Owner-drawn field boundary (Banmankhi area)
+    plotGeoJSON: {
+      type: 'FeatureCollection',
+      features: [
+        {
+          type: 'Feature',
+          geometry: {
+            type: 'Polygon',
+            coordinates: [
+              [
+                [87.1900, 25.5300],
+                [87.1940, 25.5300],
+                [87.1940, 25.5330],
+                [87.1900, 25.5330],
+                [87.1900, 25.5300],
+              ],
+            ],
+          },
+          properties: { name: 'Paddy Land', area: '2.5 acres' },
+        },
+      ],
+    },
   },
   {
     id: 'initial-3',

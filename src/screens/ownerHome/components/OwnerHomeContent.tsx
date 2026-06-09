@@ -1,143 +1,320 @@
 import React from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { colors } from '../../../theme/tokens';
-import {
-  OwnerHeader,
-  ListYourLandBanner,
-  DashboardStatsCard,
-  TotalViewsCard,
-  RecentActivityItem,
-  FloatingMicButton,
-  AlertsNotificationCard,
-} from '../../../components/ownerHome';
-import { SatelliteMonitoringCard } from '../../../components/satelliteMap';
-import { LaborConnectCard } from '../../../components/laborConnect/LaborConnectCard';
-import { SoilTestCard } from '../../../components/organisms/SoilTestCard';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
-import { ownerHomeStyles as styles } from '../styles/ownerHome.styles';
-import { WorkReportCard } from './WorkReportCard';
+import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
 
-export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = (vm) => (
-  <SafeAreaView style={styles.safeArea}>
-    <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-      <OwnerHeader
-        name={vm.userName}
-        hasNotifications={vm.hasNotifications}
-        onNotificationPress={vm.onNotificationPress}
-      />
-      <ListYourLandBanner onPress={vm.onAddListing} />
-      <SatelliteMonitoringCard onPress={vm.onSatellitePress} />
-      <View style={styles.sectionGap} />
-      <LaborConnectCard onPress={vm.onLaborPress} />
-      <View style={styles.sectionGap} />
-      <WorkReportCard onPress={vm.onWorkReportPress} />
-      <View style={styles.sectionGap} />
-      <SoilTestCard onPress={vm.onSoilTestPress} />
-      <View style={styles.sectionHeader}>
-        <Ionicons name="bar-chart" size={20} color={colors.primary} />
-        <Text style={styles.sectionTitle}>My Dashboard</Text>
-      </View>
-      <View style={styles.statsRow}>
-        <DashboardStatsCard
-          icon="seedling"
-          value={vm.dashboard.totalLands}
-          label="Total Lands"
-          onPress={vm.onDashboardStatPress}
-        />
-        <View style={styles.statsSpacer} />
-        <DashboardStatsCard
-          icon="document"
-          value={vm.dashboard.activeLeasesCount}
-          label="Active Leases"
-          onPress={vm.onDashboardStatPress}
-        />
-      </View>
-      <View style={styles.statsRow}>
-        <DashboardStatsCard
-          icon="cash"
-          value={vm.dashboard.revenueDisplay}
-          label="Revenue Earned"
-          onPress={vm.onDashboardStatPress}
-        />
-        <View style={styles.statsSpacer} />
-        <DashboardStatsCard
-          icon="leaf"
-          value={vm.dashboard.cropActivityCount}
-          label="Crop Activity"
-          onPress={vm.onDiseaseRiskPress}
-        />
-      </View>
-      <View style={styles.quickActionsHeader}>
-        <Text style={styles.quickActionsTitle}>Quick Actions</Text>
-      </View>
-      <View style={styles.quickActionsRow}>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={vm.onAddListing}
-          activeOpacity={0.8}
-        >
-          <View style={styles.quickActionIconWrap}>
-            <Ionicons name="add-circle" size={28} color={colors.primary} />
+function initials(name: string) {
+  return name
+    .split(' ')
+    .map(p => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
+  return (
+    <View style={s.safeArea}>
+      <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* ───────── Header + portfolio ───────── */}
+        <LinearGradient colors={OWNER_HEADER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
+          <SafeAreaView edges={['top']}>
+            <View style={s.header}>
+              <View style={s.headerTop}>
+                <TouchableOpacity style={s.avatar} onPress={vm.onAvatar} activeOpacity={0.8}>
+                  <Text style={s.avatarText}>{initials(vm.userName)}</Text>
+                </TouchableOpacity>
+                <View>
+                  <Text style={s.hi}>Good morning 👋</Text>
+                  <Text style={s.name}>{vm.userName}</Text>
+                  <View style={s.locRow}>
+                    <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />
+                    <Text style={s.locText}>{vm.locationLabel}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity style={s.bell} onPress={vm.onBell} activeOpacity={0.8}>
+                  <Ionicons name="notifications" size={18} color="#fff" />
+                  {vm.hasNotifications && <View style={s.bellDot} />}
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
+                <Text style={s.portLabel}>Total portfolio value</Text>
+                <Text style={s.portVal}>{vm.portfolio.valueDisplay}</Text>
+                <View style={s.portChip}>
+                  <Ionicons name="trending-up" size={12} color="#CFEFDB" />
+                  <Text style={s.portChipText}>+{vm.portfolio.changePct}% this year</Text>
+                </View>
+                <View style={s.portStats}>
+                  {[
+                    ['Lands', vm.portfolio.lands],
+                    ['Leased', vm.portfolio.leased],
+                    ['Vacant', vm.portfolio.vacant],
+                    ['Acres', vm.portfolio.acresDisplay],
+                  ].map(([label, value], i, arr) => (
+                    <View key={label as string} style={[s.pst, i === arr.length - 1 && s.pstLast]}>
+                      <Text style={s.pstV}>{value}</Text>
+                      <Text style={s.pstL}>{label}</Text>
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+
+        {/* ───────── Revenue ───────── */}
+        <View style={s.section}>
+          <View style={s.card}>
+            <TouchableOpacity style={s.revRow} onPress={vm.onRevenuePress} activeOpacity={0.8}>
+              <View>
+                <Text style={s.revLabel}>Revenue · this month</Text>
+                <Text style={s.revVal}>{vm.revenue.thisMonthDisplay}</Text>
+                <Text style={s.revChip}>▲ {vm.revenue.changePct}% vs last month</Text>
+              </View>
+              <View style={s.spark}>
+                {vm.revenue.sparkline.map((h, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      s.sparkBar,
+                      { height: `${h}%` },
+                      i === vm.revenue.sparkline.length - 1 && s.sparkBarHi,
+                    ]}
+                  />
+                ))}
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity style={s.payoutRow} onPress={vm.onPayoutPress} activeOpacity={0.8}>
+              <Ionicons name="calendar" size={16} color="#B87214" />
+              <Text style={s.payoutText}>
+                Next payout{' '}
+                <Text style={{ fontWeight: '800', color: '#0D1509' }}>{vm.revenue.payoutAmountDisplay}</Text>
+                {' '}· due {vm.revenue.payoutDate}
+              </Text>
+              <Text style={s.payoutGo}>Details ›</Text>
+            </TouchableOpacity>
           </View>
-          <Text style={styles.quickActionLabel}>Add Land</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.quickActionBtn}
-          onPress={vm.onLeaseRequestsPress}
-          activeOpacity={0.8}
-        >
-          <View style={styles.quickActionIconWrap}>
-            <Ionicons name="document-text" size={28} color={colors.info} />
+        </View>
+
+        {/* ───────── Key metrics ───────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={s.sectionTitleRow}>
+              <Ionicons name="stats-chart" size={16} color="#1A6B3A" />
+              <Text style={s.sectionTitle}>Key metrics</Text>
+            </View>
           </View>
-          <Text style={styles.quickActionLabel}>Lease Requests</Text>
-        </TouchableOpacity>
+          <View style={s.tilesWrap}>
+            <MetricTile
+              icon="pie-chart"
+              t="green"
+              value={`${vm.metrics.occupancyPct}%`}
+              label="Occupancy"
+              sub={vm.metrics.occupancySub}
+              subColor={tone.green.fg}
+              onPress={vm.onOccupancyPress}
+            />
+            <MetricTile
+              icon="document-text"
+              t="blue"
+              value={String(vm.metrics.activeLeases)}
+              label="Active leases"
+              sub={vm.metrics.activeLeasesSub}
+              subColor={tone.blue.fg}
+              onPress={vm.onActiveLeasesPress}
+            />
+            <MetricTile
+              icon="alert-circle"
+              t="red"
+              value={vm.metrics.pendingDuesDisplay}
+              valueColor={tone.red.fg}
+              label="Pending dues"
+              sub={vm.metrics.pendingDuesSub}
+              subColor={tone.red.fg}
+              onPress={vm.onDuesPress}
+            />
+            <MetricTile
+              icon="cash"
+              t="amber"
+              value={vm.metrics.avgRentDisplay}
+              label="Avg rent / acre"
+              sub="per year"
+              subColor="#6B8074"
+              onPress={vm.onAvgRentPress}
+            />
+          </View>
+        </View>
+
+        {/* ───────── Action required ───────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={s.sectionTitleRow}>
+              <Ionicons name="flash" size={16} color="#1A6B3A" />
+              <Text style={s.sectionTitle}>Action required</Text>
+            </View>
+            <Text style={s.sectionLink} onPress={vm.onActionViewAll}>View all</Text>
+          </View>
+          {vm.actionItems.map(item => {
+            const c = tone[item.tone];
+            return (
+              <View key={item.id} style={[s.alertRow, { backgroundColor: c.bg, borderColor: c.bg }]}>
+                <View style={s.alertIcon}>
+                  <Ionicons name={item.icon} size={16} color={c.fg} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.alertTitle, { color: c.strong }]}>{item.title}</Text>
+                  <Text style={[s.alertSub, { color: c.fg }]}>{item.sub}</Text>
+                </View>
+                <TouchableOpacity style={[s.alertBtn, { backgroundColor: c.fg }]} onPress={item.onPress} activeOpacity={0.85}>
+                  <Text style={s.alertBtnText}>{item.actionLabel}</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* ───────── My properties ───────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={s.sectionTitleRow}>
+              <Ionicons name="map" size={16} color="#1A6B3A" />
+              <Text style={s.sectionTitle}>My properties</Text>
+            </View>
+            <Text style={s.sectionLink} onPress={vm.onPropertiesViewAll}>
+              All {vm.properties.length} ›
+            </Text>
+          </View>
+          <View style={s.card}>
+            {vm.properties.map((p, i) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[s.propRow, i === vm.properties.length - 1 && { borderBottomWidth: 0 }]}
+                onPress={() => vm.onPropertyPress(p.id)}
+                activeOpacity={0.8}
+              >
+                <View style={s.propImg}>
+                  <Text style={s.propEmoji}>{p.emoji}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={s.propNameRow}>
+                    <Text style={s.propName}>{p.name}</Text>
+                    <View
+                      style={[
+                        s.statusChip,
+                        { backgroundColor: p.status === 'leased' ? tone.green.bg : tone.amber.bg },
+                      ]}
+                    >
+                      <Text style={[s.statusText, { color: p.status === 'leased' ? tone.green.fg : tone.amber.fg }]}>
+                        {p.status}
+                      </Text>
+                    </View>
+                  </View>
+                  <Text style={s.propMeta}>{p.meta}</Text>
+                </View>
+                <View style={s.propRight}>
+                  {p.status === 'leased' ? (
+                    <>
+                      <Text style={s.propRent}>{p.rentDisplay}</Text>
+                      <Text style={s.propNext}>Next: {p.nextPayment}</Text>
+                    </>
+                  ) : (
+                    <Text style={s.propCta}>{p.ctaLabel} ›</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+
+        {/* ───────── Farm tools ───────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={s.sectionTitleRow}>
+              <Ionicons name="construct" size={16} color="#1A6B3A" />
+              <Text style={s.sectionTitle}>Farm tools</Text>
+            </View>
+          </View>
+          <View style={s.toolsGrid}>
+            {vm.tools.map(t => {
+              const c = tone[t.tone];
+              return (
+                <TouchableOpacity key={t.key} style={s.tool} onPress={t.onPress} activeOpacity={0.8}>
+                  <View style={[s.toolIcon, { backgroundColor: c.bg }]}>
+                    <Ionicons name={t.icon} size={18} color={c.fg} />
+                  </View>
+                  <Text style={s.toolLabel}>{t.label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* ───────── Recent activity ───────── */}
+        <View style={s.section}>
+          <View style={s.sectionHead}>
+            <View style={s.sectionTitleRow}>
+              <Ionicons name="time" size={16} color="#1A6B3A" />
+              <Text style={s.sectionTitle}>Recent activity</Text>
+            </View>
+            <Text style={s.sectionLink} onPress={vm.onActivityViewAll}>View all</Text>
+          </View>
+          <View style={[s.card, { paddingHorizontal: 12 }]}>
+            {vm.activities.map((a, i) => {
+              const c = tone[a.tone];
+              return (
+                <TouchableOpacity
+                  key={a.id}
+                  style={[s.actRow, i === vm.activities.length - 1 && { borderBottomWidth: 0 }]}
+                  onPress={a.onPress}
+                  activeOpacity={0.8}
+                >
+                  <View style={[s.actDot, { backgroundColor: c.bg }]}>
+                    <Ionicons name={a.icon} size={15} color={c.fg} />
+                  </View>
+                  <View>
+                    <Text style={s.actTitle}>{a.title}</Text>
+                    <Text style={s.actSub}>{a.sub}</Text>
+                  </View>
+                  <Text style={s.actTime}>{a.time}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+      </ScrollView>
+
+      <TouchableOpacity style={s.fab} onPress={vm.onMicPress} activeOpacity={0.85}>
+        <Ionicons name="mic" size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+interface MetricTileProps {
+  icon: string;
+  t: 'green' | 'blue' | 'red' | 'amber';
+  value: string;
+  valueColor?: string;
+  label: string;
+  sub: string;
+  subColor: string;
+  onPress: () => void;
+}
+
+const MetricTile: React.FC<MetricTileProps> = ({ icon, t, value, valueColor, label, sub, subColor, onPress }) => {
+  const c = tone[t];
+  return (
+    <TouchableOpacity style={s.tile} onPress={onPress} activeOpacity={0.8}>
+      <View style={[s.tileIcon, { backgroundColor: c.bg }]}>
+        <Ionicons name={icon} size={14} color={c.fg} />
       </View>
-      <TotalViewsCard views={vm.views} percentageChange={vm.viewsChangePct} />
-      <View style={styles.recentActivityHeader}>
-        <Text style={styles.recentActivityTitle}>Alerts & Notifications</Text>
-        <Text style={styles.viewAllText} onPress={vm.onAlertsViewAll}>
-          View All
-        </Text>
-      </View>
-      <AlertsNotificationCard
-        variant="approvals"
-        title="Pending Approvals"
-        description="3 budget requests need your approval"
-        actionLabel="Review Now"
-        onPress={vm.onBudgetApprovals}
-      />
-      <AlertsNotificationCard
-        variant="disease"
-        title="Disease Risk Alert"
-        description="Early blight detected in tomato field - Bangalore North"
-        actionLabel="View Details"
-        onPress={vm.onDiseaseRiskPress}
-      />
-      <View style={styles.recentActivityHeader}>
-        <Text style={styles.recentActivityTitle}>Recent Activity</Text>
-        <Text style={styles.viewAllText} onPress={vm.onViewAllActivity}>
-          View All
-        </Text>
-      </View>
-      {vm.recentActivities.map((activity) => (
-        <RecentActivityItem
-          key={activity.id}
-          type={activity.type}
-          title={activity.title}
-          description={activity.description}
-          time={activity.time}
-          avatarUrl={activity.avatarUrl}
-          onPress={() => vm.onActivityPress(activity)}
-          onCallBack={
-            activity.phoneNumber
-              ? () => vm.onCallBack(activity.phoneNumber!)
-              : undefined
-          }
-        />
-      ))}
-    </ScrollView>
-    <FloatingMicButton onPress={vm.onMicPress} />
-  </SafeAreaView>
-);
+      <Text style={[s.tileVal, valueColor ? { color: valueColor } : null]}>{value}</Text>
+      <Text style={s.tileLabel}>{label}</Text>
+      <Text style={[s.tileSub, { color: subColor }]}>{sub}</Text>
+    </TouchableOpacity>
+  );
+};

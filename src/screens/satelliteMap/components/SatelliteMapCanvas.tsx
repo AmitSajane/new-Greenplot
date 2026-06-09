@@ -70,19 +70,26 @@ export const SatelliteMapCanvas: React.FC<SatelliteMapCanvasProps> = ({
           </View>
         </Mapbox.PointAnnotation>
       )}
-      {plotGeoJSON && (
-        <Mapbox.ShapeSource id="plotSource" shape={plotGeoJSON as object}>
-          <Mapbox.FillLayer
-            id="plotFill"
-            style={{
-              fillColor: colors.primary,
-              fillOpacity: 0.3,
-              fillOutlineColor: colors.primary,
-            }}
-          />
-          <Mapbox.LineLayer id="plotLine" style={{ lineColor: colors.primary, lineWidth: 2 }} />
-        </Mapbox.ShapeSource>
-      )}
+            {plotGeoJSON && (
+            <Mapbox.ShapeSource id="plotSource" shape={plotGeoJSON as object}>
+              {/* Highlight owner field with a vivid color */}
+              <Mapbox.FillLayer
+                id="plotFill"
+                style={{
+                  fillColor: colors.success, // bright green for emphasis
+                  fillOpacity: 0.35,
+                  fillOutlineColor: colors.success,
+                }}
+              />
+              <Mapbox.LineLayer
+                id="plotLine"
+                style={{
+                  lineColor: colors.success,
+                  lineWidth: 3,
+                }}
+              />
+            </Mapbox.ShapeSource>
+          )}
       {drawnPlotGeoJSON && (
         <Mapbox.ShapeSource id="drawnPlotSource" shape={drawnPlotGeoJSON as object}>
           <Mapbox.FillLayer

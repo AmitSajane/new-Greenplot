@@ -15,10 +15,9 @@ import { fetchNearbyLaborers } from '../redux';
 import { LaborRootState } from '../redux/store';
 import { Labor } from '../types';
 import { LaborConnectStackParamList } from '../navigation/LaborConnectStack';
+import { initMapbox } from '../../../config/mapbox';
 
-Mapbox.setAccessToken(
-  ''
-);
+initMapbox();
 
 const MAP_CENTER: [number, number] = [74.9171, 16.5909];
 
