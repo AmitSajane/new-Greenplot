@@ -258,3 +258,89 @@ create policy "rewards own" on rewards      for all using (auth.uid() = user_id)
 insert into storage.buckets (id, name, public)
 values ('land-images','land-images', true), ('post-media','post-media', true), ('avatars','avatars', true)
 on conflict (id) do nothing;
+
+-- ============================================================================
+-- Lease module v2 — offers + agreements + denormalised columns + REALTIME
+-- (the app evolved to multiple offers per land + a digital e-sign agreement).
+-- Run this block after the section above. Idempotent.
+-- ============================================================================
+
+do $$ begin
+  create type lease_type_id as enum ('cash_rent','fixed_rent','crop_share','revenue_share','flexible_share','custom');
+exception when duplicate_object then null; end $$;
+
+-- Lease OFFERS (owner attaches 1+ to a land)
+create table if not exists lease_offers (
+  id             uuid primary key default gen_random_uuid(),
+  land_id        uuid not null references lands(id) on delete cascade,
+  owner_id       uuid not null references profiles(id) on delete cascade,
+  type_id        lease_type_id not null,
+  terms          jsonb not null default '{}',
+  tenure         text,
+  available_from text,
+  created_at     timestamptz not null default now()
+);
+create index if not exists lease_offers_land_idx on lease_offers(land_id);
+
+-- lease_requests: add the denormalised columns the app uses
+alter table lease_requests add column if not exists offer_id      uuid references lease_offers(id) on delete cascade;
+alter table lease_requests add column if not exists type_id       lease_type_id;
+alter table lease_requests add column if not exists land_title    text;
+alter table lease_requests add column if not exists terms_summary text;
+alter table lease_requests add column if not exists farmer_name   text;
+alter table lease_requests add column if not exists owner_name    text;
+
+-- Lease AGREEMENTS (created on approval, two-party e-sign)
+create table if not exists lease_agreements (
+  id            uuid primary key default gen_random_uuid(),
+  request_id    uuid references lease_requests(id) on delete cascade,
+  land_id       uuid not null,
+  offer_id      uuid not null,
+  type_id       lease_type_id not null,
+  land_title    text,
+  type_name     text,
+  terms_summary text,
+  full_terms    jsonb not null default '[]',
+  tenure        text,
+  available_from text,
+  farmer_id     uuid not null references profiles(id) on delete cascade,
+  farmer_name   text,
+  owner_id      uuid not null references profiles(id) on delete cascade,
+  owner_name    text,
+  owner_signed  boolean not null default false,
+  farmer_signed boolean not null default false,
+  status        text not null default 'awaiting',  -- awaiting | active | cancelled
+  start_date    text,
+  created_at    timestamptz not null default now()
+);
+
+-- leases (active): add the denormalised columns the app shows
+alter table leases add column if not exists land_title    text;
+alter table leases add column if not exists offer_id      uuid;
+alter table leases add column if not exists type_id       lease_type_id;
+alter table leases add column if not exists type_name     text;
+alter table leases add column if not exists terms_summary text;
+alter table leases add column if not exists farmer_name   text;
+alter table leases add column if not exists owner_name    text;
+
+-- RLS
+alter table lease_offers     enable row level security;
+alter table lease_agreements enable row level security;
+
+-- Offers: public read (marketplace); owner manages their own.
+do $$ begin
+  create policy "offers read"   on lease_offers for select using (true);
+  create policy "offers write"  on lease_offers for all using (auth.uid() = owner_id) with check (auth.uid() = owner_id);
+exception when duplicate_object then null; end $$;
+
+-- Agreements: visible to the two parties; either may update (sign).
+do $$ begin
+  create policy "agr read"   on lease_agreements for select using (auth.uid() in (farmer_id, owner_id));
+  create policy "agr write"  on lease_agreements for all using (auth.uid() in (farmer_id, owner_id)) with check (auth.uid() in (farmer_id, owner_id));
+exception when duplicate_object then null; end $$;
+
+-- ── REALTIME: stream these tables to subscribed clients ─────────────────────
+alter publication supabase_realtime add table lease_offers;
+alter publication supabase_realtime add table lease_requests;
+alter publication supabase_realtime add table lease_agreements;
+alter publication supabase_realtime add table leases;

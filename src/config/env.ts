@@ -11,6 +11,8 @@ import {
   GEOCODE_API_KEY,
   GEOCODE_BASE_URL,
   SOIL_API_BASE_URL,
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
 } from '@env';
 
 export const ENV = {
@@ -18,9 +20,13 @@ export const ENV = {
   geocodeApiKey: GEOCODE_API_KEY ?? '',
   geocodeBaseUrl: GEOCODE_BASE_URL ?? 'https://geocode.maps.co',
   soilApiBaseUrl: SOIL_API_BASE_URL ?? 'https://www.kaegro.com/farms/api/soil',
+  supabaseUrl: SUPABASE_URL ?? '',
+  supabaseAnonKey: SUPABASE_ANON_KEY ?? '',
 };
 
+/** True once a Supabase project URL + anon key are present in .env. */
+export const isSupabaseConfigured = !!ENV.supabaseUrl && !!ENV.supabaseAnonKey;
+
 if (__DEV__ && !ENV.mapboxToken) {
-  // eslint-disable-next-line no-console
   console.warn('[env] MAPBOX_ACCESS_TOKEN is missing — maps will fail to load. Add it to .env.');
 }
