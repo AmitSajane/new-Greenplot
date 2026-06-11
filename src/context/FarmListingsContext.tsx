@@ -38,7 +38,7 @@ export interface FarmListing {
 interface FarmListingsContextType {
   listings: FarmListing[];
   ownerListings: FarmListing[];
-  addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => void;
+  addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => string;
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
   getListingById: (id: string) => FarmListing | undefined;
@@ -173,14 +173,16 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
   const [listings, setListings] = useState<FarmListing[]>(INITIAL_LISTINGS);
 
   const addListing = useCallback((listing: Omit<FarmListing, 'id' | 'createdAt'>) => {
+    const id = `listing-${Date.now()}`;
     const newListing: FarmListing = {
       ...listing,
-      id: `listing-${Date.now()}`,
+      id,
       createdAt: new Date(),
       acresLabel: `${listing.acres} Acres`,
       locationLabel: `${listing.location}, ${listing.district}`,
     };
     setListings((prev) => [newListing, ...prev]);
+    return id;
   }, []);
 
   const updateListing = useCallback((id: string, updates: Partial<FarmListing>) => {

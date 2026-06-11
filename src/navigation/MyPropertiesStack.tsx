@@ -5,6 +5,7 @@ import PropertyDetailsScreen from '../screens/owner/PropertyDetailsScreen';
 import LeaseTypeDetailsScreen from '../screens/LeaseTypeDetailsScreen';
 import LeaseDetailViewScreen from '../screens/LeaseDetailViewScreen';
 import CompareLeasesScreen from '../screens/CompareLeasesScreen';
+import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 
 export type MyPropertiesStackParamList = {
   MyPropertiesList: undefined;
@@ -12,6 +13,7 @@ export type MyPropertiesStackParamList = {
   LeaseTypeDetails: { propertyId: string; selectedLeaseType?: string };
   LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
+  AddLeaseOffer: { landId: string; landTitle?: string };
 };
 
 const Stack = createNativeStackNavigator<MyPropertiesStackParamList>();
@@ -28,6 +30,7 @@ export default function MyPropertiesStack() {
       <Stack.Screen name="LeaseTypeDetails" component={LeaseTypeDetailsScreen} />
       <Stack.Screen name="LeaseDetailView" component={LeaseDetailViewScreen} />
       <Stack.Screen name="CompareLeases" component={CompareLeasesScreen} />
+      <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
     </Stack.Navigator>
   );
 }

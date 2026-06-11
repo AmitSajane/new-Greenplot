@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { OwnerHomeStackParamList } from '../../../navigation/OwnerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
+import { useLeases } from '../../../context/LeaseContext';
 import {
   OWNER_METRICS,
   OWNER_PORTFOLIO,
@@ -47,6 +48,8 @@ export function useOwnerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { ownerListings } = useFarmListings();
+  const { requests } = useLeases();
+  const pendingLeaseRequests = requests.filter(r => r.status === 'pending').length;
 
   // Reach sibling tabs (MyProperties, Tenants, Market, Settings) from the home stack.
   const parent = useCallback(
@@ -95,6 +98,15 @@ export function useOwnerHome() {
   const actionItems: ActionItem[] = useMemo(
     () => [
       {
+        id: 'leaseRequests',
+        tone: 'green',
+        icon: 'document-text',
+        title: pendingLeaseRequests > 0 ? `${pendingLeaseRequests} lease request${pendingLeaseRequests === 1 ? '' : 's'}` : 'Lease requests',
+        sub: pendingLeaseRequests > 0 ? 'Farmers want to lease your land' : 'No new requests',
+        actionLabel: 'Review',
+        onPress: () => navigation.navigate('LeaseRequests'),
+      },
+      {
         id: 'approvals',
         tone: 'amber',
         icon: 'clipboard',
@@ -131,7 +143,7 @@ export function useOwnerHome() {
         onPress: () => navigation.navigate('MyCrops'),
       },
     ],
-    [navigation, goTab],
+    [navigation, goTab, pendingLeaseRequests],
   );
 
   const tools: ToolItem[] = useMemo(

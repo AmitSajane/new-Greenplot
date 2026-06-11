@@ -17,11 +17,13 @@ import SatelliteMapScreen from '../screens/satelliteMap';
 import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 import SoilTestScreen from '../screens/SoilTestScreen';
+import AgreementScreen from '../screens/AgreementScreen';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
   NotificationsCenter: undefined;
   FarmDetail: { farmId: string };
+  AgreementSign: { agreementId: string };
   AllAvailableLands: undefined;
   LandListing: undefined;
   LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
@@ -131,6 +133,7 @@ export default function FarmerHomeStack() {
         component={SoilTestScreen}
         options={{ title: 'Soil Test' }}
       />
+      <Stack.Screen name="AgreementSign" component={AgreementScreen} />
     </Stack.Navigator>
   );
 }

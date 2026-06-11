@@ -213,12 +213,13 @@ export default function AddFarmScreen() {
       listingData.media = mediaItems;
     }
 
-    addListing(listingData);
+    const newLandId = addListing(listingData);
 
-    Alert.alert('Success', 'Your farm land has been listed successfully!', [
+    Alert.alert('Land published ✓', 'Next, add lease offers so farmers can compare and apply.', [
+      { text: 'Later', style: 'cancel', onPress: () => navigation.goBack() },
       {
-        text: 'OK',
-        onPress: () => navigation.goBack(),
+        text: 'Add lease offers',
+        onPress: () => navigation.navigate('AddLeaseOffer', { landId: newLandId, landTitle: title }),
       },
     ]);
   };

@@ -15,11 +15,17 @@ import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import OwnerWorkReportScreen from '../screens/owner/OwnerWorkReportScreen';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 import SoilTestScreen from '../screens/SoilTestScreen';
+import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
+import LeaseRequestsScreen from '../screens/owner/LeaseRequestsScreen';
+import AgreementScreen from '../screens/AgreementScreen';
 
 export type OwnerHomeStackParamList = {
   OwnerHome: undefined;
   NotificationsCenter: undefined;
   SoilTest: undefined;
+  AddLeaseOffer: { landId: string; landTitle?: string };
+  LeaseRequests: undefined;
+  AgreementSign: { agreementId: string };
   AddFarm:
     | {
         acres?: string;
@@ -125,6 +131,9 @@ export default function OwnerHomeStack() {
         component={SoilTestScreen}
         options={{ title: 'Soil Test' }}
       />
+      <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
+      <Stack.Screen name="LeaseRequests" component={LeaseRequestsScreen} options={{ title: 'Lease Requests' }} />
+      <Stack.Screen name="AgreementSign" component={AgreementScreen} />
     </Stack.Navigator>
   );
 }

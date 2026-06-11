@@ -15,6 +15,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { useFarmListings } from '../../context/FarmListingsContext';
+import { useLeases } from '../../context/LeaseContext';
+import { LEASE_TYPE_MAP, summarizeOffer } from '../../constants/leaseTypes';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
 type LandDetailsTab = 'lease' | 'crop' | 'labor' | 'revenue';
@@ -40,6 +42,8 @@ export default function PropertyDetailsScreen() {
   const route = useRoute<PropertyDetailsRoute>();
   const { propertyId } = route.params;
   const { getListingById } = useFarmListings();
+  const { getOffersByLand } = useLeases();
+  const offers = getOffersByLand(propertyId);
 
   const property = getListingById(propertyId);
 
@@ -175,7 +179,33 @@ export default function PropertyDetailsScreen() {
               <Text style={styles.leaseTypeValue}>{property.leaseType || 'Select'}</Text>
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </TouchableOpacity>
-            <Text style={styles.noDataText}>No past lease records for this property.</Text>
+            {/* Lease offers the farmer will see */}
+            <View style={leaseOfferStyles.box}>
+              <View style={leaseOfferStyles.head}>
+                <Text style={leaseOfferStyles.title}>Lease offers ({offers.length})</Text>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('AddLeaseOffer', { landId: propertyId, landTitle: property.title })}
+                  style={leaseOfferStyles.addBtn}
+                  activeOpacity={0.85}
+                >
+                  <Ionicons name="add" size={15} color="#fff" />
+                  <Text style={leaseOfferStyles.addText}>Add / manage</Text>
+                </TouchableOpacity>
+              </View>
+              {offers.length === 0 ? (
+                <Text style={styles.noDataText}>No lease offers yet. Add one so farmers can apply.</Text>
+              ) : (
+                offers.map((o) => (
+                  <View key={o.id} style={leaseOfferStyles.row}>
+                    <Text style={leaseOfferStyles.emoji}>{LEASE_TYPE_MAP[o.typeId].emoji}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={leaseOfferStyles.name}>{LEASE_TYPE_MAP[o.typeId].name}</Text>
+                      <Text style={leaseOfferStyles.sum}>{summarizeOffer(o)}</Text>
+                    </View>
+                  </View>
+                ))
+              )}
+            </View>
           </View>
         )}
         {activeTab === 'crop' && (
@@ -523,4 +553,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.surface,
   },
+});
+
+const leaseOfferStyles = StyleSheet.create({
+  box: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
+  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+  title: { fontSize: 13, fontWeight: '800', color: colors.textPrimary },
+  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#0F4A28', borderRadius: 20, paddingHorizontal: 11, paddingVertical: 6 },
+  addText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F4F8F5', borderRadius: 10, padding: 10, marginBottom: 7 },
+  emoji: { fontSize: 18 },
+  name: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
+  sum: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
 });

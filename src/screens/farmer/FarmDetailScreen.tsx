@@ -16,6 +16,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
+import { LeaseOptionsSection } from './components/LeaseOptionsSection';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
@@ -183,6 +184,14 @@ export default function FarmDetailScreen() {
             </View>
           </View>
         </View>
+
+        {/* Lease options (real offers the owner published) */}
+        <LeaseOptionsSection
+          landId={farmId}
+          landTitle={farm.title}
+          ownerId={farm.ownerId}
+          ownerName={farm.ownerName}
+        />
 
         {/* Contact Button */}
         <TouchableOpacity

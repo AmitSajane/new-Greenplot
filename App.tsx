@@ -13,6 +13,7 @@ import { I18nextProvider } from 'react-i18next';
 import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
 import { FarmListingsProvider } from './src/context/FarmListingsContext';
+import { LeaseProvider } from './src/context/LeaseContext';
 import { SatelliteMapProvider } from './src/context/SatelliteMapContext';
 import { laborStore } from './src/modules/labor/redux/store';
 import i18n from './src/localization/i18n';
@@ -27,9 +28,11 @@ function App() {
         <Provider store={laborStore}>
           <AuthProvider>
             <FarmListingsProvider>
-              <SatelliteMapProvider>
-                <AppNavigator />
-              </SatelliteMapProvider>
+              <LeaseProvider>
+                <SatelliteMapProvider>
+                  <AppNavigator />
+                </SatelliteMapProvider>
+              </LeaseProvider>
             </FarmListingsProvider>
           </AuthProvider>
         </Provider>
