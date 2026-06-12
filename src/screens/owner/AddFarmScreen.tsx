@@ -165,7 +165,7 @@ export default function AddFarmScreen() {
     setShowVillagePicker(false);
   }, []);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
     const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
     if (!title || !acres || !state || !district || !soilType || !tenure || !pricePerYear || !leaseType) {
@@ -213,7 +213,13 @@ export default function AddFarmScreen() {
       listingData.media = mediaItems;
     }
 
-    const newLandId = addListing(listingData);
+    let newLandId: string;
+    try {
+      newLandId = await addListing(listingData);
+    } catch (e) {
+      Alert.alert('Could not publish', 'Please check your connection and try again.');
+      return;
+    }
 
     Alert.alert('Land published ✓', 'Next, add lease offers so farmers can compare and apply.', [
       { text: 'Later', style: 'cancel', onPress: () => navigation.goBack() },

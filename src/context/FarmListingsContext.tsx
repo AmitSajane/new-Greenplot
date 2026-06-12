@@ -1,5 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { ImageSourcePropType } from 'react-native';
+import { supabase, isSupabaseConfigured } from '../services/supabase';
+import { landsApi } from '../services/landsApi';
+import { useAuth } from './AuthContext';
 
 export interface FarmListing {
   id: string;
@@ -38,7 +41,7 @@ export interface FarmListing {
 interface FarmListingsContextType {
   listings: FarmListing[];
   ownerListings: FarmListing[];
-  addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => string;
+  addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => Promise<string>;
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
   getListingById: (id: string) => FarmListing | undefined;
@@ -170,42 +173,81 @@ interface FarmListingsProviderProps {
 }
 
 export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
-  const [listings, setListings] = useState<FarmListing[]>(INITIAL_LISTINGS);
+  const { user } = useAuth();
+  const [listings, setListings] = useState<FarmListing[]>(isSupabaseConfigured ? [] : INITIAL_LISTINGS);
 
-  const addListing = useCallback((listing: Omit<FarmListing, 'id' | 'createdAt'>) => {
-    const id = `listing-${Date.now()}`;
-    const newListing: FarmListing = {
-      ...listing,
-      id,
-      createdAt: new Date(),
-      acresLabel: `${listing.acres} Acres`,
-      locationLabel: `${listing.location}, ${listing.district}`,
-    };
-    setListings((prev) => [newListing, ...prev]);
-    return id;
+  // Supabase: hydrate lands once, then live-refetch on any realtime change.
+  const refetchLands = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      setListings(await landsApi.fetchLands());
+    } catch {
+      /* keep last good state */
+    }
   }, []);
 
-  const updateListing = useCallback((id: string, updates: Partial<FarmListing>) => {
-    setListings((prev) =>
-      prev.map((listing) =>
-        listing.id === id
-          ? {
-              ...listing,
-              ...updates,
-              acresLabel: updates.acres ? `${updates.acres} Acres` : listing.acresLabel,
-              locationLabel:
-                updates.location || updates.district
-                  ? `${updates.location || listing.location}, ${updates.district || listing.district}`
-                  : listing.locationLabel,
-            }
-          : listing
-      )
-    );
-  }, []);
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+    refetchLands();
+    return landsApi.subscribe(refetchLands);
+  }, [refetchLands]);
 
-  const deleteListing = useCallback((id: string) => {
-    setListings((prev) => prev.filter((listing) => listing.id !== id));
-  }, []);
+  const addListing = useCallback(
+    async (listing: Omit<FarmListing, 'id' | 'createdAt'>) => {
+      if (supabase) {
+        const id = await landsApi.insertLand(listing, user?.id || '', user?.name || 'Owner');
+        refetchLands();
+        return id;
+      }
+      const id = `listing-${Date.now()}`;
+      const newListing: FarmListing = {
+        ...listing,
+        id,
+        createdAt: new Date(),
+        acresLabel: `${listing.acres} Acres`,
+        locationLabel: `${listing.location}, ${listing.district}`,
+      };
+      setListings((prev) => [newListing, ...prev]);
+      return id;
+    },
+    [user?.id, user?.name, refetchLands],
+  );
+
+  const updateListing = useCallback(
+    (id: string, updates: Partial<FarmListing>) => {
+      if (supabase) {
+        landsApi.updateLand(id, updates).then(refetchLands).catch(() => {});
+        return;
+      }
+      setListings((prev) =>
+        prev.map((listing) =>
+          listing.id === id
+            ? {
+                ...listing,
+                ...updates,
+                acresLabel: updates.acres ? `${updates.acres} Acres` : listing.acresLabel,
+                locationLabel:
+                  updates.location || updates.district
+                    ? `${updates.location || listing.location}, ${updates.district || listing.district}`
+                    : listing.locationLabel,
+              }
+            : listing
+        )
+      );
+    },
+    [refetchLands],
+  );
+
+  const deleteListing = useCallback(
+    (id: string) => {
+      if (supabase) {
+        landsApi.deleteLand(id).then(refetchLands).catch(() => {});
+        return;
+      }
+      setListings((prev) => prev.filter((listing) => listing.id !== id));
+    },
+    [refetchLands],
+  );
 
   const getListingById = useCallback(
     (id: string) => {
@@ -232,8 +274,10 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
     [listings]
   );
 
-  // Get listings for the current owner (mock - in real app, filter by authenticated user)
-  const ownerListings = listings.filter((listing) => listing.status === 'active');
+  // Owner's own lands: by user in live mode, all active in mock mode.
+  const ownerListings = isSupabaseConfigured
+    ? listings.filter((listing) => listing.ownerId === user?.id)
+    : listings.filter((listing) => listing.status === 'active');
 
   return (
     <FarmListingsContext.Provider

@@ -5,11 +5,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import FarmerTabNavigator from './FarmerTabNavigator';
 import OwnerTabNavigator from './OwnerTabNavigator';
+import SupabaseAuthScreen from '../screens/SupabaseAuthScreen';
 import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   LanguageSelection: undefined;
   Auth: undefined;
+  SupabaseAuth: undefined;
   Main: undefined;
 };
 
@@ -29,14 +31,25 @@ function MainNavigator() {
 }
 
 export default function AppNavigator() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, realAuth } = useAuth();
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {/* <RootStack.Screen name="LanguageSelection" component={require("../screens/LanguageSelectionScreen").default} /> */}
-        <RootStack.Screen name="Auth" component={AuthStack} />
-        <RootStack.Screen name="Main" component={MainNavigator} />
+        {realAuth ? (
+          // Live mode (Supabase): real login gate, then the app.
+          isAuthenticated ? (
+            <RootStack.Screen name="Main" component={MainNavigator} />
+          ) : (
+            <RootStack.Screen name="SupabaseAuth" component={SupabaseAuthScreen} />
+          )
+        ) : (
+          // Mock mode (no backend): existing onboarding/profile flow.
+          <>
+            <RootStack.Screen name="Auth" component={AuthStack} />
+            <RootStack.Screen name="Main" component={MainNavigator} />
+          </>
+        )}
       </RootStack.Navigator>
     </NavigationContainer>
   );

@@ -344,3 +344,8 @@ alter publication supabase_realtime add table lease_offers;
 alter publication supabase_realtime add table lease_requests;
 alter publication supabase_realtime add table lease_agreements;
 alter publication supabase_realtime add table leases;
+
+-- leases need an insert/update policy (farmer signing creates a lease row)
+do $$ begin
+  create policy "lease write" on leases for all using (auth.uid() in (farmer_id, owner_id)) with check (auth.uid() in (farmer_id, owner_id));
+exception when duplicate_object then null; end $$;
