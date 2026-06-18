@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState } from 'react';
-import { Linking } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
@@ -107,12 +106,11 @@ export function useFarmerHome() {
     [navigation],
   );
 
-  // Open a live news article in the device browser.
-  const onOpenArticle = useCallback((url: string) => {
-    Linking.openURL(url).catch(() => {
-      /* unsupported/invalid URL — ignore so the app never crashes */
-    });
-  }, []);
+  // Open a live news article in the in-app WebView reader.
+  const onOpenArticle = useCallback(
+    (url: string, title?: string) => navigation.navigate('Article', { url, title }),
+    [navigation],
+  );
 
   const featuredListings: FarmerListingCard[] = useMemo(
     () =>

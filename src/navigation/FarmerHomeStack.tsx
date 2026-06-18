@@ -18,6 +18,7 @@ import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 import SoilTestScreen from '../screens/SoilTestScreen';
 import AgreementScreen from '../screens/AgreementScreen';
+import ArticleScreen from '../screens/ArticleScreen';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
@@ -39,6 +40,7 @@ export type FarmerHomeStackParamList = {
   SatelliteMap: { farmId?: string } | undefined;
   LaborConnect: undefined;
   SoilTest: undefined;
+  Article: { url: string; title?: string };
 };
 
 const Stack = createNativeStackNavigator<FarmerHomeStackParamList>();
@@ -134,6 +136,7 @@ export default function FarmerHomeStack() {
         options={{ title: 'Soil Test' }}
       />
       <Stack.Screen name="AgreementSign" component={AgreementScreen} />
+      <Stack.Screen name="Article" component={ArticleScreen} />
     </Stack.Navigator>
   );
 }

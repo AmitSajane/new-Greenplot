@@ -9,16 +9,16 @@ interface RowProps {
   item: NewsItem;
   isLast: boolean;
   onAction: (action: FarmerAction) => void;
-  onOpenArticle: (url: string) => void;
+  onOpenArticle: (url: string, title?: string) => void;
 }
 
 const NewsRow = React.memo(({ item, isLast, onAction, onOpenArticle }: RowProps) => {
-  // Live news items carry an external URL → open the full article;
+  // Live news items carry an external URL → open the in-app reader;
   // mock items fall back to their in-app action.
   const handlePress = useCallback(() => {
-    if (item.url) onOpenArticle(item.url);
+    if (item.url) onOpenArticle(item.url, item.title);
     else onAction(item.action);
-  }, [onAction, onOpenArticle, item.url, item.action]);
+  }, [onAction, onOpenArticle, item.url, item.title, item.action]);
   const t = tones[item.tone];
   return (
     <TouchableOpacity
@@ -41,7 +41,7 @@ const NewsRow = React.memo(({ item, isLast, onAction, onOpenArticle }: RowProps)
 interface Props {
   items: readonly NewsItem[];
   onAction: (action: FarmerAction) => void;
-  onOpenArticle: (url: string) => void;
+  onOpenArticle: (url: string, title?: string) => void;
   onMore: () => void;
 }
 
