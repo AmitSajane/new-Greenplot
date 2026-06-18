@@ -20,6 +20,24 @@ import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 
 type ArticleRoute = RouteProp<FarmerHomeStackParamList, 'Article'>;
 
+/** Extract a YouTube video id from an embed/watch/youtu.be URL, else null. */
+function extractYouTubeId(url: string): string | null {
+  const m = url.match(/(?:youtube\.com\/(?:embed\/|watch\?v=)|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+
+/** Full-bleed responsive YouTube iframe page (loaded with a youtube.com baseUrl). */
+function youTubeHtml(videoId: string): string {
+  return `<!DOCTYPE html><html><head>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<style>*{margin:0;padding:0}html,body{height:100%;background:#000}
+.wrap{position:absolute;inset:0}iframe{width:100%;height:100%;border:0}</style></head>
+<body><div class="wrap">
+<iframe src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1"
+ frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+ allowfullscreen></iframe></div></body></html>`;
+}
+
 export default function ArticleScreen() {
   const navigation = useNavigation();
   const { params } = useRoute<ArticleRoute>();
@@ -28,10 +46,18 @@ export default function ArticleScreen() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
+  // YouTube embeds must run inside a page with a real youtube.com origin, or the
+  // player rejects them (Error 153). Wrap the embed in an HTML iframe + baseUrl
+  // so it has a valid origin; load articles directly by URL.
+  const videoId = extractYouTubeId(url);
+  const source = videoId
+    ? { html: youTubeHtml(videoId), baseUrl: 'https://www.youtube.com' }
+    : { uri: url };
+
   const onBack = useCallback(() => navigation.goBack(), [navigation]);
   const onOpenExternal = useCallback(() => {
-    Linking.openURL(url).catch(() => {});
-  }, [url]);
+    Linking.openURL(videoId ? `https://www.youtube.com/watch?v=${videoId}` : url).catch(() => {});
+  }, [url, videoId]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -61,7 +87,7 @@ export default function ArticleScreen() {
         ) : (
           <>
             <WebView
-              source={{ uri: url }}
+              source={source}
               onLoadEnd={() => setLoading(false)}
               onError={() => {
                 setLoading(false);
