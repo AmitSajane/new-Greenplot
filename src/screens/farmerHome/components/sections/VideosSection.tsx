@@ -23,6 +23,7 @@ const CATEGORIES: { key: VideoCategory; label: string; icon: string }[] = [
   { key: 'news', label: 'News', icon: 'newspaper' },
   { key: 'technology', label: 'Technology', icon: 'hardware-chip' },
   { key: 'training', label: 'Training', icon: 'school' },
+  { key: 'innovations', label: 'AgriTech', icon: 'bulb' },
 ];
 
 interface CardProps {

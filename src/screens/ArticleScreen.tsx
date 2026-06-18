@@ -98,7 +98,7 @@ export default function ArticleScreen() {
             </TouchableOpacity>
           </ScrollView>
         ) : (
-          // ── Article ──
+          // ── Article or Dailymotion video (both play in a plain WebView) ──
           <>
             <WebView
               source={{ uri: url }}
@@ -109,12 +109,15 @@ export default function ArticleScreen() {
               }}
               startInLoadingState
               allowsBackForwardNavigationGestures
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              allowsFullscreenVideo
               style={styles.webview}
             />
             {loading && (
               <View style={styles.center} pointerEvents="none">
                 <ActivityIndicator size="large" color="#1A6B3A" />
-                <Text style={styles.loadingText}>Loading article…</Text>
+                <Text style={styles.loadingText}>Loading…</Text>
               </View>
             )}
           </>

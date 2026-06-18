@@ -12,16 +12,17 @@
  */
 import { ENV, isYoutubeConfigured } from '../config/env';
 
-export type VideoCategory = 'news' | 'technology' | 'training';
+export type VideoCategory = 'news' | 'technology' | 'training' | 'innovations';
 
 export interface VideoItem {
-  id: string; // YouTube videoId
+  id: string; // provider video id
   title: string;
   channel: string;
   publishedAt: string;
-  thumbnail: string; // hqdefault image
-  watchUrl: string; // youtube.com/watch?v=...
-  embedUrl: string; // youtube.com/embed/... (inline player)
+  thumbnail: string;
+  watchUrl: string; // canonical watch page
+  embedUrl: string; // inline player URL
+  provider: 'youtube' | 'dailymotion';
 }
 
 // Verified Indian agriculture channels (RSS, no key).
@@ -42,7 +43,10 @@ const CH = {
  * Krishi Jagran channel for all categories (no category-split regional channels
  * exist); en/hi split across DD Kisan / Kisan of India / Krishi Jagran.
  */
-const LANG_CHANNELS: Record<string, Record<VideoCategory, string[]>> = {
+// YouTube-backed categories only ('innovations' uses Dailymotion, no channels).
+type YtCategory = Exclude<VideoCategory, 'innovations'>;
+
+const LANG_CHANNELS: Record<string, Record<YtCategory, string[]>> = {
   en: { news: [CH.DD_KISAN], technology: [CH.KISAN_OF_INDIA], training: [CH.KJ, CH.KVK] },
   hi: { news: [CH.DD_KISAN], technology: [CH.KISAN_OF_INDIA], training: [CH.KJ, CH.KVK] },
   kn: { news: [CH.KJ_KN], technology: [CH.KJ_KN], training: [CH.KJ_KN] },
@@ -51,7 +55,7 @@ const LANG_CHANNELS: Record<string, Record<VideoCategory, string[]>> = {
   te: { news: [CH.KJ_TE], technology: [CH.KJ_TE], training: [CH.KJ_TE] },
 };
 
-const channelsFor = (language: string, category: VideoCategory): string[] =>
+const channelsFor = (language: string, category: YtCategory): string[] =>
   (LANG_CHANNELS[language] || LANG_CHANNELS.en)[category];
 
 const RSS_BASE = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
@@ -94,9 +98,44 @@ function parseFeed(xml: string): VideoItem[] {
       thumbnail: thumb(id),
       watchUrl: watch(id),
       embedUrl: embed(id),
+      provider: 'youtube',
     });
   }
   return out;
+}
+
+// ── Dailymotion (free, no key) — modern/sustainable agriculture tech videos ──
+const DM_API = 'https://api.dailymotion.com';
+const dmEmbed = (id: string) => `https://geo.dailymotion.com/player.html?video=${id}`;
+const dmWatch = (id: string) => `https://www.dailymotion.com/video/${id}`;
+
+async function fetchDailymotion(query: string, limit: number, signal?: AbortSignal): Promise<VideoItem[]> {
+  const params = new URLSearchParams({
+    search: query,
+    limit: String(limit),
+    sort: 'relevance',
+    fields: 'id,title,created_time,thumbnail_360_url,owner.screenname',
+  });
+  try {
+    const res = await fetch(`${DM_API}/videos?${params.toString()}`, { signal });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const list: any[] = Array.isArray(json.list) ? json.list : [];
+    return list
+      .filter(v => v.id)
+      .map(v => ({
+        id: v.id as string,
+        title: decode(v.title || 'Farming video'),
+        channel: v['owner.screenname'] || 'Dailymotion',
+        publishedAt: v.created_time ? new Date(v.created_time * 1000).toISOString() : '',
+        thumbnail: v.thumbnail_360_url || '',
+        watchUrl: dmWatch(v.id),
+        embedUrl: dmEmbed(v.id),
+        provider: 'dailymotion' as const,
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function fetchChannel(channelId: string, signal?: AbortSignal): Promise<VideoItem[]> {
@@ -117,6 +156,11 @@ export const videosApi = {
     limit = 10,
     signal?: AbortSignal,
   ): Promise<VideoItem[]> {
+    // "Innovations" = global modern-farming / sustainable-ag tech via Dailymotion
+    // (free, no key) rather than the India-channel YouTube RSS feeds.
+    if (category === 'innovations') {
+      return fetchDailymotion('modern farming sustainable agriculture technology', limit, signal);
+    }
     const lists = await Promise.all(channelsFor(language, category).map(c => fetchChannel(c, signal)));
     return lists
       .flat()
@@ -157,6 +201,7 @@ export const videosApi = {
             thumbnail: sn.thumbnails?.high?.url || sn.thumbnails?.medium?.url || thumb(id),
             watchUrl: watch(id),
             embedUrl: embed(id),
+            provider: 'youtube',
           } as VideoItem;
         });
     } catch {
