@@ -1,8 +1,9 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { FarmerHomeViewModel } from '../hooks/useFarmerHome';
 import { farmerHomeStyles as s } from '../styles/farmerHome.styles';
+import { LanguagePickerModal } from './LanguagePickerModal';
 import {
   AiAdvisoryCard,
   BrowseByCropSection,
@@ -20,9 +21,11 @@ import {
 
 export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const { onAction } = vm;
+  const [langOpen, setLangOpen] = useState(false);
 
   // Derived, stable handlers (onAction is memoised in the hook, so these are too).
   const onSettings = useCallback(() => onAction('settings'), [onAction]);
+  const onLanguage = useCallback(() => setLangOpen(true), []);
   const onNotifications = useCallback(() => onAction('notifications'), [onAction]);
   const onWeather = useCallback(() => onAction('satellite'), [onAction]);
   const onAi = useCallback(() => onAction(vm.aiAdvisory.action), [onAction, vm.aiAdvisory.action]);
@@ -40,7 +43,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           name={vm.userName}
           location={vm.locationLabel}
           onAvatar={onSettings}
-          onLanguage={onSettings}
+          onLanguage={onLanguage}
           onNotifications={onNotifications}
         />
         <WeatherHero weather={vm.weather} onPress={onWeather} />
@@ -77,6 +80,8 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
       <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onMic}>
         <Ionicons name="mic" size={24} color="#fff" />
       </TouchableOpacity>
+
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </View>
   );
 };

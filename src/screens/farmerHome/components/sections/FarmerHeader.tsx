@@ -3,7 +3,13 @@ import { Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { farmerHomeStyles as s, FARMER_HEADER_GRADIENT } from '../../styles/farmerHome.styles';
+
+/** Short label shown on the language button per selected language. */
+const LANG_SHORT: Record<string, string> = {
+  en: 'EN', hi: 'हि', kn: 'ಕ', mr: 'म', te: 'తె', ta: 'த',
+};
 
 interface Props {
   name: string;
@@ -24,6 +30,8 @@ function toInitials(name: string): string {
 }
 
 function FarmerHeaderBase({ name, location, onAvatar, onLanguage, onNotifications }: Props) {
+  const { i18n } = useTranslation();
+  const langShort = LANG_SHORT[i18n.language] || 'EN';
   return (
     <LinearGradient colors={FARMER_HEADER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
       <SafeAreaView edges={['top']}>
@@ -42,7 +50,7 @@ function FarmerHeaderBase({ name, location, onAvatar, onLanguage, onNotification
             </View>
             <View style={s.headerActions}>
               <TouchableOpacity style={s.headerBtn} onPress={onLanguage} activeOpacity={0.8} hitSlop={6}>
-                <Text style={s.langText}>हि</Text>
+                <Text style={s.langText}>{langShort}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={s.headerBtn} onPress={onNotifications} activeOpacity={0.8} hitSlop={6}>
                 <Ionicons name="notifications" size={17} color="#fff" />

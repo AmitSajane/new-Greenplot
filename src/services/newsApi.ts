@@ -26,6 +26,19 @@ interface NewsDataResponse {
   message?: string;
 }
 
+/**
+ * Per-language search terms. English keywords won't match regional-script
+ * headlines, so each language uses its own native words for agriculture/farmer.
+ */
+const QUERY_BY_LANG: Record<string, string> = {
+  en: 'agriculture OR farmer OR kisan OR crop OR mandi OR subsidy',
+  hi: 'कृषि OR किसान OR खेती OR फसल OR मंडी',
+  kn: 'ಕೃಷಿ OR ರೈತ OR ಬೆಳೆ OR ಮಾರುಕಟ್ಟೆ',
+  mr: 'शेती OR शेतकरी OR पीक OR बाजार',
+  ta: 'விவசாயம் OR விவசாயி OR பயிர்',
+  te: 'వ్యవసాయం OR రైతు OR పంట',
+};
+
 // Rotate icon/tone so the list looks varied without per-article metadata.
 const ROTATION: ReadonlyArray<{ icon: string; tone: Tone }> = [
   { icon: 'business', tone: 'blue' },
@@ -52,21 +65,23 @@ function toNewsItem(a: NewsDataArticle, i: number): NewsItem {
 
 export const newsApi = {
   /**
-   * Fetch India agriculture news + scheme updates.
-   * @param limit  max items to return (default 6)
-   * @param signal optional AbortSignal for cancellation on unmount
+   * Fetch India agriculture news + scheme updates in the given language.
+   * @param language UI language code (en/hi/kn/mr/ta/te); defaults to en
+   * @param limit    max items to return (default 6)
+   * @param signal   optional AbortSignal for cancellation on unmount
    * @returns mapped NewsItem[]; empty array on failure (caller keeps fallback)
    */
-  async fetchAgriNews(limit = 6, signal?: AbortSignal): Promise<NewsItem[]> {
+  async fetchAgriNews(language = 'en', limit = 6, signal?: AbortSignal): Promise<NewsItem[]> {
     if (!isNewsConfigured) return [];
 
+    const lang = QUERY_BY_LANG[language] ? language : 'en';
     const params = new URLSearchParams({
       apikey: ENV.newsApiKey,
       country: 'in',
-      language: 'en',
-      // Match the headline (qInTitle) — far more agriculture-relevant than a
-      // full-text `q`, which leaks unrelated India news on the free tier.
-      qInTitle: 'farmer OR agriculture OR kisan OR crop OR mandi OR subsidy',
+      language: lang,
+      // Match the headline (qInTitle) with native-script terms for the language —
+      // far more agriculture-relevant than a full-text `q`.
+      qInTitle: QUERY_BY_LANG[lang],
     });
 
     try {

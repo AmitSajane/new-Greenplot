@@ -6,11 +6,14 @@
  * request on unmount to avoid setState-after-unmount leaks.
  */
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { newsApi } from '../../../services/newsApi';
 import { isNewsConfigured } from '../../../config/env';
 import type { NewsItem } from '../constants/farmerDashboardData';
 
 export function useAgriNews(fallback: readonly NewsItem[]): readonly NewsItem[] {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
   const [news, setNews] = useState<readonly NewsItem[]>(fallback);
 
   useEffect(() => {
@@ -21,7 +24,7 @@ export function useAgriNews(fallback: readonly NewsItem[]): readonly NewsItem[] 
     let active = true;
 
     newsApi
-      .fetchAgriNews(6, controller.signal)
+      .fetchAgriNews(language, 6, controller.signal)
       .then(items => {
         if (active && items.length > 0) setNews(items);
       })
@@ -33,7 +36,7 @@ export function useAgriNews(fallback: readonly NewsItem[]): readonly NewsItem[] 
       active = false;
       controller.abort();
     };
-  }, []);
+  }, [language]);
 
   return news;
 }

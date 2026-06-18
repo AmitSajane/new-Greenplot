@@ -24,12 +24,35 @@ export interface VideoItem {
   embedUrl: string; // youtube.com/embed/... (inline player)
 }
 
-/** Curated, verified Indian agriculture channels per category (RSS, no key). */
-const CHANNELS: Record<VideoCategory, string[]> = {
-  news: ['UCnDfmcUyhgJp6xC1LmBLfUg'], // DD Kisan (Govt of India)
-  technology: ['UCrqpSH1UygFf4WqyaaA4LvA'], // Kisan of India
-  training: ['UCy5uIHLkQrHYd6Dj8CsqHrw', 'UCZjZpssoa3OIiERKbtIKzWg'], // Krishi Jagran, KVK
+// Verified Indian agriculture channels (RSS, no key).
+const CH = {
+  DD_KISAN: 'UCnDfmcUyhgJp6xC1LmBLfUg', // DD Kisan (Govt, Hindi)
+  KISAN_OF_INDIA: 'UCrqpSH1UygFf4WqyaaA4LvA', // Kisan of India (Hindi/Eng)
+  KJ: 'UCy5uIHLkQrHYd6Dj8CsqHrw', // Krishi Jagran (Eng/Hindi)
+  KVK: 'UCZjZpssoa3OIiERKbtIKzWg', // Krishi Vigyan Kendra
+  KJ_KN: 'UC04Q0MV695st8ZVFWS9EXBQ', // Krishi Jagran ಕನ್ನಡ
+  KJ_MR: 'UC3ZYxSSgb8LbjBLijqk-_CQ', // Krishi Jagran मराठी
+  KJ_TA: 'UCd4YyLKIyvGUyriBKfBrC7A', // Krishi Jagran தமிழ்
+  KJ_TE: 'UCDTRyq1uVOBmj5Cgnnig2uA', // Krishi Jagran తెలుగు
+  AGROWON: 'UC-sr8hmR882HCdFxRLAy12g', // Agrowon (Marathi)
 };
+
+/**
+ * Channels per (language → category). Regional languages use that language's
+ * Krishi Jagran channel for all categories (no category-split regional channels
+ * exist); en/hi split across DD Kisan / Kisan of India / Krishi Jagran.
+ */
+const LANG_CHANNELS: Record<string, Record<VideoCategory, string[]>> = {
+  en: { news: [CH.DD_KISAN], technology: [CH.KISAN_OF_INDIA], training: [CH.KJ, CH.KVK] },
+  hi: { news: [CH.DD_KISAN], technology: [CH.KISAN_OF_INDIA], training: [CH.KJ, CH.KVK] },
+  kn: { news: [CH.KJ_KN], technology: [CH.KJ_KN], training: [CH.KJ_KN] },
+  mr: { news: [CH.AGROWON], technology: [CH.KJ_MR], training: [CH.KJ_MR, CH.AGROWON] },
+  ta: { news: [CH.KJ_TA], technology: [CH.KJ_TA], training: [CH.KJ_TA] },
+  te: { news: [CH.KJ_TE], technology: [CH.KJ_TE], training: [CH.KJ_TE] },
+};
+
+const channelsFor = (language: string, category: VideoCategory): string[] =>
+  (LANG_CHANNELS[language] || LANG_CHANNELS.en)[category];
 
 const RSS_BASE = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 
@@ -87,9 +110,14 @@ async function fetchChannel(channelId: string, signal?: AbortSignal): Promise<Vi
 }
 
 export const videosApi = {
-  /** Latest videos for a category, merged across its channels, newest first. */
-  async fetchByCategory(category: VideoCategory, limit = 10, signal?: AbortSignal): Promise<VideoItem[]> {
-    const lists = await Promise.all(CHANNELS[category].map(c => fetchChannel(c, signal)));
+  /** Latest videos for a category in a language, merged across channels, newest first. */
+  async fetchByCategory(
+    category: VideoCategory,
+    language = 'en',
+    limit = 10,
+    signal?: AbortSignal,
+  ): Promise<VideoItem[]> {
+    const lists = await Promise.all(channelsFor(language, category).map(c => fetchChannel(c, signal)));
     return lists
       .flat()
       .sort((a, b) => (a.publishedAt < b.publishedAt ? 1 : -1))
@@ -100,7 +128,7 @@ export const videosApi = {
    * Free-text video search via YouTube Data API v3 (India-focused).
    * Returns [] when no key is configured (caller can keep category feeds).
    */
-  async search(query: string, limit = 10, signal?: AbortSignal): Promise<VideoItem[]> {
+  async search(query: string, language = 'en', limit = 10, signal?: AbortSignal): Promise<VideoItem[]> {
     if (!isYoutubeConfigured || !query.trim()) return [];
     const params = new URLSearchParams({
       key: ENV.youtubeApiKey,
@@ -108,7 +136,7 @@ export const videosApi = {
       type: 'video',
       q: `${query} agriculture farming`,
       regionCode: 'IN',
-      relevanceLanguage: 'hi',
+      relevanceLanguage: language,
       maxResults: String(limit),
     });
     try {

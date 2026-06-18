@@ -4,6 +4,7 @@
  * unmount to avoid setState-after-unmount leaks.
  */
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { videosApi, VideoCategory, VideoItem } from '../../../services/videosApi';
 
 interface State {
@@ -12,6 +13,8 @@ interface State {
 }
 
 export function useAgriVideos(category: VideoCategory): State {
+  const { i18n } = useTranslation();
+  const language = i18n.language;
   const [state, setState] = useState<State>({ videos: [], loading: true });
 
   useEffect(() => {
@@ -20,7 +23,7 @@ export function useAgriVideos(category: VideoCategory): State {
     setState(s => ({ videos: s.videos, loading: true }));
 
     videosApi
-      .fetchByCategory(category, 10, controller.signal)
+      .fetchByCategory(category, language, 10, controller.signal)
       .then(videos => {
         if (active) setState({ videos, loading: false });
       })
@@ -32,7 +35,7 @@ export function useAgriVideos(category: VideoCategory): State {
       active = false;
       controller.abort();
     };
-  }, [category]);
+  }, [category, language]);
 
   return state;
 }
