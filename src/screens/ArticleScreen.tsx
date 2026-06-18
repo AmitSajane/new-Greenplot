@@ -26,16 +26,30 @@ function extractYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Full-bleed responsive YouTube iframe page (loaded with a youtube.com baseUrl). */
+/**
+ * Full-bleed YouTube player using the IFrame Player API so we can catch
+ * onError (e.g. 101/150 = embedding disabled by owner) and post it back to RN
+ * to trigger an "open in YouTube" fallback. Loaded with a youtube.com baseUrl
+ * to give the player a valid origin (avoids Error 153).
+ */
 function youTubeHtml(videoId: string): string {
   return `<!DOCTYPE html><html><head>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<style>*{margin:0;padding:0}html,body{height:100%;background:#000}
-.wrap{position:absolute;inset:0}iframe{width:100%;height:100%;border:0}</style></head>
-<body><div class="wrap">
-<iframe src="https://www.youtube.com/embed/${videoId}?playsinline=1&rel=0&modestbranding=1"
- frameborder="0" allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
- allowfullscreen></iframe></div></body></html>`;
+<style>*{margin:0;padding:0}html,body{height:100%;background:#000}#player{width:100%;height:100%}</style></head>
+<body><div id="player"></div>
+<script>
+  var tag=document.createElement('script');
+  tag.src="https://www.youtube.com/iframe_api";
+  document.body.appendChild(tag);
+  function post(m){ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(m); }
+  function onYouTubeIframeAPIReady(){
+    new YT.Player('player',{
+      videoId:'${videoId}',
+      playerVars:{playsinline:1,rel:0,modestbranding:1},
+      events:{ onError:function(e){ post('error:'+e.data); } }
+    });
+  }
+</script></body></html>`;
 }
 
 export default function ArticleScreen() {
@@ -59,6 +73,15 @@ export default function ArticleScreen() {
     Linking.openURL(videoId ? `https://www.youtube.com/watch?v=${videoId}` : url).catch(() => {});
   }, [url, videoId]);
 
+  // The YouTube player posts 'error:<code>' when a video can't be embedded
+  // (e.g. 101/150 = owner disabled embedding) → show the fallback.
+  const onMessage = useCallback((e: { nativeEvent: { data: string } }) => {
+    if (e.nativeEvent.data?.startsWith('error:')) {
+      setLoading(false);
+      setFailed(true);
+    }
+  }, []);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* Branded header */}
@@ -78,10 +101,12 @@ export default function ArticleScreen() {
       <View style={styles.body}>
         {failed ? (
           <View style={styles.center}>
-            <Ionicons name="cloud-offline-outline" size={48} color="#9EB8A8" />
-            <Text style={styles.errText}>Couldn't load this article.</Text>
+            <Ionicons name="logo-youtube" size={48} color="#9EB8A8" />
+            <Text style={styles.errText}>
+              {videoId ? "This video can't play inside the app." : "Couldn't load this article."}
+            </Text>
             <TouchableOpacity style={styles.errBtn} onPress={onOpenExternal} activeOpacity={0.85}>
-              <Text style={styles.errBtnText}>Open in browser</Text>
+              <Text style={styles.errBtnText}>{videoId ? 'Watch on YouTube' : 'Open in browser'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
@@ -93,6 +118,9 @@ export default function ArticleScreen() {
                 setLoading(false);
                 setFailed(true);
               }}
+              onMessage={onMessage}
+              javaScriptEnabled
+              domStorageEnabled
               startInLoadingState
               allowsBackForwardNavigationGestures
               allowsInlineMediaPlayback
