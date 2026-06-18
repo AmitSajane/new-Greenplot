@@ -15,6 +15,8 @@ import {
   SUPABASE_ANON_KEY,
   NEWS_API_KEY,
   NEWS_API_BASE_URL,
+  YOUTUBE_API_KEY,
+  YOUTUBE_API_BASE_URL,
 } from '@env';
 
 export const ENV = {
@@ -26,6 +28,8 @@ export const ENV = {
   supabaseAnonKey: SUPABASE_ANON_KEY ?? '',
   newsApiKey: NEWS_API_KEY ?? '',
   newsApiBaseUrl: NEWS_API_BASE_URL ?? 'https://newsdata.io/api/1',
+  youtubeApiKey: YOUTUBE_API_KEY ?? '',
+  youtubeApiBaseUrl: YOUTUBE_API_BASE_URL ?? 'https://www.googleapis.com/youtube/v3',
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */
@@ -33,6 +37,10 @@ export const isSupabaseConfigured = !!ENV.supabaseUrl && !!ENV.supabaseAnonKey;
 
 /** True once a NewsData.io key is present in .env (else we fall back to mock news). */
 export const isNewsConfigured = !!ENV.newsApiKey;
+
+/** True once a YouTube Data API key is present (enables in-app video SEARCH;
+ *  RSS-based category feeds work without it). */
+export const isYoutubeConfigured = !!ENV.youtubeApiKey;
 
 if (__DEV__ && !ENV.mapboxToken) {
   console.warn('[env] MAPBOX_ACCESS_TOKEN is missing — maps will fail to load. Add it to .env.');

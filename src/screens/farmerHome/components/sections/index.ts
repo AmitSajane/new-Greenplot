@@ -8,5 +8,6 @@ export { QuickActionsSection } from './QuickActionsSection';
 export { CropHealthSection } from './CropHealthSection';
 export { FindLandSection } from './FindLandSection';
 export { SchemesNewsSection } from './SchemesNewsSection';
+export { VideosSection } from './VideosSection';
 export { BrowseByCropSection } from './BrowseByCropSection';
 export { SectionHeader } from './SectionHeader';

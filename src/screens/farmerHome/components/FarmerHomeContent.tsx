@@ -14,6 +14,7 @@ import {
   QuickActionsSection,
   SchemesNewsSection,
   TasksSection,
+  VideosSection,
   WeatherHero,
 } from './sections';
 
@@ -69,6 +70,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           onOpenArticle={vm.onOpenArticle}
           onMore={onNewsMore}
         />
+        <VideosSection onOpenVideo={vm.onOpenVideo} />
         <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />
       </ScrollView>
 

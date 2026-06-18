@@ -69,6 +69,9 @@ export default function ArticleScreen() {
               }}
               startInLoadingState
               allowsBackForwardNavigationGestures
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              allowsFullscreenVideo
               style={styles.webview}
             />
             {loading && (

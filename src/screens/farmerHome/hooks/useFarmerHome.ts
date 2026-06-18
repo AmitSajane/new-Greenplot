@@ -112,6 +112,12 @@ export function useFarmerHome() {
     [navigation],
   );
 
+  // Play an agriculture video in the in-app WebView (YouTube embed URL).
+  const onOpenVideo = useCallback(
+    (embedUrl: string, title: string) => navigation.navigate('Article', { url: embedUrl, title }),
+    [navigation],
+  );
+
   const featuredListings: FarmerListingCard[] = useMemo(
     () =>
       getFeaturedListings().map(listing => ({
@@ -154,6 +160,7 @@ export function useFarmerHome() {
     onTickerPress,
     onListingPress,
     onOpenArticle,
+    onOpenVideo,
   };
 }
 
