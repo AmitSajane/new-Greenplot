@@ -63,7 +63,12 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           onSearch={onAllLands}
           onViewAll={onAllLands}
         />
-        <SchemesNewsSection items={vm.news} onAction={onAction} onMore={onNewsMore} />
+        <SchemesNewsSection
+          items={vm.news}
+          onAction={onAction}
+          onOpenArticle={vm.onOpenArticle}
+          onMore={onNewsMore}
+        />
         <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />
       </ScrollView>
 

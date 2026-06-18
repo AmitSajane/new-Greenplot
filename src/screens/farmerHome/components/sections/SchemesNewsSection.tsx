@@ -9,10 +9,16 @@ interface RowProps {
   item: NewsItem;
   isLast: boolean;
   onAction: (action: FarmerAction) => void;
+  onOpenArticle: (url: string) => void;
 }
 
-const NewsRow = React.memo(({ item, isLast, onAction }: RowProps) => {
-  const handlePress = useCallback(() => onAction(item.action), [onAction, item.action]);
+const NewsRow = React.memo(({ item, isLast, onAction, onOpenArticle }: RowProps) => {
+  // Live news items carry an external URL → open the full article;
+  // mock items fall back to their in-app action.
+  const handlePress = useCallback(() => {
+    if (item.url) onOpenArticle(item.url);
+    else onAction(item.action);
+  }, [onAction, onOpenArticle, item.url, item.action]);
   const t = tones[item.tone];
   return (
     <TouchableOpacity
@@ -35,16 +41,23 @@ const NewsRow = React.memo(({ item, isLast, onAction }: RowProps) => {
 interface Props {
   items: readonly NewsItem[];
   onAction: (action: FarmerAction) => void;
+  onOpenArticle: (url: string) => void;
   onMore: () => void;
 }
 
-function SchemesNewsSectionBase({ items, onAction, onMore }: Props) {
+function SchemesNewsSectionBase({ items, onAction, onOpenArticle, onMore }: Props) {
   return (
     <View style={s.section}>
       <SectionHeader icon="newspaper" title="Schemes & news" linkLabel="More" onLink={onMore} />
       <View style={s.card}>
         {items.map((item, i) => (
-          <NewsRow key={item.id} item={item} isLast={i === items.length - 1} onAction={onAction} />
+          <NewsRow
+            key={item.id}
+            item={item}
+            isLast={i === items.length - 1}
+            onAction={onAction}
+            onOpenArticle={onOpenArticle}
+          />
         ))}
       </View>
     </View>
