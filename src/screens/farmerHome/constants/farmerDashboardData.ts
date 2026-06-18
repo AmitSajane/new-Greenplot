@@ -101,6 +101,8 @@ export interface NewsItem {
   title: string;
   sub: string;
   action: FarmerAction;
+  /** Optional external article link (present for live NewsData.io items). */
+  url?: string;
 }
 
 export interface BrowseCrop {

@@ -13,6 +13,8 @@ import {
   SOIL_API_BASE_URL,
   SUPABASE_URL,
   SUPABASE_ANON_KEY,
+  NEWS_API_KEY,
+  NEWS_API_BASE_URL,
 } from '@env';
 
 export const ENV = {
@@ -22,10 +24,15 @@ export const ENV = {
   soilApiBaseUrl: SOIL_API_BASE_URL ?? 'https://www.kaegro.com/farms/api/soil',
   supabaseUrl: SUPABASE_URL ?? '',
   supabaseAnonKey: SUPABASE_ANON_KEY ?? '',
+  newsApiKey: NEWS_API_KEY ?? '',
+  newsApiBaseUrl: NEWS_API_BASE_URL ?? 'https://newsdata.io/api/1',
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */
 export const isSupabaseConfigured = !!ENV.supabaseUrl && !!ENV.supabaseAnonKey;
+
+/** True once a NewsData.io key is present in .env (else we fall back to mock news). */
+export const isNewsConfigured = !!ENV.newsApiKey;
 
 if (__DEV__ && !ENV.mapboxToken) {
   console.warn('[env] MAPBOX_ACCESS_TOKEN is missing — maps will fail to load. Add it to .env.');

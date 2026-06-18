@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
+import { useAgriNews } from './useAgriNews';
 import {
   FARMER_AI_ADVISORY,
   FARMER_BROWSE_CROPS,
@@ -41,6 +42,9 @@ export function useFarmerHome() {
 
   const [query, setQuery] = useState('');
   const [selectedNearby, setSelectedNearby] = useState<NearbyChip>('Nearby');
+
+  // Live agriculture news/schemes (NewsData.io) with mock fallback.
+  const news = useAgriNews(FARMER_NEWS);
 
   // Stable cross-tab navigation helper.
   const goTab = useCallback(
@@ -128,7 +132,7 @@ export function useFarmerHome() {
     tasks: FARMER_TASKS,
     quickActions: FARMER_QUICK_ACTIONS,
     cropHealth: FARMER_CROP_HEALTH,
-    news: FARMER_NEWS,
+    news,
     browseCrops: FARMER_BROWSE_CROPS,
     nearbyChips: FARMER_NEARBY_CHIPS,
 
