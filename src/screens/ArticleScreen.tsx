@@ -1,12 +1,16 @@
 /**
- * In-app article reader. Opens a news/scheme URL inside a WebView with a
- * branded header (back + open-in-browser) and loading/error states, so users
- * never leave the app to read the full story.
+ * In-app reader. Renders one of two things from a single route:
+ *  - a YouTube video → embedded YoutubePlayer (react-native-youtube-iframe),
+ *    which handles the IFrame API origin handshake reliably on iOS/Android.
+ *  - any other URL → a WebView (news/scheme article).
+ * Both have a branded header and a graceful fallback to the external app.
  */
 import React, { useState, useCallback } from 'react';
 import {
   ActivityIndicator,
+  Dimensions,
   Linking,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +18,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { WebView } from 'react-native-webview';
+import YoutubePlayer from 'react-native-youtube-iframe';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
@@ -26,32 +31,6 @@ function extractYouTubeId(url: string): string | null {
   return m ? m[1] : null;
 }
 
-/**
- * Full-bleed YouTube player using the IFrame Player API so we can catch
- * onError (e.g. 101/150 = embedding disabled by owner) and post it back to RN
- * to trigger an "open in YouTube" fallback. Loaded with a youtube.com baseUrl
- * to give the player a valid origin (avoids Error 153).
- */
-function youTubeHtml(videoId: string): string {
-  return `<!DOCTYPE html><html><head>
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<style>*{margin:0;padding:0}html,body{height:100%;background:#000}#player{width:100%;height:100%}</style></head>
-<body><div id="player"></div>
-<script>
-  var tag=document.createElement('script');
-  tag.src="https://www.youtube.com/iframe_api";
-  document.body.appendChild(tag);
-  function post(m){ if(window.ReactNativeWebView) window.ReactNativeWebView.postMessage(m); }
-  function onYouTubeIframeAPIReady(){
-    new YT.Player('player',{
-      videoId:'${videoId}',
-      playerVars:{playsinline:1,rel:0,modestbranding:1},
-      events:{ onError:function(e){ post('error:'+e.data); } }
-    });
-  }
-</script></body></html>`;
-}
-
 export default function ArticleScreen() {
   const navigation = useNavigation();
   const { params } = useRoute<ArticleRoute>();
@@ -60,26 +39,19 @@ export default function ArticleScreen() {
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
 
-  // YouTube embeds must run inside a page with a real youtube.com origin, or the
-  // player rejects them (Error 153). Wrap the embed in an HTML iframe + baseUrl
-  // so it has a valid origin; load articles directly by URL.
   const videoId = extractYouTubeId(url);
-  const source = videoId
-    ? { html: youTubeHtml(videoId), baseUrl: 'https://www.youtube.com' }
-    : { uri: url };
+  const playerHeight = Math.round((Dimensions.get('window').width * 9) / 16);
 
   const onBack = useCallback(() => navigation.goBack(), [navigation]);
   const onOpenExternal = useCallback(() => {
     Linking.openURL(videoId ? `https://www.youtube.com/watch?v=${videoId}` : url).catch(() => {});
   }, [url, videoId]);
 
-  // The YouTube player posts 'error:<code>' when a video can't be embedded
-  // (e.g. 101/150 = owner disabled embedding) → show the fallback.
-  const onMessage = useCallback((e: { nativeEvent: { data: string } }) => {
-    if (e.nativeEvent.data?.startsWith('error:')) {
-      setLoading(false);
-      setFailed(true);
-    }
+  // YoutubePlayer reports embedding/playback problems here (e.g. a video whose
+  // owner disabled embedding) → fall back to opening it in the YouTube app.
+  const onVideoError = useCallback(() => {
+    setLoading(false);
+    setFailed(true);
   }, []);
 
   return (
@@ -90,14 +62,13 @@ export default function ArticleScreen() {
           <Ionicons name="chevron-back" size={24} color="#0F4A28" />
         </TouchableOpacity>
         <Text style={styles.title} numberOfLines={1}>
-          {title || 'Article'}
+          {title || (videoId ? 'Video' : 'Article')}
         </Text>
         <TouchableOpacity style={styles.iconBtn} onPress={onOpenExternal} activeOpacity={0.7}>
           <Ionicons name="open-outline" size={20} color="#0F4A28" />
         </TouchableOpacity>
       </View>
 
-      {/* Content */}
       <View style={styles.body}>
         {failed ? (
           <View style={styles.center}>
@@ -109,23 +80,35 @@ export default function ArticleScreen() {
               <Text style={styles.errBtnText}>{videoId ? 'Watch on YouTube' : 'Open in browser'}</Text>
             </TouchableOpacity>
           </View>
+        ) : videoId ? (
+          // ── Video ──
+          <ScrollView contentContainerStyle={styles.videoWrap}>
+            <YoutubePlayer
+              height={playerHeight}
+              play={false}
+              videoId={videoId}
+              onError={onVideoError}
+              onReady={() => setLoading(false)}
+              webViewProps={{ allowsInlineMediaPlayback: true }}
+            />
+            {!!title && <Text style={styles.videoTitle}>{title}</Text>}
+            <TouchableOpacity style={styles.ytLink} onPress={onOpenExternal} activeOpacity={0.7}>
+              <Ionicons name="logo-youtube" size={18} color="#C02828" />
+              <Text style={styles.ytLinkText}>Open in YouTube</Text>
+            </TouchableOpacity>
+          </ScrollView>
         ) : (
+          // ── Article ──
           <>
             <WebView
-              source={source}
+              source={{ uri: url }}
               onLoadEnd={() => setLoading(false)}
               onError={() => {
                 setLoading(false);
                 setFailed(true);
               }}
-              onMessage={onMessage}
-              javaScriptEnabled
-              domStorageEnabled
               startInLoadingState
               allowsBackForwardNavigationGestures
-              allowsInlineMediaPlayback
-              mediaPlaybackRequiresUserAction={false}
-              allowsFullscreenVideo
               style={styles.webview}
             />
             {loading && (
@@ -152,16 +135,16 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E6EFE9',
     backgroundColor: '#fff',
   },
-  iconBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  iconBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   title: { flex: 1, fontSize: 16, fontWeight: '800', color: '#0D1509', marginHorizontal: 4 },
   body: { flex: 1 },
   webview: { flex: 1 },
+
+  videoWrap: { paddingTop: 8, paddingBottom: 24, backgroundColor: '#fff' },
+  videoTitle: { fontSize: 17, fontWeight: '800', color: '#0D1509', paddingHorizontal: 16, paddingTop: 16, lineHeight: 23 },
+  ytLink: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 16, paddingTop: 14 },
+  ytLinkText: { fontSize: 15, fontWeight: '700', color: '#1A6B3A' },
+
   center: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
@@ -170,12 +153,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   loadingText: { fontSize: 14, color: '#6B8074', fontWeight: '600' },
-  errText: { fontSize: 16, color: '#3A5040', fontWeight: '700' },
-  errBtn: {
-    backgroundColor: '#1A6B3A',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-  },
+  errText: { fontSize: 16, color: '#3A5040', fontWeight: '700', textAlign: 'center', paddingHorizontal: 24 },
+  errBtn: { backgroundColor: '#1A6B3A', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 14 },
   errBtnText: { color: '#fff', fontSize: 15, fontWeight: '800' },
 });
