@@ -17,7 +17,15 @@ import {
   NEWS_API_BASE_URL,
   YOUTUBE_API_KEY,
   YOUTUBE_API_BASE_URL,
+  DATA_GOV_API_KEY,
 } from '@env';
+
+/**
+ * data.gov.in publishes this sample key openly in its API docs (not a secret) —
+ * it lets the app work out-of-the-box for the demo. Users can drop their own
+ * free key into .env (DATA_GOV_API_KEY) for higher rate limits.
+ */
+const DATA_GOV_SAMPLE_KEY = '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
 
 export const ENV = {
   mapboxToken: MAPBOX_ACCESS_TOKEN ?? '',
@@ -30,6 +38,9 @@ export const ENV = {
   newsApiBaseUrl: NEWS_API_BASE_URL ?? 'https://newsdata.io/api/1',
   youtubeApiKey: YOUTUBE_API_KEY ?? '',
   youtubeApiBaseUrl: YOUTUBE_API_BASE_URL ?? 'https://www.googleapis.com/youtube/v3',
+  // Mandi prices (data.gov.in Agmarknet). Free public sample key by default.
+  dataGovApiKey: DATA_GOV_API_KEY || DATA_GOV_SAMPLE_KEY,
+  dataGovBaseUrl: 'https://api.data.gov.in/resource',
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */

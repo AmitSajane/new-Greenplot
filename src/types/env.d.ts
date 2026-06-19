@@ -10,4 +10,5 @@ declare module '@env' {
   export const NEWS_API_BASE_URL: string | undefined;
   export const YOUTUBE_API_KEY: string | undefined;
   export const YOUTUBE_API_BASE_URL: string | undefined;
+  export const DATA_GOV_API_KEY: string | undefined;
 }

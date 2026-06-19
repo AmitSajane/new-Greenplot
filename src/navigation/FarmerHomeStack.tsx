@@ -19,6 +19,8 @@ import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 import SoilTestScreen from '../screens/SoilTestScreen';
 import AgreementScreen from '../screens/AgreementScreen';
 import ArticleScreen from '../screens/ArticleScreen';
+import MandiPricesScreen from '../screens/MandiPricesScreen';
+import SoilAdvisoryScreen from '../screens/SoilAdvisoryScreen';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
@@ -41,6 +43,8 @@ export type FarmerHomeStackParamList = {
   LaborConnect: undefined;
   SoilTest: undefined;
   Article: { url: string; title?: string };
+  MandiPrices: undefined;
+  SoilAdvisory: undefined;
 };
 
 const Stack = createNativeStackNavigator<FarmerHomeStackParamList>();
@@ -137,6 +141,8 @@ export default function FarmerHomeStack() {
       />
       <Stack.Screen name="AgreementSign" component={AgreementScreen} />
       <Stack.Screen name="Article" component={ArticleScreen} />
+      <Stack.Screen name="MandiPrices" component={MandiPricesScreen} />
+      <Stack.Screen name="SoilAdvisory" component={SoilAdvisoryScreen} />
     </Stack.Navigator>
   );
 }

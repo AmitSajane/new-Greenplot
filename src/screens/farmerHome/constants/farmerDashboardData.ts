@@ -23,7 +23,9 @@ export type FarmerAction =
   | 'allLands'
   | 'notifications'
   | 'hub'
-  | 'settings';
+  | 'settings'
+  | 'mandiCompare'
+  | 'soilAdvisory';
 
 export type Tone = 'green' | 'amber' | 'red' | 'blue' | 'purple' | 'neutral';
 
@@ -164,8 +166,9 @@ export const FARMER_QUICK_ACTIONS: readonly QuickAction[] = [
   { id: 'q4', label: 'Lease Status', icon: 'document-text', tone: 'purple', action: 'leaseStatus' },
   { id: 'q5', label: 'Satellite', icon: 'globe', tone: 'green', action: 'satellite' },
   { id: 'q6', label: 'Soil Test', icon: 'flask', tone: 'amber', action: 'soil' },
-  { id: 'q7', label: 'Market', icon: 'bar-chart', tone: 'green', action: 'market' },
-  { id: 'q8', label: 'Kisan Mitra', icon: 'mic', tone: 'blue', action: 'aiAssistant' },
+  { id: 'q7', label: 'Mandi Prices', icon: 'pricetags', tone: 'green', action: 'mandiCompare' },
+  { id: 'q8', label: 'Soil Advisory', icon: 'leaf', tone: 'green', action: 'soilAdvisory' },
+  { id: 'q9', label: 'Kisan Mitra', icon: 'mic', tone: 'blue', action: 'aiAssistant' },
 ];
 
 export const FARMER_CROP_HEALTH: readonly CropHealth[] = [

@@ -73,6 +73,10 @@ export function useFarmerHome() {
           return navigation.navigate('SatelliteMap');
         case 'soil':
           return navigation.navigate('SoilTest');
+        case 'soilAdvisory':
+          return navigation.navigate('SoilAdvisory');
+        case 'mandiCompare':
+          return navigation.navigate('MandiPrices');
         case 'market':
           return goTab('Market');
         case 'marketAlert':

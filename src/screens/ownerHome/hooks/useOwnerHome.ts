@@ -164,9 +164,9 @@ export function useOwnerHome() {
     () => [
       { key: 'satellite', label: 'Satellite', icon: 'globe', tone: 'green', onPress: () => navigation.navigate('SatelliteMap') },
       { key: 'labor', label: 'Labor', icon: 'people', tone: 'blue', onPress: () => navigation.navigate('LaborConnect') },
-      { key: 'soil', label: 'Soil test', icon: 'flask', tone: 'amber', onPress: () => navigation.navigate('SoilTest') },
+      { key: 'soilAdvisory', label: 'Soil advisory', icon: 'leaf', tone: 'green', onPress: () => navigation.navigate('SoilAdvisory') },
+      { key: 'mandi', label: 'Mandi prices', icon: 'pricetags', tone: 'amber', onPress: () => navigation.navigate('MandiPrices') },
       { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => navigation.navigate('OwnerWorkReport') },
-      { key: 'market', label: 'Market', icon: 'bar-chart', tone: 'green', onPress: () => goTab('Market') },
       { key: 'add', label: 'Add land', icon: 'add-circle', tone: 'neutral', onPress: () => navigation.navigate('AddFarm') },
     ],
     [navigation, goTab],

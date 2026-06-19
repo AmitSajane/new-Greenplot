@@ -30,6 +30,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const onWeather = useCallback(() => onAction('satellite'), [onAction]);
   const onAi = useCallback(() => onAction(vm.aiAdvisory.action), [onAction, vm.aiAdvisory.action]);
   const onMarket = useCallback(() => onAction('market'), [onAction]);
+  const onMandi = useCallback(() => onAction('mandiCompare'), [onAction]);
   const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
   const onCrops = useCallback(() => onAction('crops'), [onAction]);
   const onAllLands = useCallback(() => onAction('allLands'), [onAction]);
@@ -54,7 +55,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           cta={vm.aiAdvisory.cta}
           onPress={onAi}
         />
-        <MarketTicker items={vm.ticker} onPressItem={vm.onTickerPress} onSeeAll={onMarket} />
+        <MarketTicker items={vm.ticker} onPressItem={vm.onTickerPress} onSeeAll={onMandi} />
         <TasksSection items={vm.tasks} onAction={onAction} onViewAll={onTasksViewAll} />
         <QuickActionsSection items={vm.quickActions} onAction={onAction} />
         <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} />
