@@ -50,21 +50,73 @@ function buildContents(history: ChatMessage[], userText: string) {
   return turns;
 }
 
+/** Return the first balanced {...} object in a string (Gemini sometimes appends
+ *  extra content after the JSON, which breaks a naive JSON.parse). */
+function firstJsonObject(s: string): string | null {
+  const start = s.indexOf('{');
+  if (start < 0) return null;
+  let depth = 0;
+  let inStr = false;
+  let esc = false;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (esc) { esc = false; continue; }
+    if (c === '\\') { esc = true; continue; }
+    if (c === '"') inStr = !inStr;
+    else if (!inStr) {
+      if (c === '{') depth++;
+      else if (c === '}') {
+        depth--;
+        if (depth === 0) return s.slice(start, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
+/** Extract one string field from (possibly truncated) JSON, unescaped. */
+function field(json: string, key: string): string | null {
+  const m = json.match(new RegExp(`"${key}"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`));
+  if (!m) return null;
+  try {
+    return JSON.parse(`"${m[1]}"`); // unescape \n, \" etc.
+  } catch {
+    return m[1];
+  }
+}
+
 function safeParse(raw: string): GeminiReply | null {
   // Gemini may wrap JSON in ```json fences despite instructions — strip them.
   const cleaned = raw.replace(/```json/gi, '').replace(/```/g, '').trim();
+
+  // 1) Parse just the first JSON object (handles trailing "extra data").
   try {
-    const j = JSON.parse(cleaned);
-    if (!j.reply) return null;
-    return {
-      text: String(j.reply),
-      textEn: String(j.replyEnglish || j.reply),
-      suggestions: Array.isArray(j.suggestions) ? j.suggestions.slice(0, 3).map(String) : [],
-    };
+    const obj = firstJsonObject(cleaned) || cleaned;
+    const j = JSON.parse(obj);
+    if (j.reply) {
+      return {
+        text: String(j.reply),
+        textEn: String(j.replyEnglish || j.reply),
+        suggestions: Array.isArray(j.suggestions) ? j.suggestions.slice(0, 3).map(String) : [],
+      };
+    }
   } catch {
-    // Not valid JSON → use the raw text as the reply so we still answer.
-    return cleaned ? { text: cleaned, textEn: cleaned, suggestions: [] } : null;
+    /* fall through to field extraction */
   }
+
+  // 2) Truncated/imperfect JSON → pull out the fields we can (never show raw braces).
+  const reply = field(cleaned, 'reply');
+  if (reply) {
+    const suggMatch = cleaned.match(/"suggestions"\s*:\s*\[([^\]]*)\]/);
+    const suggestions = suggMatch
+      ? (suggMatch[1].match(/"((?:[^"\\]|\\.)*)"/g) || []).slice(0, 3).map(s => s.replace(/^"|"$/g, ''))
+      : [];
+    return { text: reply, textEn: field(cleaned, 'replyEnglish') || reply, suggestions };
+  }
+
+  // 3) Last resort: if it isn't JSON-looking at all, show it as the reply.
+  if (cleaned && !cleaned.startsWith('{')) return { text: cleaned, textEn: cleaned, suggestions: [] };
+  return null;
 }
 
 export async function generateGeminiReply(args: {
@@ -81,7 +133,8 @@ export async function generateGeminiReply(args: {
     contents: buildContents(args.history, args.userText),
     generationConfig: {
       temperature: 0.6,
-      maxOutputTokens: 700,
+      // Generous budget — Indic scripts use many tokens; too small truncates the JSON.
+      maxOutputTokens: 2048,
       responseMimeType: 'application/json',
     },
   };
