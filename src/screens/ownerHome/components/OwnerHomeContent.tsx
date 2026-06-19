@@ -5,6 +5,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
 import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
+import { SchemesNewsSection, VideosSection } from '../../farmerHome/components/sections';
 
 function initials(name: string) {
   return name
@@ -285,6 +286,17 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
             })}
           </View>
         </View>
+
+        {/* ───────── Schemes & news ───────── */}
+        <SchemesNewsSection
+          items={vm.news}
+          onAction={() => undefined}
+          onOpenArticle={vm.onOpenArticle}
+          onMore={vm.onNewsMore}
+        />
+
+        {/* ───────── Learn · Videos ───────── */}
+        <VideosSection onOpenVideo={vm.onOpenVideo} />
       </ScrollView>
 
       <TouchableOpacity style={s.fab} onPress={vm.onMicPress} activeOpacity={0.85}>

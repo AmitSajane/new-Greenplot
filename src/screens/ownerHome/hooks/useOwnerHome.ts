@@ -5,6 +5,8 @@ import { OwnerHomeStackParamList } from '../../../navigation/OwnerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useLeases } from '../../../context/LeaseContext';
+import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
+import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import {
   OWNER_METRICS,
   OWNER_PORTFOLIO,
@@ -50,6 +52,18 @@ export function useOwnerHome() {
   const { ownerListings } = useFarmListings();
   const { requests } = useLeases();
   const pendingLeaseRequests = requests.filter(r => r.status === 'pending').length;
+
+  // Live agriculture news + in-app readers (shared with Farmer Home).
+  const news = useAgriNews(FARMER_NEWS);
+  const onOpenArticle = useCallback(
+    (url: string, title?: string) => navigation.navigate('Article', { url, title }),
+    [navigation],
+  );
+  const onOpenVideo = useCallback(
+    (embedUrl: string, title: string) => navigation.navigate('Article', { url: embedUrl, title }),
+    [navigation],
+  );
+  const onNewsMore = useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]);
 
   // Reach sibling tabs (MyProperties, Tenants, Market, Settings) from the home stack.
   const parent = useCallback(
@@ -202,6 +216,10 @@ export function useOwnerHome() {
     properties,
     tools,
     activities,
+    news,
+    onOpenArticle,
+    onOpenVideo,
+    onNewsMore,
 
     // Handlers
     onBell: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),

@@ -18,9 +18,11 @@ import SoilTestScreen from '../screens/SoilTestScreen';
 import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 import LeaseRequestsScreen from '../screens/owner/LeaseRequestsScreen';
 import AgreementScreen from '../screens/AgreementScreen';
+import ArticleScreen from '../screens/ArticleScreen';
 
 export type OwnerHomeStackParamList = {
   OwnerHome: undefined;
+  Article: { url: string; title?: string };
   NotificationsCenter: undefined;
   SoilTest: undefined;
   AddLeaseOffer: { landId: string; landTitle?: string };
@@ -55,6 +57,7 @@ export default function OwnerHomeStack() {
       }}
     >
       <Stack.Screen name="OwnerHome" component={OwnerHomeScreen} />
+      <Stack.Screen name="Article" component={ArticleScreen} />
       <Stack.Screen name="NotificationsCenter" component={NotificationsCenterScreen} options={{ title: 'Notifications' }} />
       <Stack.Screen
         name="AIAssistant"
