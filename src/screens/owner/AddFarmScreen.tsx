@@ -20,6 +20,11 @@ import { OwnerHomeStackParamList } from '../../navigation/OwnerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
 import locationHierarchy, { type StateItem } from '../../data/locationHierarchy';
+import INDIA_LOCATIONS from '../../constants/indiaLocations.json';
+import { lookupPincode } from '../../services/pincodeApi';
+
+/** Complete all-India State → District → Taluk map (offline, 35 states / 10.8k taluks). */
+const INDIA = INDIA_LOCATIONS as Record<string, Record<string, string[]>>;
 
 type NavigationProp = NativeStackNavigationProp<OwnerHomeStackParamList>;
 
@@ -69,6 +74,9 @@ export default function AddFarmScreen() {
     const initialAcres = route?.params?.acres;
     return initialAcres ? String(initialAcres) : '';
   });
+  const [pincode, setPincode] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState('');
   const [state, setState] = useState('');
   const [district, setDistrict] = useState('');
   const [taluk, setTaluk] = useState('');
@@ -98,20 +106,21 @@ export default function AddFarmScreen() {
   const [fraudBadge, setFraudBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
   const [blockchainBadge, setBlockchainBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
 
+  // Hobli/Village (optional) still come from the older curated dataset.
   const statesData = locationHierarchy.states;
+
+  // State → District → Taluk from the complete all-India dataset.
+  const stateOptions = useMemo(() => Object.keys(INDIA).sort(), []);
 
   const districtOptions = useMemo(() => {
     if (!state) return [];
-    const s = statesData.find((st) => st.name === state);
-    return s ? s.districts.map((d) => d.name) : [];
-  }, [state, statesData]);
+    return Object.keys(INDIA[state] || {}).sort();
+  }, [state]);
 
   const talukOptions = useMemo(() => {
     if (!state || !district) return [];
-    const s = statesData.find((st) => st.name === state);
-    const d = s?.districts.find((dist) => dist.name === district);
-    return d ? d.taluks.map((t) => t.name) : [];
-  }, [state, district, statesData]);
+    return INDIA[state]?.[district] || [];
+  }, [state, district]);
 
   const hobliOptions = useMemo(() => {
     if (!state || !district || !taluk) return [];
@@ -163,6 +172,36 @@ export default function AddFarmScreen() {
   const handleVillageSelect = useCallback((value: string) => {
     setVillage(value);
     setShowVillagePicker(false);
+  }, []);
+
+  // PIN-code auto-fill: type 6 digits → fetch and fill State / District / Taluk.
+  const handlePincodeChange = useCallback((text: string) => {
+    const pin = text.replace(/\D/g, '').slice(0, 6);
+    setPincode(pin);
+    setPinError('');
+    if (pin.length !== 6) return;
+
+    setPinLoading(true);
+    lookupPincode(pin)
+      .then((loc) => {
+        if (!loc) {
+          setPinError('Could not find this PIN code. Pick manually below.');
+          return;
+        }
+        // Only set values that exist in our dropdown data (so the cascade stays valid).
+        const matchedState = INDIA[loc.state] ? loc.state : '';
+        setState(matchedState);
+        const districts = matchedState ? INDIA[matchedState] : {};
+        const matchedDistrict = districts[loc.district] ? loc.district : '';
+        setDistrict(matchedDistrict);
+        const taluks = matchedDistrict ? districts[matchedDistrict] : [];
+        setTaluk(taluks.includes(loc.taluk) ? loc.taluk : '');
+        setHobli('');
+        setVillage('');
+        if (!matchedState) setPinError('PIN found, but please confirm State/District manually.');
+      })
+      .catch(() => setPinError('Network error. Pick location manually below.'))
+      .finally(() => setPinLoading(false));
   }, []);
 
   const handleSubmit = async () => {
@@ -424,6 +463,33 @@ export default function AddFarmScreen() {
             </View>
           </View>
 
+          {/* PIN-code quick fill */}
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>PIN Code (auto-fill location)</Text>
+            <View style={styles.pinRow}>
+              <TextInput
+                style={[styles.input, styles.pinInput]}
+                placeholder="e.g. 590001"
+                placeholderTextColor={colors.textMuted}
+                value={pincode}
+                onChangeText={handlePincodeChange}
+                keyboardType="number-pad"
+                maxLength={6}
+              />
+              <View style={styles.pinHint}>
+                {pinLoading ? (
+                  <Text style={styles.pinHintText}>Looking up…</Text>
+                ) : (
+                  <Ionicons name="location-outline" size={20} color={colors.textMuted} />
+                )}
+              </View>
+            </View>
+            {!!pinError && <Text style={styles.pinError}>{pinError}</Text>}
+            {!pinError && !!state && !!pincode && (
+              <Text style={styles.pinOk}>✓ Auto-filled from PIN — adjust below if needed</Text>
+            )}
+          </View>
+
           <View style={styles.formGroup}>
             <Text style={styles.label}>State *</Text>
             {renderDropdown(state, 'Select State', () => setShowStatePicker(true))}
@@ -435,19 +501,23 @@ export default function AddFarmScreen() {
           </View>
 
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Taluk *</Text>
+            <Text style={styles.label}>Taluk</Text>
             {renderDropdown(taluk, 'Select Taluk', () => district && setShowTalukPicker(true))}
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Hobli *</Text>
-            {renderDropdown(hobli, 'Select Hobli', () => taluk && setShowHobliPicker(true))}
-          </View>
+          {hobliOptions.length > 0 && (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Hobli (optional)</Text>
+              {renderDropdown(hobli, 'Select Hobli', () => taluk && setShowHobliPicker(true))}
+            </View>
+          )}
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Village *</Text>
-            {renderDropdown(village, 'Select Village', () => hobli && setShowVillagePicker(true))}
-          </View>
+          {villageOptions.length > 0 && (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Village (optional)</Text>
+              {renderDropdown(village, 'Select Village', () => hobli && setShowVillagePicker(true))}
+            </View>
+          )}
 
           {/* Govt survey fetch */}
           <View style={styles.formGroup}>
@@ -628,7 +698,7 @@ export default function AddFarmScreen() {
       </KeyboardAvoidingView>
 
       {/* Picker Modals */}
-      {renderPickerModal(showStatePicker, statesData.map((s) => s.name), handleStateSelect, () => setShowStatePicker(false))}
+      {renderPickerModal(showStatePicker, stateOptions, handleStateSelect, () => setShowStatePicker(false))}
       {renderPickerModal(showDistrictPicker, districtOptions, handleDistrictSelect, () => setShowDistrictPicker(false))}
       {renderPickerModal(showTalukPicker, talukOptions, handleTalukSelect, () => setShowTalukPicker(false))}
       {renderPickerModal(showHobliPicker, hobliOptions, handleHobliSelect, () => setShowHobliPicker(false))}
@@ -709,6 +779,12 @@ const styles = StyleSheet.create({
     minHeight: 100,
     paddingTop: spacing.md,
   },
+  pinRow: { flexDirection: 'row', alignItems: 'center' },
+  pinInput: { flex: 1 },
+  pinHint: { marginLeft: spacing.md, minWidth: 70, alignItems: 'center' },
+  pinHintText: { fontSize: 13, color: colors.textMuted, fontWeight: '600' },
+  pinError: { fontSize: 13, color: '#C02828', marginTop: 6 },
+  pinOk: { fontSize: 13, color: '#1A6B3A', fontWeight: '600', marginTop: 6 },
   dropdown: {
     backgroundColor: colors.surface,
     borderRadius: radius.md,
