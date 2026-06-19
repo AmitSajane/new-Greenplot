@@ -45,7 +45,7 @@ export const ENV = {
   dataGovBaseUrl: 'https://api.data.gov.in/resource',
   // Kisan Mitra real AI (Google Gemini, free tier). No key → offline engine.
   geminiApiKey: GEMINI_API_KEY ?? '',
-  geminiModel: GEMINI_MODEL || 'gemini-2.0-flash',
+  geminiModel: GEMINI_MODEL || 'gemini-2.5-flash-lite',
   geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 };
 
