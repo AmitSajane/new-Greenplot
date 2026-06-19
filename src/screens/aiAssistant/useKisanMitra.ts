@@ -7,6 +7,8 @@ import {
   Language,
   generateAssistantReply,
 } from '../../services/aiAssistantService';
+import { generateGeminiReply } from '../../services/geminiService';
+import { isGeminiConfigured } from '../../config/env';
 import {
   isSttAvailable,
   speak,
@@ -48,9 +50,11 @@ export function useKisanMitra() {
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const listenTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const listenHandled = useRef(false);
+  const mounted = useRef(true);
 
   useEffect(
     () => () => {
+      mounted.current = false;
       timers.current.forEach(clearTimeout);
       if (listenTimeout.current) clearTimeout(listenTimeout.current);
       teardownVoice();
@@ -68,23 +72,42 @@ export function useKisanMitra() {
       stopSpeaking();
       setIsThinking(true);
       setSuggestions([]);
-      const t = setTimeout(() => {
-        const reply = generateAssistantReply({ ...args, language, history: messages });
+
+      // Offline engine reply (also supplies contextual action buttons + a
+      // sensible fallback if AI is off/unavailable).
+      const base = generateAssistantReply({ ...args, language, history: messages });
+
+      const finish = (text: string, textEn: string, suggestions: string[]) => {
+        if (!mounted.current) return;
         setMessages(prev => [
           ...prev,
           {
             id: makeId('a'),
             role: 'assistant',
-            text: reply.text,
-            textEn: reply.textEn,
-            actions: reply.actions,
-            verified: reply.verified,
+            text,
+            textEn,
+            actions: base.actions,
+            verified: base.verified,
             createdAt: Date.now(),
           },
         ]);
-        setSuggestions(reply.suggestions);
+        setSuggestions(suggestions.length ? suggestions : base.suggestions);
         setIsThinking(false);
-      }, 700);
+      };
+
+      // Real AI for text questions when a Gemini key is configured.
+      if (isGeminiConfigured && args.userText) {
+        generateGeminiReply({ userText: args.userText, language, history: messages })
+          .then(ai => {
+            if (ai) finish(ai.text, ai.textEn, ai.suggestions);
+            else finish(base.text, base.textEn, base.suggestions); // graceful fallback
+          })
+          .catch(() => finish(base.text, base.textEn, base.suggestions));
+        return;
+      }
+
+      // Offline path (no key, or image-only message) — brief "thinking" delay.
+      const t = setTimeout(() => finish(base.text, base.textEn, base.suggestions), 700);
       timers.current.push(t);
     },
     [language, messages],

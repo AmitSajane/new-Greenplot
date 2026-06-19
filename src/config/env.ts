@@ -18,6 +18,8 @@ import {
   YOUTUBE_API_KEY,
   YOUTUBE_API_BASE_URL,
   DATA_GOV_API_KEY,
+  GEMINI_API_KEY,
+  GEMINI_MODEL,
 } from '@env';
 
 /**
@@ -41,6 +43,10 @@ export const ENV = {
   // Mandi prices (data.gov.in Agmarknet). Free public sample key by default.
   dataGovApiKey: DATA_GOV_API_KEY || DATA_GOV_SAMPLE_KEY,
   dataGovBaseUrl: 'https://api.data.gov.in/resource',
+  // Kisan Mitra real AI (Google Gemini, free tier). No key → offline engine.
+  geminiApiKey: GEMINI_API_KEY ?? '',
+  geminiModel: GEMINI_MODEL || 'gemini-2.0-flash',
+  geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */
@@ -52,6 +58,9 @@ export const isNewsConfigured = !!ENV.newsApiKey;
 /** True once a YouTube Data API key is present (enables in-app video SEARCH;
  *  RSS-based category feeds work without it). */
 export const isYoutubeConfigured = !!ENV.youtubeApiKey;
+
+/** True once a Gemini key is present → Kisan Mitra uses real AI (else offline engine). */
+export const isGeminiConfigured = !!ENV.geminiApiKey;
 
 if (__DEV__ && !ENV.mapboxToken) {
   console.warn('[env] MAPBOX_ACCESS_TOKEN is missing — maps will fail to load. Add it to .env.');
