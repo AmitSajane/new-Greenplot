@@ -25,9 +25,14 @@ create table if not exists profiles (
   location     text,
   district     text,
   state        text,
+  whatsapp     text,
+  has_whatsapp boolean not null default true,
   avatar_url   text,
   created_at   timestamptz not null default now()
 );
+-- For existing databases, run once:
+-- alter table profiles add column if not exists whatsapp text;
+-- alter table profiles add column if not exists has_whatsapp boolean not null default true;
 
 -- ── Lands / properties ──────────────────────────────────────────────────────
 create table if not exists lands (

@@ -5,13 +5,13 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AuthStack from './AuthStack';
 import FarmerTabNavigator from './FarmerTabNavigator';
 import OwnerTabNavigator from './OwnerTabNavigator';
-import SupabaseAuthScreen from '../screens/SupabaseAuthScreen';
+import ProfileOnboardingScreen from '../screens/ProfileOnboardingScreen';
 import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   LanguageSelection: undefined;
   Auth: undefined;
-  SupabaseAuth: undefined;
+  Onboarding: undefined;
   Main: undefined;
 };
 
@@ -41,7 +41,7 @@ export default function AppNavigator() {
           isAuthenticated ? (
             <RootStack.Screen name="Main" component={MainNavigator} />
           ) : (
-            <RootStack.Screen name="SupabaseAuth" component={SupabaseAuthScreen} />
+            <RootStack.Screen name="Onboarding" component={ProfileOnboardingScreen} />
           )
         ) : (
           // Mock mode (no backend): existing onboarding/profile flow.

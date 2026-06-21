@@ -26,12 +26,26 @@ interface AuthContextType {
   // ── Supabase (phone/password) — used when backend is on ──
   signInWithPhone: (phone: string, password: string) => Promise<AuthResult>;
   signUpWithPhone: (phone: string, password: string, name: string, role: UserRole) => Promise<AuthResult>;
+  /** Password-less onboarding: one screen → account + profile → dashboard. */
+  onboard: (input: OnboardInput) => Promise<AuthResult>;
   logout: () => void;
+}
+
+export interface OnboardInput {
+  name: string;
+  role: UserRole;
+  phone: string;
+  location?: string;
+  district?: string;
+  state?: string;
+  hasWhatsapp?: boolean;
 }
 
 /** Phone is the real identifier; we back it with a synthetic email Supabase never shows. */
 const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
 const phoneToEmail = (phone: string) => `${cleanPhone(phone)}@greenplot.app`;
+/** Deterministic password from the phone — invisible to the farmer (no OTP / no typing). */
+const phoneToPassword = (phone: string) => `GreenPlot-${cleanPhone(phone)}-v1`;
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -42,13 +56,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Build the app User from a Supabase session + the profiles row.
   const loadUserFromSession = useCallback(async (uid: string) => {
     if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('name, role, phone, email').eq('id', uid).single();
+    const { data } = await supabase
+      .from('profiles')
+      .select('name, role, phone, email, location, district, state, has_whatsapp')
+      .eq('id', uid)
+      .single();
     setUser({
       id: uid,
       name: data?.name || 'User',
       role: (data?.role as UserRole) || 'farmer',
       email: data?.email || undefined,
       phoneNumber: data?.phone || '',
+      location: data?.location || undefined,
+      district: data?.district || undefined,
+      state: data?.state || undefined,
+      hasWhatsapp: data?.has_whatsapp ?? undefined,
     });
   }, []);
 
@@ -137,6 +159,80 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [loadUserFromSession],
   );
 
+  // ── Password-less onboarding (single screen) ────────────────────────────────
+  const onboard = useCallback(
+    async (input: OnboardInput): Promise<AuthResult> => {
+      const digits = cleanPhone(input.phone);
+      if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
+      if (!input.name.trim()) return { success: false, error: 'Please enter your name.' };
+
+      const profileFields = {
+        name: input.name.trim(),
+        role: input.role,
+        phone: digits,
+        location: input.location || null,
+        district: input.district || null,
+        state: input.state || null,
+        has_whatsapp: input.hasWhatsapp ?? true,
+      };
+
+      // ── Mock mode (no backend): persist locally ──
+      if (!supabase) {
+        const newUser: User = {
+          id: `user-${digits}`,
+          name: profileFields.name,
+          phoneNumber: digits,
+          role: input.role,
+          location: input.location,
+          district: input.district,
+          state: input.state,
+          hasWhatsapp: profileFields.has_whatsapp,
+        };
+        registerUser(newUser);
+        setUser(newUser);
+        return { success: true };
+      }
+
+      // ── Supabase mode: sign up (or sign in if the phone already exists) ──
+      setIsLoading(true);
+      try {
+        const email = phoneToEmail(digits);
+        const password = phoneToPassword(digits);
+
+        let uid: string | undefined;
+        const signUp = await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { name: profileFields.name, phone: digits } },
+        });
+
+        if (signUp.error) {
+          // Already registered → sign the returning user back in.
+          const signIn = await supabase.auth.signInWithPassword({ email, password });
+          if (signIn.error || !signIn.data.user) {
+            return { success: false, error: 'This number is already registered on another device.' };
+          }
+          uid = signIn.data.user.id;
+        } else if (signUp.data.session && signUp.data.user) {
+          uid = signUp.data.user.id;
+        } else {
+          // No session → email confirmation is still ON in Supabase.
+          return { success: false, error: 'Turn OFF "Confirm email" in Supabase → Authentication → Providers → Email.' };
+        }
+
+        // The on_auth_user_created trigger seeds the row; fill in all the details.
+        await supabase.from('profiles').update(profileFields).eq('id', uid);
+        await loadUserFromSession(uid);
+        return { success: true };
+      } catch {
+        return { success: false, error: 'Something went wrong. Please try again.' };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loadUserFromSession],
+  );
+
   const logout = useCallback(() => {
     if (supabase) supabase.auth.signOut();
     setUser(null);
@@ -154,6 +250,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         getUserRole,
         signInWithPhone,
         signUpWithPhone,
+        onboard,
         logout,
       }}
     >

@@ -57,6 +57,26 @@ export async function reverseGeocode(lat: number, lon: number): Promise<string> 
   return formatAddress(json);
 }
 
+export interface ReverseDetail {
+  label: string;
+  district?: string;
+  state?: string;
+}
+
+/** Reverse geocode returning a label plus structured district/state. */
+export async function reverseGeocodeDetailed(lat: number, lon: number): Promise<ReverseDetail> {
+  const url = `${BASE_URL}/reverse?lat=${lat}&lon=${lon}&api_key=${GEOCODE_API_KEY}`;
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`Reverse geocode failed: ${res.status}`);
+  const json: GeocodeResult = await res.json();
+  const a = json.address || {};
+  return {
+    label: formatAddress(json),
+    district: a.state_district || a.district || a.county || undefined,
+    state: a.state || undefined,
+  };
+}
+
 export async function forwardGeocode(query: string): Promise<GeoPlace | null> {
   const url = `${BASE_URL}/search?q=${encodeURIComponent(query)}&api_key=${GEOCODE_API_KEY}`;
   const res = await fetch(url, { headers: { accept: 'application/json' } });
