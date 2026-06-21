@@ -27,9 +27,10 @@ import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import { useTranslation } from 'react-i18next';
 
 export default function ProfileOnboardingScreen() {
-  const { onboard, isLoading } = useAuth();
+  const { onboard, loginWithPhone, isLoading } = useAuth();
   const { i18n } = useTranslation();
 
+  const [mode, setMode] = useState<'signup' | 'login'>('signup');
   const [name, setName] = useState('');
   const [role, setRole] = useState<UserRole | null>(null);
   const [phone, setPhone] = useState('');
@@ -56,61 +57,85 @@ export default function ProfileOnboardingScreen() {
   }, []);
 
   const onContinue = useCallback(async () => {
-    if (!name.trim()) return Alert.alert('Name', 'Please enter your name.');
-    if (!role) return Alert.alert('Role', 'Please choose Farmer or Land Owner.');
     if (phone.replace(/\D/g, '').length < 10) return Alert.alert('Phone', 'Enter a valid 10-digit mobile number.');
 
+    // Returning user → phone-only login.
+    if (mode === 'login') {
+      setSubmitting(true);
+      const res = await loginWithPhone(phone);
+      setSubmitting(false);
+      if (!res.success) {
+        Alert.alert(
+          'Account not found',
+          res.error || 'No account for this number.',
+          res.isNewUser ? [{ text: 'Create account', onPress: () => setMode('signup') }, { text: 'Cancel', style: 'cancel' }] : undefined,
+        );
+      }
+      return;
+    }
+
+    // New user → full sign-up.
+    if (!name.trim()) return Alert.alert('Name', 'Please enter your name.');
+    if (!role) return Alert.alert('Role', 'Please choose Farmer or Land Owner.');
     setSubmitting(true);
     const res = await onboard({ name, role, phone, location, district, state, hasWhatsapp });
     setSubmitting(false);
     if (!res.success) Alert.alert('Could not continue', res.error || 'Please try again.');
     // On success the navigator switches to the dashboard automatically.
-  }, [name, role, phone, location, district, state, hasWhatsapp, onboard]);
+  }, [mode, name, role, phone, location, district, state, hasWhatsapp, onboard, loginWithPhone]);
 
   const busy = submitting || isLoading;
+  const isLogin = mode === 'login';
 
   return (
     <SafeAreaView style={styles.safe} edges={['bottom']}>
+      <LinearGradient colors={['#092E18', '#0F4A28', '#1A6B3A']} style={styles.hero}>
+        <SafeAreaView edges={['top']}>
+          <View style={styles.logo}><Text style={{ fontSize: 30 }}>🌱</Text></View>
+          <Text style={styles.heroTitle}>{isLogin ? 'Welcome back 👋' : 'Welcome to GreenPlot'}</Text>
+          <Text style={styles.heroSub}>
+            {isLogin ? 'Enter your phone number to log in' : "Let's set up your profile — takes 30 seconds"}
+          </Text>
+        </SafeAreaView>
+      </LinearGradient>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
           {/* Hero */}
-          <LinearGradient colors={['#092E18', '#0F4A28', '#1A6B3A']} style={styles.hero}>
-            <SafeAreaView edges={['top']}>
-              <View style={styles.logo}><Text style={{ fontSize: 30 }}>🌱</Text></View>
-              <Text style={styles.heroTitle}>Welcome to GreenPlot</Text>
-              <Text style={styles.heroSub}>Let's set up your profile — takes 30 seconds</Text>
-            </SafeAreaView>
-          </LinearGradient>
+
 
           <View style={styles.body}>
-            {/* Name */}
-            <Text style={styles.label}>Your name</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g. Rajesh Kumar"
-              placeholderTextColor="#9EB8A8"
-              value={name}
-              onChangeText={setName}
-            />
+            {!isLogin && (
+              <>
+                {/* Name */}
+                <Text style={styles.label}>Your name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Rajesh Kumar"
+                  placeholderTextColor="#9EB8A8"
+                  value={name}
+                  onChangeText={setName}
+                />
 
-            {/* Role */}
-            <Text style={styles.label}>I am a…</Text>
-            <View style={styles.types}>
-              <RoleCard
-                emoji="👨‍🌾"
-                title="Farmer"
-                desc="I want to lease land & grow crops"
-                selected={role === 'farmer'}
-                onPress={() => setRole('farmer')}
-              />
-              <RoleCard
-                emoji="🏡"
-                title="Land Owner"
-                desc="I have land to give on lease"
-                selected={role === 'owner'}
-                onPress={() => setRole('owner')}
-              />
-            </View>
+                {/* Role */}
+                <Text style={styles.label}>I am a…</Text>
+                <View style={styles.types}>
+                  <RoleCard
+                    emoji="👨‍🌾"
+                    title="Farmer"
+                    desc="I want to lease land & grow crops"
+                    selected={role === 'farmer'}
+                    onPress={() => setRole('farmer')}
+                  />
+                  <RoleCard
+                    emoji="🏡"
+                    title="Land Owner"
+                    desc="I have land to give on lease"
+                    selected={role === 'owner'}
+                    onPress={() => setRole('owner')}
+                  />
+                </View>
+              </>
+            )}
 
             {/* Phone */}
             <Text style={styles.label}>Phone number</Text>
@@ -126,61 +151,75 @@ export default function ProfileOnboardingScreen() {
                 onChangeText={t => setPhone(t.replace(/\D/g, ''))}
               />
             </View>
-            <TouchableOpacity style={styles.toggleRow} activeOpacity={0.7} onPress={() => setHasWhatsapp(v => !v)}>
-              <View style={[styles.check, hasWhatsapp && styles.checkOn]}>
-                {hasWhatsapp && <Ionicons name="checkmark" size={16} color="#fff" />}
-              </View>
-              <Text style={styles.toggleText}>This number is also on <Text style={styles.wa}>WhatsApp</Text> 🟢</Text>
-            </TouchableOpacity>
-
-            {/* Location */}
-            <Text style={styles.label}>Your location</Text>
-            {location ? (
-              <View style={styles.locDetected}>
-                <Text style={{ fontSize: 20 }}>📍</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.locName}>{location}</Text>
-                  <Text style={styles.locSub}>Tap "Detect" to update</Text>
+            {!isLogin && (
+              <TouchableOpacity style={styles.toggleRow} activeOpacity={0.7} onPress={() => setHasWhatsapp(v => !v)}>
+                <View style={[styles.check, hasWhatsapp && styles.checkOn]}>
+                  {hasWhatsapp && <Ionicons name="checkmark" size={16} color="#fff" />}
                 </View>
-                <TouchableOpacity onPress={detectLocation}><Text style={styles.locEdit}>Detect</Text></TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity style={styles.locBtn} activeOpacity={0.8} onPress={detectLocation} disabled={locating}>
-                {locating ? <ActivityIndicator color="#0F4A28" /> : <Ionicons name="location-outline" size={20} color="#0F4A28" />}
-                <Text style={styles.locBtnText}>{locating ? 'Detecting…' : 'Use my current location (GPS)'}</Text>
+                <Text style={styles.toggleText}>This number is also on <Text style={styles.wa}>WhatsApp</Text> 🟢</Text>
               </TouchableOpacity>
             )}
-            <TextInput
-              style={[styles.input, { marginTop: 8 }]}
-              placeholder="or type Village, District, State"
-              placeholderTextColor="#9EB8A8"
-              value={location}
-              onChangeText={setLocation}
-            />
 
-            {/* Language */}
-            <Text style={styles.label}>Language <Text style={styles.opt}>· optional</Text></Text>
-            <View style={styles.pills}>
-              {Object.entries(AVAILABLE_LANGUAGES).map(([code, lbl]) => {
-                const active = i18n.language === code;
-                return (
-                  <TouchableOpacity
-                    key={code}
-                    style={[styles.pill, active && styles.pillActive]}
-                    onPress={() => loadLanguage(code)}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={[styles.pillText, active && styles.pillTextActive]}>{lbl}</Text>
+            {!isLogin && (
+              <>
+                {/* Location */}
+                <Text style={styles.label}>Your location</Text>
+                {location ? (
+                  <View style={styles.locDetected}>
+                    <Text style={{ fontSize: 20 }}>📍</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.locName}>{location}</Text>
+                      <Text style={styles.locSub}>Tap "Detect" to update</Text>
+                    </View>
+                    <TouchableOpacity onPress={detectLocation}><Text style={styles.locEdit}>Detect</Text></TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={styles.locBtn} activeOpacity={0.8} onPress={detectLocation} disabled={locating}>
+                    {locating ? <ActivityIndicator color="#0F4A28" /> : <Ionicons name="location-outline" size={20} color="#0F4A28" />}
+                    <Text style={styles.locBtnText}>{locating ? 'Detecting…' : 'Use my current location (GPS)'}</Text>
                   </TouchableOpacity>
-                );
-              })}
-            </View>
+                )}
+                <TextInput
+                  style={[styles.input, { marginTop: 8 }]}
+                  placeholder="or type Village, District, State"
+                  placeholderTextColor="#9EB8A8"
+                  value={location}
+                  onChangeText={setLocation}
+                />
+
+                {/* Language */}
+                <Text style={styles.label}>Language <Text style={styles.opt}>· optional</Text></Text>
+                <View style={styles.pills}>
+                  {Object.entries(AVAILABLE_LANGUAGES).map(([code, lbl]) => {
+                    const active = i18n.language === code;
+                    return (
+                      <TouchableOpacity
+                        key={code}
+                        style={[styles.pill, active && styles.pillActive]}
+                        onPress={() => loadLanguage(code)}
+                        activeOpacity={0.8}
+                      >
+                        <Text style={[styles.pillText, active && styles.pillTextActive]}>{lbl}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
 
             {/* CTA */}
             <TouchableOpacity style={[styles.cta, busy && { opacity: 0.7 }]} onPress={onContinue} disabled={busy} activeOpacity={0.9}>
-              {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>Continue →</Text>}
+              {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>{isLogin ? 'Log in →' : 'Continue →'}</Text>}
             </TouchableOpacity>
             <Text style={styles.ctaHint}>No password needed. Your number keeps your account.</Text>
+
+            {/* Switch between sign-up and login */}
+            <TouchableOpacity style={styles.switchMode} onPress={() => setMode(isLogin ? 'signup' : 'login')} activeOpacity={0.7}>
+              <Text style={styles.switchText}>
+                {isLogin ? 'New to GreenPlot? ' : 'Already have an account? '}
+                <Text style={styles.switchLink}>{isLogin ? 'Create account' : 'Log in'}</Text>
+              </Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -200,15 +239,15 @@ function RoleCard({ emoji, title, desc, selected, onPress }: { emoji: string; ti
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: '#F4F8F5' },
-  scroll: { paddingBottom: 30 },
-  hero: { paddingHorizontal: 22, paddingBottom: 24, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 },
-  logo: { width: 54, height: 54, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginTop: 8, marginBottom: 12 },
-  heroTitle: { fontSize: 25, fontWeight: '800', color: '#fff' },
-  heroSub: { fontSize: 15, color: 'rgba(255,255,255,0.82)', marginTop: 4 },
+  safe: { flex: 1, },
+  scroll: { paddingBottom: 36 },
+  hero: { alignItems: 'center', justifyContent: 'center', paddingBottom: 18, borderBottomLeftRadius: 22, borderBottomRightRadius: 22 },
+  logo: { width: 48, height: 48, borderRadius: 14, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center', marginTop: 4, marginBottom: 10, textAlign: 'center' },
+  heroTitle: { fontSize: 24, fontWeight: '800', color: '#fff' },
+  heroSub: { fontSize: 16, color: 'rgba(255,255,255,0.82)', marginTop: 4, marginBottom: 18, textAlign: 'center', lineHeight: 20 },
 
-  body: { padding: 18 },
-  label: { fontSize: 15, fontWeight: '800', color: '#0D1509', marginTop: 18, marginBottom: 9 },
+  body: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 18 },
+  label: { fontSize: 15, fontWeight: '800', color: '#0D1509', marginTop: 16, marginBottom: 8 },
   opt: { fontWeight: '600', color: '#6B8074', fontSize: 13 },
   input: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E6EFE9', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, fontSize: 16, color: '#0D1509' },
 
@@ -244,4 +283,7 @@ const styles = StyleSheet.create({
   cta: { marginTop: 24, backgroundColor: '#1A6B3A', borderRadius: 16, paddingVertical: 17, alignItems: 'center' },
   ctaText: { color: '#fff', fontSize: 17, fontWeight: '800' },
   ctaHint: { textAlign: 'center', fontSize: 12.5, color: '#6B8074', marginTop: 10 },
+  switchMode: { marginTop: 16, alignItems: 'center', paddingVertical: 6 },
+  switchText: { fontSize: 14.5, color: '#3A5040' },
+  switchLink: { color: '#1A6B3A', fontWeight: '800' },
 });

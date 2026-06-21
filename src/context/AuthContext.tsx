@@ -28,6 +28,8 @@ interface AuthContextType {
   signUpWithPhone: (phone: string, password: string, name: string, role: UserRole) => Promise<AuthResult>;
   /** Password-less onboarding: one screen → account + profile → dashboard. */
   onboard: (input: OnboardInput) => Promise<AuthResult>;
+  /** Returning user: log in with phone only (profile already exists). */
+  loginWithPhone: (phone: string) => Promise<AuthResult>;
   logout: () => void;
 }
 
@@ -233,6 +235,38 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [loadUserFromSession],
   );
 
+  // ── Returning-user login (phone only) ──────────────────────────────────────
+  const loginWithPhone = useCallback(
+    async (phone: string): Promise<AuthResult> => {
+      const digits = cleanPhone(phone);
+      if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
+
+      if (!supabase) {
+        // Mock mode: only role is known by phone; treat missing as new user.
+        const role = getUserRoleByPhone(digits);
+        if (!role) return { success: false, error: 'No account found for this number.', isNewUser: true };
+        setUser({ id: `user-${digits}`, name: 'User', phoneNumber: digits, role });
+        return { success: true };
+      }
+
+      setIsLoading(true);
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: phoneToEmail(digits),
+          password: phoneToPassword(digits),
+        });
+        if (error || !data.user) {
+          return { success: false, error: 'No account found for this number. Please create one.', isNewUser: true };
+        }
+        await loadUserFromSession(data.user.id);
+        return { success: true };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [loadUserFromSession],
+  );
+
   const logout = useCallback(() => {
     if (supabase) supabase.auth.signOut();
     setUser(null);
@@ -251,6 +285,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signInWithPhone,
         signUpWithPhone,
         onboard,
+        loginWithPhone,
         logout,
       }}
     >
