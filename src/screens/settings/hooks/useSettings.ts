@@ -3,15 +3,12 @@ import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../../../context/AuthContext';
-import { RootStackParamList } from '../../../navigation/AppNavigator';
 import { SettingsStackParamList } from '../../../navigation/SettingsStack';
 
-type NavigationProp = NativeStackNavigationProp<RootStackParamList>;
 type SettingsNavProp = NativeStackNavigationProp<SettingsStackParamList, 'SettingsMain'>;
 
 export function useSettings() {
   const { user, logout } = useAuth();
-  const navigation = useNavigation<NavigationProp>();
   const settingsNav = useNavigation<SettingsNavProp>();
 
   const handleLogout = useCallback(() => {
@@ -20,13 +17,12 @@ export function useSettings() {
       {
         text: 'Logout',
         style: 'destructive',
-        onPress: () => {
-          logout();
-          navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
-        },
+        // Just clear the session — AppNavigator swaps to the onboarding/login
+        // screen automatically when `user` becomes null (no manual reset).
+        onPress: () => logout(),
       },
     ]);
-  }, [logout, navigation]);
+  }, [logout]);
 
   const onLanguagePress = useCallback(
     () => settingsNav.navigate('LanguageSelection', { fromAuth: false }),
