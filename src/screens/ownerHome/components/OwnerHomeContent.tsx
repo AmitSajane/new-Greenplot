@@ -1,11 +1,12 @@
 import React from 'react';
-import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
 import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
 import { SchemesNewsSection, VideosSection } from '../../farmerHome/components/sections';
+import useCurrentLocation from '../../../hooks/useCurrentLocation';
 
 function initials(name: string) {
   return name
@@ -17,6 +18,7 @@ function initials(name: string) {
 }
 
 export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
+  const { address, loading } = useCurrentLocation();
   return (
     <View style={s.safeArea}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -33,7 +35,10 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
                   <Text style={s.name}>{vm.userName}</Text>
                   <View style={s.locRow}>
                     <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />
-                    <Text style={s.locText}>{vm.locationLabel}</Text>
+                    <Text style={s.locText}>{address ?? vm.locationLabel}</Text>
+                    {loading ? (
+                      <ActivityIndicator style={{ marginLeft: 8 }} size="small" color="rgba(255,255,255,0.9)" />
+                    ) : null}
                   </View>
                 </View>
                 <TouchableOpacity style={s.bell} onPress={vm.onBell} activeOpacity={0.8}>
