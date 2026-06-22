@@ -54,8 +54,15 @@ create table if not exists lands (
   last_year_crop     text,
   last_year_earnings text,
   current_crop       text,
+  survey_number      text,
+  verified           boolean not null default false,
+  verified_owner     text,
   created_at         timestamptz not null default now()
 );
+-- For existing databases, run once:
+-- alter table lands add column if not exists survey_number text;
+-- alter table lands add column if not exists verified boolean not null default false;
+-- alter table lands add column if not exists verified_owner text;
 create index if not exists lands_owner_idx on lands(owner_id);
 create index if not exists lands_state_idx on lands(state);
 

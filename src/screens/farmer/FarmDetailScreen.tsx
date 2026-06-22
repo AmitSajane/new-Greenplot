@@ -81,6 +81,14 @@ export default function FarmDetailScreen() {
         {/* Title and Location */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>{farm.title}</Text>
+          {farm.verified && (
+            <View style={styles.verifiedBadge}>
+              <Ionicons name="shield-checkmark" size={14} color="#fff" />
+              <Text style={styles.verifiedText}>
+                Ownership Verified{farm.verifiedOwnerName ? ` · ${farm.verifiedOwnerName}` : ''}
+              </Text>
+            </View>
+          )}
           <View style={styles.locationRow}>
             <Ionicons name="location" size={18} color={colors.primary} />
             <Text style={styles.location}>
@@ -262,6 +270,18 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
+  verifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    backgroundColor: '#1A6B3A',
+    borderRadius: 20,
+    paddingHorizontal: 11,
+    paddingVertical: 6,
+    marginBottom: spacing.sm,
+  },
+  verifiedText: { color: '#fff', fontSize: 12.5, fontWeight: '800' },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',

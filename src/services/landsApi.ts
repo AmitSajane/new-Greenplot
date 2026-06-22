@@ -34,6 +34,9 @@ const landToApp = (r: any): FarmListing => ({
   lastYearCrop: r.last_year_crop || undefined,
   lastYearEarnings: r.last_year_earnings || undefined,
   currentCrop: r.current_crop || undefined,
+  surveyNumber: r.survey_number || undefined,
+  verified: r.verified ?? undefined,
+  verifiedOwnerName: r.verified_owner || undefined,
 });
 
 const toRow = (l: Partial<FarmListing>) => {
@@ -54,6 +57,9 @@ const toRow = (l: Partial<FarmListing>) => {
   if (l.lastYearCrop !== undefined) row.last_year_crop = l.lastYearCrop;
   if (l.lastYearEarnings !== undefined) row.last_year_earnings = l.lastYearEarnings;
   if (l.currentCrop !== undefined) row.current_crop = l.currentCrop;
+  if (l.surveyNumber !== undefined) row.survey_number = l.surveyNumber;
+  if (l.verified !== undefined) row.verified = l.verified;
+  if (l.verifiedOwnerName !== undefined) row.verified_owner = l.verifiedOwnerName;
   return row;
 };
 

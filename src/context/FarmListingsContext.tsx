@@ -36,6 +36,10 @@ export interface FarmListing {
   irrigationSchedule?: string;
   pesticideSchedule?: string;
   expectedHarvest?: string;
+  // Land ownership verification (from uploaded govt record, AI-read)
+  surveyNumber?: string;
+  verified?: boolean;
+  verifiedOwnerName?: string;
 }
 
 interface FarmListingsContextType {

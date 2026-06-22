@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -22,9 +23,18 @@ import { useAuth } from '../../context/AuthContext';
 import locationHierarchy, { type StateItem } from '../../data/locationHierarchy';
 import INDIA_LOCATIONS from '../../constants/indiaLocations.json';
 import { lookupPincode } from '../../services/pincodeApi';
+import { landVerifier, VerificationResult } from '../../services/landVerifier';
 
 /** Complete all-India State → District → Taluk map (offline, 35 states / 10.8k taluks). */
 const INDIA = INDIA_LOCATIONS as Record<string, Record<string, string[]>>;
+
+// Defensive optional require for the image picker (camera / gallery).
+let ImagePicker: { launchImageLibrary?: Function; launchCamera?: Function } | null;
+try {
+  ImagePicker = require('react-native-image-picker');
+} catch {
+  ImagePicker = null;
+}
 
 type NavigationProp = NativeStackNavigationProp<OwnerHomeStackParamList>;
 
@@ -103,6 +113,8 @@ export default function AddFarmScreen() {
   const [expectedHarvest, setExpectedHarvest] = useState('');
   const [govtSurveyNumber, setGovtSurveyNumber] = useState('');
   const [surveyFetched, setSurveyFetched] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [verifyResult, setVerifyResult] = useState<VerificationResult | null>(null);
   const [fraudBadge, setFraudBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
   const [blockchainBadge, setBlockchainBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
 
@@ -246,6 +258,9 @@ export default function AddFarmScreen() {
       status: 'active',
       plotGeoJSON: route?.params?.plotGeoJSON,
       areaAcres: acres ? parseFloat(acres) || undefined : undefined,
+      surveyNumber: govtSurveyNumber.trim() || undefined,
+      verified: verifyResult?.status === 'verified' || undefined,
+      verifiedOwnerName: verifyResult?.status === 'verified' ? verifyResult.record.ownerName : undefined,
     };
 
     if (selectedCrops.length > 0) {
@@ -370,6 +385,68 @@ export default function AddFarmScreen() {
   const removeMedia = useCallback((index: number) => {
     setMediaItems((prev) => prev.filter((_, i) => i !== index));
   }, []);
+
+  // ── Land document verification (upload RoR → AI reads → cross-check → badge) ──
+  const runVerification = useCallback(
+    async (base64: string, mimeType?: string) => {
+      setVerifying(true);
+      setVerifyResult(null);
+      const result = await landVerifier.verify({
+        base64,
+        mimeType,
+        claimedSurveyNumber: govtSurveyNumber,
+        claimedOwnerName: user?.name,
+        state,
+      });
+      setVerifying(false);
+      setVerifyResult(result);
+
+      // Light up the existing trust badges when the document checks out.
+      if (result.status === 'verified') {
+        setSurveyFetched(true);
+        setFraudBadge('verified');
+        setBlockchainBadge('verified');
+      }
+
+      // Auto-fill the form from the extracted record (only empty fields).
+      if (result.status === 'verified' || result.status === 'mismatch') {
+        const r = result.record;
+        if (r.surveyNumber && !govtSurveyNumber.trim()) setGovtSurveyNumber(r.surveyNumber);
+        if (r.area && !acres) {
+          const n = parseFloat(String(r.area).replace(/[^\d.]/g, ''));
+          if (n) setAcres(String(n));
+        }
+        if (r.village && !location) {
+          setLocation([r.village, r.district, r.state].filter(Boolean).join(', '));
+        }
+        if (r.state && INDIA[r.state] && !state) {
+          setState(r.state);
+          if (r.district && INDIA[r.state][r.district] && !district) setDistrict(r.district);
+        }
+      }
+    },
+    [govtSurveyNumber, user?.name, state, acres, location, district],
+  );
+
+  const pickDocument = useCallback(
+    (source: 'camera' | 'gallery') => {
+      const launch = source === 'camera' ? ImagePicker?.launchCamera : ImagePicker?.launchImageLibrary;
+      if (!launch) {
+        Alert.alert('Upload', 'Image picker is not available in this build.');
+        return;
+      }
+      launch(
+        { mediaType: 'photo', selectionLimit: 1, includeBase64: true, maxWidth: 1600, maxHeight: 1600, quality: 0.8 },
+        (res: { didCancel?: boolean; errorCode?: string; assets?: { base64?: string; type?: string }[] }) => {
+          if (res.didCancel) return;
+          const a = res.assets?.[0];
+          if (a?.base64) runVerification(a.base64, a.type);
+          else Alert.alert('Upload', 'Could not read that image. Please try again.');
+        },
+      );
+    },
+    [runVerification],
+  );
 
   // Memoized components for better performance
   const CropButton = React.memo<{ crop: string; isSelected: boolean; onPress: () => void }>(
@@ -535,27 +612,88 @@ export default function AddFarmScreen() {
           {/* Govt survey fetch */}
           <View style={styles.formGroup}>
             <Text style={styles.label}>Govt Survey Number (optional)</Text>
-            <View style={styles.surveyRow}>
-              <TextInput
-                style={[styles.input, styles.surveyInput]}
-                placeholder="e.g. Survey 123/45"
-                placeholderTextColor={colors.textMuted}
-                value={govtSurveyNumber}
-                onChangeText={setGovtSurveyNumber}
-              />
-              <TouchableOpacity
-                style={styles.fetchBtn}
-                onPress={() => {
-                  if (govtSurveyNumber.trim()) {
-                    setSurveyFetched(true);
-                    setFraudBadge('verified');
-                    setBlockchainBadge('verified');
-                  }
-                }}
-              >
-                <Text style={styles.fetchBtnText}>Fetch</Text>
-              </TouchableOpacity>
-            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="e.g. 123/4A"
+              placeholderTextColor={colors.textMuted}
+              value={govtSurveyNumber}
+              onChangeText={setGovtSurveyNumber}
+            />
+
+            {/* ── Verify ownership (free, AI reads the uploaded land record) ── */}
+            <Text style={[styles.label, { marginTop: spacing.md }]}>
+              Verify ownership{'  '}
+              <Text style={styles.labelHint}>· builds trust with farmers</Text>
+            </Text>
+
+            {verifying ? (
+              <View style={vrf.analyzing}>
+                <View style={vrf.docThumb}><Text style={{ fontSize: 22 }}>📄</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={vrf.analyzingTitle}>🔎 Reading your document…</Text>
+                  <Text style={vrf.analyzingSub}>AI is extracting owner name, survey number & area</Text>
+                </View>
+                <ActivityIndicator color="#4B2EA8" />
+              </View>
+            ) : verifyResult && (verifyResult.status === 'verified' || verifyResult.status === 'mismatch') ? (
+              <View>
+                {verifyResult.status === 'mismatch' && (
+                  <View style={vrf.warn}>
+                    <Text style={{ fontSize: 22 }}>⚠️</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={vrf.warnTitle}>Survey number doesn't match</Text>
+                      <Text style={vrf.warnSub}>{verifyResult.message}</Text>
+                    </View>
+                  </View>
+                )}
+                <View style={[vrf.card, verifyResult.status === 'verified' && vrf.cardOk]}>
+                  <View style={vrf.cardHead}>
+                    {verifyResult.status === 'verified' ? (
+                      <View style={vrf.badge}>
+                        <Ionicons name="shield-checkmark" size={14} color="#fff" />
+                        <Text style={vrf.badgeText}>Document Verified</Text>
+                      </View>
+                    ) : (
+                      <Text style={vrf.cardTitle}>Document details</Text>
+                    )}
+                    <Text style={{ fontSize: 20, marginLeft: 'auto' }}>📄</Text>
+                  </View>
+                  <VRow label="Owner name" value={verifyResult.record.ownerName} match={verifyResult.ownerMatches} />
+                  <VRow label="Survey no." value={verifyResult.record.surveyNumber} match={verifyResult.surveyMatches} />
+                  <VRow label="Area" value={verifyResult.record.area} />
+                  <VRow label="Village" value={verifyResult.record.village} />
+                  <Text style={vrf.foot}>🔁 Auto-filled into the form · tap any field to edit</Text>
+                </View>
+                <TouchableOpacity onPress={() => pickDocument('gallery')}>
+                  <Text style={vrf.reupload}>Re-upload document</Text>
+                </TouchableOpacity>
+              </View>
+            ) : verifyResult && (verifyResult.status === 'unreadable' || verifyResult.status === 'unconfigured') ? (
+              <View>
+                <View style={vrf.warn}>
+                  <Text style={{ fontSize: 22 }}>📷</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={vrf.warnTitle}>Couldn't read the document</Text>
+                    <Text style={vrf.warnSub}>{verifyResult.message}</Text>
+                  </View>
+                </View>
+                <View style={vrf.upBtns}>
+                  <TouchableOpacity style={vrf.upBtn} onPress={() => pickDocument('camera')}><Text style={vrf.upBtnText}>📷 Camera</Text></TouchableOpacity>
+                  <TouchableOpacity style={vrf.upBtn} onPress={() => pickDocument('gallery')}><Text style={vrf.upBtnText}>🖼️ Gallery</Text></TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <View style={vrf.upload}>
+                <Text style={{ fontSize: 30 }}>📄</Text>
+                <Text style={vrf.uploadTitle}>Upload your land record</Text>
+                <Text style={vrf.uploadDesc}>RoR / Pahani / 7-12 — download free from your state portal, then upload. AI reads & verifies it.</Text>
+                <View style={vrf.upBtns}>
+                  <TouchableOpacity style={vrf.upBtn} onPress={() => pickDocument('camera')}><Text style={vrf.upBtnText}>📷 Camera</Text></TouchableOpacity>
+                  <TouchableOpacity style={vrf.upBtn} onPress={() => pickDocument('gallery')}><Text style={vrf.upBtnText}>🖼️ Gallery</Text></TouchableOpacity>
+                </View>
+                <Text style={vrf.privacy}>🔒 We only read survey number, owner name & area to verify.</Text>
+              </View>
+            )}
           </View>
 
           <View style={styles.formGroup}>
@@ -723,6 +861,55 @@ export default function AddFarmScreen() {
   );
 }
 
+/** A label/value row in the verification card, with an optional ✓ match tag. */
+function VRow({ label, value, match }: { label: string; value?: string; match?: boolean }) {
+  if (!value) return null;
+  return (
+    <View style={vrf.row}>
+      <Text style={vrf.rowKey}>{label}</Text>
+      <View style={vrf.rowValWrap}>
+        <Text style={vrf.rowVal} numberOfLines={1}>{value}</Text>
+        {match === true && <Text style={vrf.matchTag}>✓ matches</Text>}
+        {match === false && <Text style={vrf.mismatchTag}>✕</Text>}
+      </View>
+    </View>
+  );
+}
+
+const vrf = StyleSheet.create({
+  upload: { borderWidth: 1.5, borderColor: '#1A6B3A', borderStyle: 'dashed', borderRadius: 14, padding: 16, alignItems: 'center', backgroundColor: '#fff' },
+  uploadTitle: { fontSize: 15, fontWeight: '800', color: '#0F4A28', marginTop: 6 },
+  uploadDesc: { fontSize: 12.5, color: '#6B8074', marginTop: 4, textAlign: 'center', lineHeight: 17 },
+  upBtns: { flexDirection: 'row', gap: 10, marginTop: 12, alignSelf: 'stretch' },
+  upBtn: { flex: 1, backgroundColor: '#E4F4EC', borderWidth: 1, borderColor: '#CDE9D8', borderRadius: 11, paddingVertical: 11, alignItems: 'center' },
+  upBtnText: { fontSize: 13.5, fontWeight: '800', color: '#0F4A28' },
+  privacy: { fontSize: 11.5, color: '#6B8074', marginTop: 10, textAlign: 'center' },
+
+  analyzing: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#EDE8FD', borderWidth: 1.5, borderColor: '#DCD2F5', borderRadius: 14, padding: 14 },
+  docThumb: { width: 44, height: 54, borderRadius: 8, backgroundColor: '#fff', borderWidth: 1, borderColor: '#ddd', alignItems: 'center', justifyContent: 'center' },
+  analyzingTitle: { fontSize: 14, fontWeight: '800', color: '#4B2EA8' },
+  analyzingSub: { fontSize: 12, color: '#6a5aa8', marginTop: 2 },
+
+  card: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E6EFE9', borderRadius: 14, padding: 14, marginTop: 4 },
+  cardOk: { borderColor: '#A8D8B8', backgroundColor: '#FBFFFC' },
+  cardHead: { flexDirection: 'row', alignItems: 'center' },
+  cardTitle: { fontSize: 14, fontWeight: '800', color: '#1C2E18' },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 11, paddingVertical: 6 },
+  badgeText: { color: '#fff', fontSize: 12.5, fontWeight: '800' },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F1F6F3' },
+  rowKey: { fontSize: 13.5, color: '#6B8074' },
+  rowValWrap: { flexDirection: 'row', alignItems: 'center', gap: 7, flexShrink: 1 },
+  rowVal: { fontSize: 14, fontWeight: '800', color: '#0D1509', flexShrink: 1 },
+  matchTag: { fontSize: 11.5, fontWeight: '800', color: '#1A6B3A' },
+  mismatchTag: { fontSize: 12, fontWeight: '800', color: '#C02828' },
+  foot: { fontSize: 12, color: '#6B8074', marginTop: 10 },
+  reupload: { fontSize: 13, fontWeight: '800', color: '#1A6B3A', marginTop: 10 },
+
+  warn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#FDF5E0', borderWidth: 1.5, borderColor: '#F0D9A8', borderRadius: 14, padding: 13, marginBottom: 10 },
+  warnTitle: { fontSize: 13.5, fontWeight: '800', color: '#B87214' },
+  warnSub: { fontSize: 12, color: '#8a6a1a', marginTop: 2 },
+});
+
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -771,6 +958,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
     marginBottom: spacing.sm,
+  },
+  labelHint: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: colors.textSecondary,
   },
   hintText: {
     fontSize: 12,
