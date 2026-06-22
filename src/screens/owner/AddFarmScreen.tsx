@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -105,6 +105,19 @@ export default function AddFarmScreen() {
   const [surveyFetched, setSurveyFetched] = useState(false);
   const [fraudBadge, setFraudBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
   const [blockchainBadge, setBlockchainBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
+
+  // Auto-fill location from the satellite-map boundary (reverse-geocoded centroid).
+  // Runs once: matches state/district against the bundled dropdown data; always
+  // fills the free-text location so the farmer sees their detected place.
+  useEffect(() => {
+    const p = route?.params || {};
+    if (p.location) setLocation(p.location);
+    if (p.state && INDIA[p.state]) {
+      setState(p.state);
+      if (p.district && INDIA[p.state][p.district]) setDistrict(p.district);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Hobli/Village (optional) still come from the older curated dataset.
   const statesData = locationHierarchy.states;

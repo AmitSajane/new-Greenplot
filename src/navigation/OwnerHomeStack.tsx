@@ -36,6 +36,9 @@ export type OwnerHomeStackParamList = {
     | {
         acres?: string;
         plotGeoJSON?: any;
+        location?: string;
+        district?: string;
+        state?: string;
       }
     | undefined;
   BudgetApprovals: undefined;

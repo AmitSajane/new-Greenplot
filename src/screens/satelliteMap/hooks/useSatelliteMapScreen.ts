@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
-import { Alert, PermissionsAndroid, Platform } from 'react-native';
-import Geolocation from '@react-native-community/geolocation';
+import { Alert } from 'react-native';
 import { initMapbox } from '../../../config/mapbox';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/SatelliteMapContext';
 import { calculatePolygonAreaAcres, LngLat } from '../../../utils/geo';
 import { calculatePolygonCentroid, estimateZoomForPolygon } from '../../../utils/geo/polygonCentroid';
+import { getCurrentCoords } from '../../../utils/geo/location';
+import { reverseGeocodeDetailed } from '../../../utils/geo/geocoding';
 import { getNDVITileUrl } from '../../../services/satelliteMapService';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 
@@ -60,38 +61,21 @@ export function useSatelliteMapScreen() {
     };
   }, []);
 
-  const fetchUserLocation = useCallback(() => {
-    const requestLocationPermission = async () => {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert(
-            'Location Required',
-            'Please enable location access to show your position on the map.'
-          );
-          return;
-        }
-      }
-      Geolocation.getCurrentPosition(
-        (position) => {
-          if (!isMountedRef.current) return;
-          const { longitude, latitude } = position.coords;
-          const coords: LngLat = [longitude, latitude];
-          setUserLocation(coords);
-          setMapCenter(coords);
-        },
-        () => {
-          if (!isMountedRef.current) return;
-          const fallback: LngLat = [74.91711421195988, 16.59086417203163];
-          setUserLocation(fallback);
-          setMapCenter(fallback);
-        },
-        { enableHighAccuracy: true }
-      );
-    };
-    requestLocationPermission();
+  const fetchUserLocation = useCallback(async () => {
+    // Uses the shared helper (timeout + Android permission) so it never hangs.
+    try {
+      const { lat, lon } = await getCurrentCoords();
+      if (!isMountedRef.current) return;
+      const coords: LngLat = [lon, lat];
+      setUserLocation(coords);
+      setMapCenter(coords);
+      setZoomLevel(16); // close-in on the farmer's field
+    } catch {
+      if (!isMountedRef.current) return;
+      const fallback: LngLat = [74.91711421195988, 16.59086417203163];
+      setUserLocation(fallback);
+      setMapCenter(fallback);
+    }
   }, [setMapCenter]);
 
   useEffect(() => {
@@ -99,6 +83,7 @@ export function useSatelliteMapScreen() {
       setIsLoading(true);
       await loadPlotData();
       // If navigated with a farmId, load its GeoJSON and focus map
+      let focusedOnPlot = false;
       if (farmIdFromRoute) {
         const listing = getListingById(farmIdFromRoute);
         if (listing?.plotGeoJSON) {
@@ -111,11 +96,13 @@ export function useSatelliteMapScreen() {
             setMapCenter(centroid);
             const zoom = estimateZoomForPolygon(coords as any);
             setZoomLevel(zoom);
+            focusedOnPlot = true;
           }
         }
       }
       if (!isMountedRef.current) return;
-      fetchUserLocation();
+      // New-farm flow (no existing plot) → center on the farmer's current GPS.
+      if (!focusedOnPlot) await fetchUserLocation();
       if (!isMountedRef.current) return;
       setIsLoading(false);
     };
@@ -150,7 +137,7 @@ export function useSatelliteMapScreen() {
     [drawMode]
   );
 
-  const handleSavePlot = useCallback(() => {
+  const handleSavePlot = useCallback(async () => {
     if (drawnPoints.length < 3) {
       Alert.alert('Error', 'Please draw at least 3 points to create a polygon');
       return;
@@ -172,6 +159,15 @@ export function useSatelliteMapScreen() {
     };
     setPlotGeoJSON(newGeoJSON);
     if (userRole === 'owner') {
+      // Reverse-geocode the field centroid so AddFarm can auto-fill location.
+      const centroid = calculatePolygonCentroid(coordinates as any); // [lon, lat]
+      let geo: { label?: string; district?: string; state?: string } = {};
+      try {
+        geo = await reverseGeocodeDetailed(centroid[1], centroid[0]);
+      } catch {
+        /* leave blank — user can fill manually */
+      }
+      if (!isMountedRef.current) return;
       Alert.alert(
         'Success',
         `Farm boundaries saved!\n\nApproximate area: ${areaAcres.toFixed(2)} acres`,
@@ -181,7 +177,13 @@ export function useSatelliteMapScreen() {
             onPress: () =>
               (navigation as { navigate?: (name: string, params?: object) => void }).navigate?.(
                 'AddFarm',
-                { acres: areaAcres.toFixed(2), plotGeoJSON: newGeoJSON }
+                {
+                  acres: areaAcres.toFixed(2),
+                  plotGeoJSON: newGeoJSON,
+                  location: geo.label,
+                  district: geo.district,
+                  state: geo.state,
+                }
               ),
           },
           { text: 'Close', style: 'cancel' },
