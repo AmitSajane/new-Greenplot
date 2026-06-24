@@ -40,6 +40,8 @@ export interface FarmListing {
   surveyNumber?: string;
   verified?: boolean;
   verifiedOwnerName?: string;
+  // Uploaded photo/video URLs (Supabase Storage). imageUrl is the cover (first).
+  mediaUrls?: string[];
 }
 
 interface FarmListingsContextType {

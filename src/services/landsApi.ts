@@ -37,6 +37,7 @@ const landToApp = (r: any): FarmListing => ({
   surveyNumber: r.survey_number || undefined,
   verified: r.verified ?? undefined,
   verifiedOwnerName: r.verified_owner || undefined,
+  mediaUrls: Array.isArray(r.media) ? r.media : undefined,
 });
 
 const toRow = (l: Partial<FarmListing>) => {
@@ -60,6 +61,7 @@ const toRow = (l: Partial<FarmListing>) => {
   if (l.surveyNumber !== undefined) row.survey_number = l.surveyNumber;
   if (l.verified !== undefined) row.verified = l.verified;
   if (l.verifiedOwnerName !== undefined) row.verified_owner = l.verifiedOwnerName;
+  if (l.mediaUrls !== undefined) row.media = l.mediaUrls;
   return row;
 };
 

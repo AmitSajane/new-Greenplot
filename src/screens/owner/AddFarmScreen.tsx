@@ -24,6 +24,7 @@ import locationHierarchy, { type StateItem } from '../../data/locationHierarchy'
 import INDIA_LOCATIONS from '../../constants/indiaLocations.json';
 import { lookupPincode } from '../../services/pincodeApi';
 import { landVerifier, VerificationResult } from '../../services/landVerifier';
+import { storageApi } from '../../services/storageApi';
 
 /** Complete all-India State → District → Taluk map (offline, 35 states / 10.8k taluks). */
 const INDIA = INDIA_LOCATIONS as Record<string, Record<string, string[]>>;
@@ -69,8 +70,11 @@ const FARM_IMAGES = [
 ];
 
 interface MediaItem {
-  uri: string;
+  id: string;
+  uri: string; // local preview uri
   type: 'photo' | 'video';
+  remoteUrl?: string; // Supabase Storage URL once uploaded
+  uploading?: boolean;
 }
 
 export default function AddFarmScreen() {
@@ -236,6 +240,13 @@ export default function AddFarmScreen() {
       Alert.alert('Missing Fields', 'Please select State, District and fill other required fields.');
       return;
     }
+    if (mediaItems.some(m => m.uploading)) {
+      Alert.alert('Please wait', 'Photos are still uploading. Try again in a moment.');
+      return;
+    }
+
+    // Uploaded media URLs (work across devices); first photo is the cover image.
+    const uploadedUrls = mediaItems.map(m => m.remoteUrl).filter((u): u is string => !!u);
 
     // Add the listing
     const listingData: any = {
@@ -252,7 +263,8 @@ export default function AddFarmScreen() {
       leaseType,
       pricePerYear: `₹${pricePerYear}`,
       description,
-      imageUrl: mediaItems.length > 0 ? mediaItems[0].uri : FARM_IMAGES[Math.floor(Math.random() * FARM_IMAGES.length)],
+      imageUrl: uploadedUrls[0] || FARM_IMAGES[Math.floor(Math.random() * FARM_IMAGES.length)],
+      mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       ownerId: user?.id || 'current-owner',
       ownerName: user?.name || 'Owner',
       status: 'active',
@@ -275,9 +287,6 @@ export default function AddFarmScreen() {
     }
     if (expectedHarvest) {
       listingData.expectedHarvest = expectedHarvest;
-    }
-    if (mediaItems.length > 0) {
-      listingData.media = mediaItems;
     }
 
     let newLandId: string;
@@ -352,35 +361,63 @@ export default function AddFarmScreen() {
     );
   }, []);
 
+  const newId = () => `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+  // Add a media item locally, then upload to Supabase Storage and swap in its URL.
+  const addAndUpload = useCallback(
+    (asset: { uri?: string; base64?: string; type?: string }, kind: 'photo' | 'video') => {
+      if (!asset.uri) return;
+      const id = newId();
+      setMediaItems(prev => [...prev, { id, uri: asset.uri!, type: kind, uploading: true }]);
+
+      const upload =
+        kind === 'photo' && asset.base64
+          ? storageApi.uploadImage(asset.base64, asset.type || 'image/jpeg', user?.id || 'anon')
+          : storageApi.uploadFromUri(asset.uri, asset.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), user?.id || 'anon');
+
+      upload.then(url => {
+        setMediaItems(prev =>
+          prev.map(m => (m.id === id ? { ...m, uploading: false, remoteUrl: url || undefined } : m)),
+        );
+      });
+    },
+    [user?.id],
+  );
+
   const handleTakePhoto = useCallback(() => {
-    // TODO: Integrate with image picker library (e.g., react-native-image-picker)
-    Alert.alert(
-      'Take Photo',
-      'Image picker integration needed. For now, this is a placeholder.',
-      [{ text: 'OK' }]
+    if (!ImagePicker?.launchCamera) return Alert.alert('Camera', 'Image picker not available in this build.');
+    ImagePicker.launchCamera(
+      { mediaType: 'photo', includeBase64: true, maxWidth: 1600, maxHeight: 1600, quality: 0.8 },
+      (res: { didCancel?: boolean; assets?: any[] }) => {
+        if (res.didCancel) return;
+        const a = res.assets?.[0];
+        if (a) addAndUpload(a, 'photo');
+      },
     );
-    // Example implementation:
-    // ImagePicker.launchCamera({ mediaType: 'photo' }, (response) => {
-    //   if (!response.didCancel && response.assets?.[0]) {
-    //     setMediaItems((prev) => [...prev, { uri: response.assets[0].uri, type: 'photo' }]);
-    //   }
-    // });
-  }, []);
+  }, [addAndUpload]);
+
+  const handlePickGallery = useCallback(() => {
+    if (!ImagePicker?.launchImageLibrary) return Alert.alert('Gallery', 'Image picker not available in this build.');
+    ImagePicker.launchImageLibrary(
+      { mediaType: 'photo', selectionLimit: 0, includeBase64: true, maxWidth: 1600, maxHeight: 1600, quality: 0.8 },
+      (res: { didCancel?: boolean; assets?: any[] }) => {
+        if (res.didCancel) return;
+        (res.assets || []).forEach(a => addAndUpload(a, 'photo'));
+      },
+    );
+  }, [addAndUpload]);
 
   const handleRecordVideo = useCallback(() => {
-    // TODO: Integrate with image picker library for video recording
-    Alert.alert(
-      'Record Video',
-      'Video recording integration needed. For now, this is a placeholder.',
-      [{ text: 'OK' }]
+    if (!ImagePicker?.launchCamera) return Alert.alert('Video', 'Image picker not available in this build.');
+    ImagePicker.launchCamera(
+      { mediaType: 'video', videoQuality: 'medium', durationLimit: 60 },
+      (res: { didCancel?: boolean; assets?: any[] }) => {
+        if (res.didCancel) return;
+        const a = res.assets?.[0];
+        if (a) addAndUpload(a, 'video');
+      },
     );
-    // Example implementation:
-    // ImagePicker.launchCamera({ mediaType: 'video' }, (response) => {
-    //   if (!response.didCancel && response.assets?.[0]) {
-    //     setMediaItems((prev) => [...prev, { uri: response.assets[0].uri, type: 'video' }]);
-    //   }
-    // });
-  }, []);
+  }, [addAndUpload]);
 
   const removeMedia = useCallback((index: number) => {
     setMediaItems((prev) => prev.filter((_, i) => i !== index));
@@ -470,6 +507,16 @@ export default function AddFarmScreen() {
     ({ item, index, onRemove }) => (
       <View style={styles.mediaPreviewContainer}>
         <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
+        {item.uploading && (
+          <View style={styles.mediaUploading}>
+            <ActivityIndicator color="#fff" />
+          </View>
+        )}
+        {!item.uploading && item.remoteUrl && (
+          <View style={styles.mediaUploaded}>
+            <Ionicons name="cloud-done" size={12} color="#fff" />
+          </View>
+        )}
         <TouchableOpacity style={styles.removeMediaButton} onPress={onRemove} activeOpacity={0.8}>
           <Ionicons name="close-circle" size={20} color={colors.danger} />
         </TouchableOpacity>
@@ -803,7 +850,7 @@ export default function AddFarmScreen() {
               <View style={styles.mediaPreviewsContainer}>
                 {mediaItems.map((item, index) => (
                   <MediaPreview
-                    key={`${item.uri}-${index}`}
+                    key={item.id}
                     item={item}
                     index={index}
                     onRemove={() => removeMedia(index)}
@@ -814,30 +861,29 @@ export default function AddFarmScreen() {
 
             {/* Capture Buttons */}
             <View style={styles.captureButtonsContainer}>
-              <TouchableOpacity
-                style={styles.captureButton}
-                onPress={handleTakePhoto}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={styles.captureButton} onPress={handlePickGallery} activeOpacity={0.8}>
+                <View style={[styles.captureIconContainer, styles.photoIconContainer]}>
+                  <Ionicons name="images" size={24} color={colors.primary} />
+                </View>
+                <Text style={styles.captureButtonText}>Gallery</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.captureButton} onPress={handleTakePhoto} activeOpacity={0.8}>
                 <View style={[styles.captureIconContainer, styles.photoIconContainer]}>
                   <Ionicons name="camera" size={24} color={colors.primary} />
                 </View>
-                <Text style={styles.captureButtonText}>Take Photo</Text>
+                <Text style={styles.captureButtonText}>Camera</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.captureButton}
-                onPress={handleRecordVideo}
-                activeOpacity={0.8}
-              >
+              <TouchableOpacity style={styles.captureButton} onPress={handleRecordVideo} activeOpacity={0.8}>
                 <View style={[styles.captureIconContainer, styles.videoIconContainer]}>
                   <Ionicons name="videocam" size={24} color={colors.info} />
                 </View>
-                <Text style={styles.captureButtonText}>Record Video</Text>
+                <Text style={styles.captureButtonText}>Video</Text>
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.mediaHint}>Clear photos help rent your land faster.</Text>
+            <Text style={styles.mediaHint}>Add multiple photos — clear photos rent your land faster.</Text>
           </View>
 
           {/* Submit Button */}
@@ -1162,6 +1208,21 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  mediaUploading: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  mediaUploaded: {
+    position: 'absolute',
+    top: 4,
+    left: 4,
+    backgroundColor: '#1A6B3A',
+    borderRadius: 10,
+    padding: 3,
   },
   captureButtonsContainer: {
     flexDirection: 'row',

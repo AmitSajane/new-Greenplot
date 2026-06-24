@@ -15,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { useFarmListings } from '../../context/FarmListingsContext';
+import MediaCarousel from '../../components/MediaCarousel';
 import { useLeases } from '../../context/LeaseContext';
 import { LEASE_TYPE_MAP, summarizeOffer } from '../../constants/leaseTypes';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
@@ -109,8 +110,8 @@ export default function PropertyDetailsScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image */}
-        <Image source={{ uri: property.imageUrl }} style={styles.image} />
+        {/* Photos / videos */}
+        <MediaCarousel urls={property.mediaUrls?.length ? property.mediaUrls : [property.imageUrl]} height={240} />
 
         {/* Title & status */}
         <View style={styles.titleRow}>

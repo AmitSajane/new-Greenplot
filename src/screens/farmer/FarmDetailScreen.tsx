@@ -17,6 +17,7 @@ import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { LeaseOptionsSection } from './components/LeaseOptionsSection';
+import MediaCarousel from '../../components/MediaCarousel';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
@@ -75,8 +76,8 @@ export default function FarmDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Image */}
-        <Image source={{ uri: farm.imageUrl }} style={styles.image} />
+        {/* Photos / videos */}
+        <MediaCarousel urls={farm.mediaUrls?.length ? farm.mediaUrls : [farm.imageUrl]} height={250} />
 
         {/* Title and Location */}
         <View style={styles.titleSection}>
