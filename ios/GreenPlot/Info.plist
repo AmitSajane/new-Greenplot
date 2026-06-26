@@ -49,6 +49,12 @@
 	<string>Kisan Mitra uses the microphone so you can ask farming questions by voice.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Kisan Mitra converts your spoken questions to text to answer them.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>GreenPlot uses the camera to take photos and videos of your farm and land documents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>GreenPlot lets you choose farm photos and land documents from your gallery.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>GreenPlot can save farm photos to your gallery.</string>
 	<key>RCTNewArchEnabled</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
