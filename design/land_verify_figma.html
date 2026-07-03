@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GreenPlot — Land Document Verification (Add Farm)</title>
+<style>
+  :root{
+    --green-900:#092E18;--green-800:#0F4A28;--green-700:#1A6B3A;--green-500:#2E9E5B;
+    --green-100:#E4F4EC;--amber:#B87214;--amber-100:#FDF5E0;--red:#C02828;--red-100:#FDECEC;
+    --blue:#1A5299;--blue-100:#E7F0FF;--purple:#4B2EA8;--purple-100:#EDE8FD;
+    --ink:#0D1509;--ink-2:#3A5040;--muted:#6B8074;--line:#E6EFE9;--bg:#F4F8F5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',system-ui,Roboto,sans-serif;}
+  body{background:#0c241a;padding:30px 16px 60px;color:var(--ink);}
+  .title{text-align:center;color:#fff;font-size:25px;font-weight:800;margin-bottom:6px;}
+  .sub{text-align:center;color:#8fcfa8;font-size:15px;margin-bottom:26px;}
+  .frames{display:flex;gap:34px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:12px;}
+  .clabel{color:#cfeeda;font-size:13px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;}
+  .phone{width:360px;background:var(--bg);border-radius:38px;padding:12px;box-shadow:0 26px 60px rgba(0,0,0,.5);border:1px solid #15321f;}
+  .screen{width:100%;background:var(--bg);border-radius:28px;overflow:hidden;padding:16px;}
+
+  .formlabel{font-size:14px;font-weight:800;color:var(--ink);margin:14px 0 8px;}
+  .formlabel:first-child{margin-top:4px;}
+  .input{background:#fff;border:1.5px solid var(--line);border-radius:13px;padding:13px 13px;font-size:15px;color:var(--ink);display:flex;align-items:center;justify-content:space-between;}
+  .input .ph{color:#9EB8A8;}
+
+  .card{background:#fff;border:1.5px solid var(--line);border-radius:16px;padding:15px;margin-top:8px;}
+
+  /* upload state */
+  .upload{border:1.5px dashed var(--green-700);border-radius:14px;padding:18px;text-align:center;background:#fff;}
+  .upload .ic{font-size:30px;}
+  .upload .t{font-size:15px;font-weight:800;color:var(--green-800);margin-top:6px;}
+  .upload .d{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.4;}
+  .upbtns{display:flex;gap:10px;margin-top:12px;}
+  .upbtn{flex:1;background:var(--green-100);border:1px solid #CDE9D8;border-radius:11px;padding:11px;font-size:13.5px;font-weight:800;color:var(--green-800);}
+
+  /* analyzing */
+  .analyzing{display:flex;align-items:center;gap:12px;background:var(--purple-100);border:1.5px solid #DCD2F5;border-radius:14px;padding:15px;}
+  .spin{width:30px;height:30px;border-radius:15px;border:3px solid #D8CCF5;border-top-color:var(--purple);}
+  .analyzing .t{font-size:14.5px;font-weight:800;color:var(--purple);}
+  .analyzing .d{font-size:12.5px;color:#6a5aa8;margin-top:2px;}
+  .docthumb{width:46px;height:58px;border-radius:8px;background:#fff;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:22px;}
+
+  /* verified */
+  .vhead{display:flex;align-items:center;gap:10px;}
+  .badge{display:inline-flex;align-items:center;gap:6px;background:var(--green-700);color:#fff;font-size:12.5px;font-weight:800;padding:6px 11px;border-radius:20px;}
+  .vrow{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #F1F6F3;font-size:14px;}
+  .vrow:last-child{border-bottom:none;}
+  .vrow .k{color:var(--muted);}
+  .vrow .v{font-weight:800;color:var(--ink);}
+  .match{color:var(--green-700);font-size:12px;font-weight:800;}
+  .vfoot{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--muted);}
+
+  /* mismatch */
+  .warn{display:flex;align-items:center;gap:10px;background:var(--amber-100);border:1.5px solid #F0D9A8;border-radius:14px;padding:13px;margin-top:10px;}
+  .warn .t{font-size:13.5px;font-weight:800;color:var(--amber);}
+  .warn .d{font-size:12px;color:#8a6a1a;margin-top:2px;}
+
+  .smallnote{font-size:12px;color:var(--muted);margin-top:8px;line-height:1.4;}
+  .link{color:var(--green-700);font-weight:800;}
+
+  .note{max-width:1000px;margin:34px auto 0;background:#10301f;border:1px solid #1d4a30;border-radius:18px;padding:22px 26px;color:#d7f0e0;}
+  .note h3{color:#fff;font-size:18px;margin-bottom:12px;}
+  .note ul{margin-left:18px;line-height:1.85;font-size:15px;}
+  .note .tag{display:inline-block;background:#1A6B3A;color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:8px;margin-right:6px;}
+</style>
+</head>
+<body>
+  <div class="title">Land Verification — fits inside "Add Farm"</div>
+  <div class="sub">Survey number → upload document → AI reads &amp; verifies → badge + auto-fill (all free, uses Gemini Vision)</div>
+
+  <div class="frames">
+    <!-- STATE 1: upload -->
+    <div class="col">
+      <div class="clabel">① Enter &amp; upload</div>
+      <div class="phone"><div class="screen">
+        <div class="formlabel">Govt Survey Number</div>
+        <div class="input"><span>123/4A, Belagavi</span><span>🔖</span></div>
+
+        <div class="formlabel">Verify ownership <span style="color:var(--muted);font-weight:600;">· builds trust</span></div>
+        <div class="upload">
+          <div class="ic">📄</div>
+          <div class="t">Upload your land record</div>
+          <div class="d">RoR / Pahani / 7-12 — download free from Bhoomi, then upload here. AI will read &amp; verify it.</div>
+          <div class="upbtns">
+            <div class="upbtn">📷 Camera</div>
+            <div class="upbtn">🖼️ Gallery</div>
+          </div>
+        </div>
+        <div class="smallnote">🔒 Your document stays private. We only read the survey number, owner name &amp; area to verify.</div>
+      </div></div>
+    </div>
+
+    <!-- STATE 2: analyzing -->
+    <div class="col">
+      <div class="clabel">② AI reading (Gemini)</div>
+      <div class="phone"><div class="screen">
+        <div class="formlabel">Govt Survey Number</div>
+        <div class="input"><span>123/4A, Belagavi</span><span>🔖</span></div>
+
+        <div class="formlabel">Verify ownership</div>
+        <div class="analyzing">
+          <div class="docthumb">📄</div>
+          <div style="flex:1;">
+            <div class="t">🔎 Reading your document…</div>
+            <div class="d">AI is extracting owner name, survey number &amp; area</div>
+          </div>
+          <div class="spin"></div>
+        </div>
+        <div class="smallnote">Powered by Kisan Mitra AI · takes a few seconds</div>
+      </div></div>
+    </div>
+
+    <!-- STATE 3: verified -->
+    <div class="col">
+      <div class="clabel">③ Verified ✓ + auto-fill</div>
+      <div class="phone"><div class="screen">
+        <div class="formlabel">Govt Survey Number</div>
+        <div class="input"><span>123/4A, Belagavi</span><span style="color:var(--green-700)">✓</span></div>
+
+        <div class="formlabel">Ownership</div>
+        <div class="card" style="border-color:#A8D8B8;background:#FBFFFC;">
+          <div class="vhead">
+            <span class="badge">🛡️ Document Verified</span>
+            <span style="margin-left:auto;font-size:22px;">📄</span>
+          </div>
+          <div style="margin-top:12px;">
+            <div class="vrow"><span class="k">Owner name</span><span class="v">Niranjangouda Patil <span class="match">✓ matches</span></span></div>
+            <div class="vrow"><span class="k">Survey no.</span><span class="v">123/4A <span class="match">✓</span></span></div>
+            <div class="vrow"><span class="k">Area</span><span class="v">1.01 acres</span></div>
+            <div class="vrow"><span class="k">Village</span><span class="v">Belagavi</span></div>
+          </div>
+          <div class="vfoot">🔁 Auto-filled into the form below · tap any field to edit</div>
+        </div>
+        <div class="smallnote">Read from your uploaded record by AI. <span class="link">Re-upload</span></div>
+      </div></div>
+    </div>
+
+    <!-- STATE 4: mismatch -->
+    <div class="col">
+      <div class="clabel">④ Mismatch (safety)</div>
+      <div class="phone"><div class="screen">
+        <div class="formlabel">Govt Survey Number</div>
+        <div class="input"><span>999/9</span><span>🔖</span></div>
+
+        <div class="formlabel">Ownership</div>
+        <div class="warn">
+          <span style="font-size:24px;">⚠️</span>
+          <div>
+            <div class="t">Survey number doesn't match the document</div>
+            <div class="d">Document shows <b>123/4A</b>. Please check the number or re-upload the correct record.</div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:10px;">
+          <div class="vrow"><span class="k">Document survey no.</span><span class="v">123/4A</span></div>
+          <div class="vrow"><span class="k">You entered</span><span class="v" style="color:var(--red);">999/9</span></div>
+        </div>
+        <div class="smallnote">You can still submit, but unverified land shows no trust badge to farmers.</div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>How it works &amp; why it fits</h3>
+    <ul>
+      <li><span class="tag">WHERE</span> Slots into the existing <b>Add Farm → "Govt Survey Number"</b> section — just adds an upload box below it.</li>
+      <li><span class="tag">FREE</span> Uses your existing <b>Gemini Vision</b> (no new paid API). Owner downloads their own RoR/Pahani/7-12 free from the state portal &amp; uploads it.</li>
+      <li><span class="tag">REAL</span> The government document IS the proof — AI reads owner name, survey no, area, village and <b>cross-checks</b> against what was typed → <b>"Document Verified"</b> badge.</li>
+      <li><span class="tag">AUTO-FILL</span> Extracted area &amp; village flow into the form — less typing for the owner.</li>
+      <li><span class="tag">TRUST</span> Verified farms show a 🛡️ badge to farmers browsing land — big confidence boost, no gated API needed. Works all-India (any state's document).</li>
+      <li><span class="tag">FUTURE</span> Built behind a <b>LandVerifier</b> interface — drop in the APISetu Karnataka API (free, once approved) or a paid all-India API later, with zero UI changes.</li>
+    </ul>
+  </div>
+</body>
+</html>

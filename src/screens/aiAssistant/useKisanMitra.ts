@@ -7,7 +7,7 @@ import {
   Language,
   generateAssistantReply,
 } from '../../services/aiAssistantService';
-import { generateGeminiReply } from '../../services/geminiService';
+import { generateGeminiReply, generateGeminiVisionReply } from '../../services/geminiService';
 import { isGeminiConfigured } from '../../config/env';
 import {
   isSttAvailable,
@@ -68,7 +68,7 @@ export function useKisanMitra() {
   );
 
   const respond = useCallback(
-    (args: { userText?: string; imageUri?: string }) => {
+    (args: { userText?: string; imageUri?: string; imageBase64?: string; imageMime?: string }) => {
       stopSpeaking();
       setIsThinking(true);
       setSuggestions([]);
@@ -95,19 +95,31 @@ export function useKisanMitra() {
         setIsThinking(false);
       };
 
-      // Real AI for text questions when a Gemini key is configured.
-      if (isGeminiConfigured && args.userText) {
-        generateGeminiReply({ userText: args.userText, language, history: messages })
-          .then(ai => {
-            if (ai) finish(ai.text, ai.textEn, ai.suggestions);
-            else finish(base.text, base.textEn, base.suggestions); // graceful fallback
-          })
-          .catch(() => finish(base.text, base.textEn, base.suggestions));
+      const fallback = () => finish(base.text, base.textEn, base.suggestions);
+
+      // Real AI — photo disease detection (image) takes priority.
+      if (isGeminiConfigured && args.imageBase64) {
+        generateGeminiVisionReply({
+          base64: args.imageBase64,
+          mimeType: args.imageMime || 'image/jpeg',
+          language,
+          userText: args.userText,
+        })
+          .then(ai => (ai ? finish(ai.text, ai.textEn, ai.suggestions) : fallback()))
+          .catch(fallback);
         return;
       }
 
-      // Offline path (no key, or image-only message) — brief "thinking" delay.
-      const t = setTimeout(() => finish(base.text, base.textEn, base.suggestions), 700);
+      // Real AI for text questions.
+      if (isGeminiConfigured && args.userText) {
+        generateGeminiReply({ userText: args.userText, language, history: messages })
+          .then(ai => (ai ? finish(ai.text, ai.textEn, ai.suggestions) : fallback()))
+          .catch(fallback);
+        return;
+      }
+
+      // Offline path (no key) — brief "thinking" delay.
+      const t = setTimeout(fallback, 700);
       timers.current.push(t);
     },
     [language, messages],
@@ -124,9 +136,9 @@ export function useKisanMitra() {
   );
 
   const sendImage = useCallback(
-    (uri: string) => {
+    (uri: string, base64?: string, mime?: string) => {
       setMessages(prev => [...prev, { id: makeId('u'), role: 'user', imageUri: uri, createdAt: Date.now() }]);
-      respond({ imageUri: uri });
+      respond({ imageUri: uri, imageBase64: base64, imageMime: mime });
     },
     [respond],
   );
@@ -137,11 +149,12 @@ export function useKisanMitra() {
       return;
     }
     ImagePicker.launchImageLibrary(
-      { mediaType: 'photo', selectionLimit: 1 },
-      (res: { didCancel?: boolean; assets?: { uri?: string }[] }) => {
+      // includeBase64 + resize → small enough to send to Gemini Vision quickly.
+      { mediaType: 'photo', selectionLimit: 1, includeBase64: true, maxWidth: 1280, maxHeight: 1280, quality: 0.7 },
+      (res: { didCancel?: boolean; assets?: { uri?: string; base64?: string; type?: string }[] }) => {
         if (res.didCancel) return;
-        const uri = res.assets?.[0]?.uri;
-        if (uri) sendImage(uri);
+        const a = res.assets?.[0];
+        if (a?.uri) sendImage(a.uri, a.base64, a.type);
       },
     );
   }, [sendImage]);

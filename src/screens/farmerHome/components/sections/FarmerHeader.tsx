@@ -1,5 +1,5 @@
 import React from 'react';
-import { Text, TouchableOpacity, View } from 'react-native';
+import { Text, TouchableOpacity, View, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -14,6 +14,7 @@ const LANG_SHORT: Record<string, string> = {
 interface Props {
   name: string;
   location: string;
+  loading?: boolean;
   onAvatar: () => void;
   onLanguage: () => void;
   onNotifications: () => void;
@@ -29,7 +30,7 @@ function toInitials(name: string): string {
     .toUpperCase();
 }
 
-function FarmerHeaderBase({ name, location, onAvatar, onLanguage, onNotifications }: Props) {
+function FarmerHeaderBase({ name, location, loading, onAvatar, onLanguage, onNotifications }: Props) {
   const { i18n } = useTranslation();
   const langShort = LANG_SHORT[i18n.language] || 'EN';
   return (
@@ -46,6 +47,13 @@ function FarmerHeaderBase({ name, location, onAvatar, onLanguage, onNotification
               <View style={s.locRow}>
                 <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />
                 <Text style={s.locText}>{location}</Text>
+                {loading ? (
+                  <ActivityIndicator
+                    style={{ marginLeft: 8 }}
+                    size="small"
+                    color="rgba(255,255,255,0.9)"
+                  />
+                ) : null}
               </View>
             </View>
             <View style={s.headerActions}>

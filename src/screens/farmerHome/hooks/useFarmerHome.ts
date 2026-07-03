@@ -137,8 +137,8 @@ export function useFarmerHome() {
   );
 
   return {
-    userName: user?.name || 'Rajesh Kumar',
-    locationLabel: (user as { location?: string })?.location || 'Purnea, Bihar · Kisan',
+    userName: user?.name || 'Hi User',
+    locationLabel: (user as { location?: string })?.location || '',
 
     // Static (stable) content
     weather: FARMER_WEATHER,

@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GreenPlot — Home Redesign v2 (richer)</title>
+<style>
+  :root{
+    --green-900:#092E18; --green-800:#0F4A28; --green-700:#1A6B3A; --green-500:#2E9E5B;
+    --green-100:#E4F4EC; --amber:#B87214; --amber-100:#FDF5E0; --red:#C02828; --red-100:#FDECEC;
+    --blue:#1A5299; --blue-100:#E7F0FF; --purple:#4B2EA8; --purple-100:#EDE8FD;
+    --ink:#0D1509; --ink-2:#3A5040; --muted:#6B8074; --line:#E6EFE9; --bg:#EEF4F0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;}
+  body{font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;background:#0c241a;color:var(--ink);padding:32px 16px 64px;}
+  .page-title{text-align:center;color:#fff;margin-bottom:6px;font-size:26px;font-weight:800;}
+  .page-sub{text-align:center;color:#8fcfa8;margin-bottom:28px;font-size:15px;}
+  .frames{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .col-label{color:#cfeeda;font-size:15px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+  .phone{width:392px;background:var(--bg);border-radius:42px;padding:14px;box-shadow:0 30px 70px rgba(0,0,0,.5);border:1px solid #15321f;}
+  .screen{width:100%;height:840px;background:var(--bg);border-radius:30px;overflow-y:auto;overflow-x:hidden;position:relative;}
+  .screen::-webkit-scrollbar{width:0;}
+
+  /* header */
+  .header{background:linear-gradient(135deg,#092E18,#0F4A28 55%,#1A6B3A);padding:18px 18px 20px;color:#fff;}
+  .htop{display:flex;align-items:center;gap:12px;}
+  .avatar{width:50px;height:50px;border-radius:25px;background:#F5C86A;display:flex;align-items:center;justify-content:center;font-weight:800;color:#5C3300;font-size:18px;border:2px solid rgba(255,255,255,.3);}
+  .greet{font-size:14px;color:rgba(255,255,255,.75);}
+  .uname{font-size:22px;font-weight:800;line-height:1.15;}
+  .loc{font-size:13px;color:rgba(255,255,255,.7);display:flex;align-items:center;gap:4px;margin-top:2px;}
+  .htools{margin-left:auto;display:flex;gap:9px;}
+  .hicon{width:44px;height:44px;border-radius:13px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:18px;position:relative;}
+  .hicon .dot{position:absolute;top:9px;right:10px;width:9px;height:9px;border-radius:5px;background:#FF5C5C;border:2px solid #0F4A28;}
+
+  .section{padding:16px 16px 0;}
+  .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+  .sec-title{font-size:18px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+  .sec-link{font-size:14px;font-weight:700;color:var(--green-700);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:18px;}
+
+  .fab{position:absolute;right:18px;bottom:18px;width:60px;height:60px;border-radius:30px;background:var(--green-700);display:flex;align-items:center;justify-content:center;font-size:25px;box-shadow:0 10px 24px rgba(15,74,40,.5);}
+
+  /* weather hero */
+  .weather{margin:14px 16px 0;background:#fff;border-radius:20px;padding:16px;border:1px solid var(--line);box-shadow:0 6px 16px rgba(9,46,24,.06);}
+  .weather-top{display:flex;align-items:center;gap:14px;}
+  .w-emoji{font-size:44px;}
+  .w-temp{font-size:38px;font-weight:800;color:var(--ink);line-height:1;}
+  .w-cond{font-size:15px;color:var(--ink-2);font-weight:600;margin-top:2px;}
+  .w-place{font-size:13px;color:var(--muted);}
+  .w-advisory{margin-top:13px;background:var(--green-100);border-radius:14px;padding:12px 13px;font-size:15px;color:var(--green-800);font-weight:600;line-height:1.4;display:flex;gap:8px;}
+
+  /* snapshot stats */
+  .snap{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;}
+  .snap .s{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 6px;text-align:center;}
+  .snap .s .e{font-size:22px;}
+  .snap .s .v{font-size:21px;font-weight:800;color:var(--ink);margin-top:3px;}
+  .snap .s .l{font-size:12px;color:var(--muted);margin-top:2px;line-height:1.2;}
+
+  /* AI advisory */
+  .ai{display:flex;align-items:center;gap:13px;padding:15px;background:linear-gradient(120deg,#EDE8FD,#F4F0FF);border:1px solid #DCD2F5;border-radius:18px;}
+  .ai-icon{width:48px;height:48px;border-radius:14px;background:#4B2EA8;display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0;}
+  .ai-badge{font-size:12px;font-weight:800;color:#4B2EA8;text-transform:uppercase;letter-spacing:.4px;}
+  .ai-text{font-size:15px;font-weight:600;color:var(--ink);margin-top:2px;line-height:1.35;}
+  .ai-cta{margin-left:auto;color:#4B2EA8;font-size:22px;font-weight:800;}
+
+  /* quick actions grid */
+  .qgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+  .qbtn{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px 8px;display:flex;flex-direction:column;align-items:center;gap:9px;box-shadow:0 3px 9px rgba(9,46,24,.04);}
+  .qicon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:23px;}
+  .qlabel{font-size:14px;font-weight:700;color:var(--ink);text-align:center;line-height:1.2;}
+
+  /* tasks */
+  .task{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1F6F3;}
+  .task:last-child{border-bottom:none;}
+  .task-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+  .task-title{font-size:16px;font-weight:800;color:var(--ink);}
+  .task-sub{font-size:13px;color:var(--muted);margin-top:2px;}
+  .task-btn{margin-left:auto;color:#fff;font-size:14px;font-weight:800;padding:10px 15px;border-radius:13px;}
+
+  /* crop health */
+  .crop{padding:15px 16px;border-bottom:1px solid #F1F6F3;}
+  .crop:last-child{border-bottom:none;}
+  .crop-top{display:flex;align-items:center;gap:12px;}
+  .crop-emoji{font-size:30px;}
+  .crop-name{font-size:16px;font-weight:800;color:var(--ink);}
+  .crop-stage{font-size:13px;color:var(--muted);margin-top:2px;}
+  .crop-status{margin-left:auto;font-size:12px;font-weight:800;padding:5px 10px;border-radius:11px;}
+  .bar{height:9px;border-radius:5px;background:#EDF3EF;margin-top:11px;overflow:hidden;}
+  .bar i{display:block;height:100%;border-radius:5px;}
+
+  /* mandi */
+  .mandi-row{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1F6F3;}
+  .mandi-row:last-child{border-bottom:none;}
+  .mandi-emoji{font-size:28px;}
+  .mandi-name{font-size:16px;font-weight:700;color:var(--ink);}
+  .mandi-unit{font-size:12px;color:var(--muted);}
+  .mandi-price{margin-left:auto;text-align:right;}
+  .mandi-val{font-size:18px;font-weight:800;color:var(--ink);}
+  .mandi-up{font-size:13px;font-weight:800;color:var(--green-500);}
+  .mandi-down{font-size:13px;font-weight:800;color:var(--red);}
+
+  /* land */
+  .land{border-radius:18px;overflow:hidden;}
+  .land-img{height:140px;background:linear-gradient(120deg,#7cc69a,#3f8f5e);display:flex;align-items:flex-end;padding:11px;}
+  .land-badge{background:rgba(9,46,24,.82);color:#fff;font-size:13px;font-weight:800;padding:6px 11px;border-radius:11px;}
+  .land-price{margin-left:auto;background:#F5C86A;color:#5C3300;font-size:15px;font-weight:800;padding:6px 11px;border-radius:11px;}
+  .land-body{padding:14px 16px;}
+  .land-title{font-size:18px;font-weight:800;color:var(--ink);}
+  .land-meta{font-size:14px;color:var(--ink-2);margin-top:4px;display:flex;align-items:center;gap:5px;}
+  .land-cta{margin-top:12px;background:var(--green-100);color:var(--green-800);font-size:15px;font-weight:800;text-align:center;padding:12px;border-radius:13px;}
+
+  /* schemes / news */
+  .news{display:flex;align-items:center;gap:13px;padding:14px 16px;border-bottom:1px solid #F1F6F3;}
+  .news:last-child{border-bottom:none;}
+  .news-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+  .news-title{font-size:16px;font-weight:800;color:var(--ink);}
+  .news-sub{font-size:13px;color:var(--muted);margin-top:2px;line-height:1.3;}
+
+  /* ---------- OWNER ---------- */
+  .port{margin-top:16px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:18px;padding:16px;}
+  .port-label{font-size:13px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:rgba(255,255,255,.65);}
+  .port-val{font-size:36px;font-weight:800;color:#fff;line-height:1;margin-top:4px;}
+  .port-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(77,175,122,.3);border:1px solid rgba(168,216,184,.5);border-radius:20px;padding:5px 11px;font-size:14px;font-weight:700;color:#CFEFDB;margin-top:10px;}
+  .port-stats{display:flex;margin-top:15px;border-top:1px solid rgba(255,255,255,.15);padding-top:13px;}
+  .pst{flex:1;text-align:center;border-right:1px solid rgba(255,255,255,.13);}
+  .pst:last-child{border-right:none;}
+  .pst-v{font-size:20px;font-weight:800;color:#fff;}
+  .pst-l{font-size:12px;color:rgba(255,255,255,.65);margin-top:3px;}
+
+  .rev{padding:16px 18px;display:flex;align-items:flex-end;justify-content:space-between;}
+  .rev-label{font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);}
+  .rev-val{font-size:30px;font-weight:800;color:var(--green-900);margin-top:3px;}
+  .rev-chip{display:inline-block;font-size:13px;font-weight:700;color:var(--green-800);background:var(--green-100);padding:4px 10px;border-radius:11px;margin-top:7px;}
+  .spark{display:flex;align-items:flex-end;gap:5px;height:56px;}
+  .spark span{width:9px;border-radius:3px;background:#7BC79B;}
+  .spark span.hi{background:var(--green-700);}
+  .payout{display:flex;align-items:center;gap:9px;margin:0 18px;border-top:1px dashed var(--line);padding:13px 0;font-size:14px;color:var(--ink-2);}
+  .payout b{color:var(--ink);}
+  .payout .go{margin-left:auto;color:var(--green-700);font-weight:800;}
+
+  .mgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .metric{background:#fff;border:1px solid var(--line);border-radius:16px;padding:15px;}
+  .m-icon{width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:19px;}
+  .m-val{font-size:26px;font-weight:800;color:var(--ink);margin-top:10px;line-height:1;}
+  .m-label{font-size:14px;color:var(--ink-2);font-weight:600;margin-top:5px;}
+  .m-sub{font-size:12px;font-weight:700;margin-top:3px;}
+
+  .alert{display:flex;align-items:center;gap:12px;border-radius:16px;padding:14px;margin-bottom:9px;}
+  .alert-icon{width:44px;height:44px;border-radius:13px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:21px;}
+  .alert-title{font-size:15px;font-weight:800;}
+  .alert-sub{font-size:13px;margin-top:2px;}
+  .alert-btn{margin-left:auto;color:#fff;font-size:13px;font-weight:800;padding:10px 14px;border-radius:12px;}
+
+  .prop{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #F1F6F3;}
+  .prop:last-child{border-bottom:none;}
+  .prop-img{width:52px;height:52px;border-radius:14px;background:var(--green-100);display:flex;align-items:center;justify-content:center;font-size:25px;}
+  .prop-name{font-size:16px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+  .prop-meta{font-size:13px;color:var(--muted);margin-top:3px;}
+  .chip{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;padding:3px 9px;border-radius:10px;}
+  .chip.leased{background:var(--green-100);color:var(--green-700);}
+  .chip.vacant{background:var(--amber-100);color:var(--amber);}
+  .prop-right{margin-left:auto;text-align:right;}
+  .prop-rent{font-size:16px;font-weight:800;color:var(--green-800);}
+  .prop-next{font-size:12px;color:var(--muted);}
+  .prop-cta{font-size:14px;font-weight:800;color:var(--amber);}
+
+  /* tools */
+  .tools{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;}
+  .tool{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .tool .ti{width:44px;height:44px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:21px;}
+  .tool .tl{font-size:13px;font-weight:700;color:var(--ink);text-align:center;}
+
+  /* activity */
+  .act{display:flex;align-items:center;gap:12px;padding:13px 16px;border-bottom:1px solid #F1F6F3;}
+  .act:last-child{border-bottom:none;}
+  .act-dot{width:40px;height:40px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .act-title{font-size:15px;font-weight:700;color:var(--ink);}
+  .act-sub{font-size:13px;color:var(--muted);margin-top:1px;}
+  .act-time{margin-left:auto;font-size:12px;color:var(--muted);}
+
+  .note{max-width:920px;margin:36px auto 0;background:#10301f;border:1px solid #1d4a30;border-radius:18px;padding:22px 26px;color:#d7f0e0;}
+  .note h3{color:#fff;font-size:18px;margin-bottom:12px;}
+  .note ul{margin-left:18px;line-height:1.85;font-size:15px;}
+  .note .tag{display:inline-block;background:#1A6B3A;color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:8px;margin-right:6px;}
+  .note .cut{background:#7a2230;}
+</style>
+</head>
+<body>
+  <div class="page-title">GreenPlot — Home Redesign (v2 · richer)</div>
+  <div class="page-sub">Keeps the useful info · bigger fonts · grouped into clear cards · only redundant content removed</div>
+
+  <div class="frames">
+    <!-- ============ FARMER HOME ============ -->
+    <div class="col">
+      <div class="col-label">👨‍🌾 Farmer Home</div>
+      <div class="phone"><div class="screen">
+
+        <div class="header">
+          <div class="htop">
+            <div class="avatar">RK</div>
+            <div>
+              <div class="greet">नमस्ते 🙏</div>
+              <div class="uname">Rajesh Kumar</div>
+              <div class="loc">📍 Purnea, Bihar · Kisan</div>
+            </div>
+            <div class="htools">
+              <div class="hicon">🌐</div>
+              <div class="hicon">🔔<span class="dot"></span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- weather + advisory -->
+        <div class="weather">
+          <div class="weather-top">
+            <div class="w-emoji">⛅</div>
+            <div>
+              <div class="w-temp">28°C</div>
+              <div class="w-cond">Partly cloudy</div>
+            </div>
+            <div style="margin-left:auto;text-align:right;">
+              <div class="w-place">💧 Humidity 72%</div>
+              <div class="w-place">🌬️ Wind 8 km/h</div>
+            </div>
+          </div>
+          <div class="w-advisory">✅ <span>Good day to spray. Light rain Thursday — plan irrigation accordingly.</span></div>
+        </div>
+
+        <!-- my farm snapshot -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🚜 My Farm</div></div>
+          <div class="snap">
+            <div class="s"><div class="e">📄</div><div class="v">2</div><div class="l">Leases</div></div>
+            <div class="s"><div class="e">🌾</div><div class="v">7.5</div><div class="l">Acres</div></div>
+            <div class="s"><div class="e">🌱</div><div class="v">3</div><div class="l">Crops</div></div>
+            <div class="s"><div class="e" style="color:#B87214;">✅</div><div class="v" style="color:#B87214;">4</div><div class="l">Tasks due</div></div>
+          </div>
+        </div>
+
+        <!-- AI advisory -->
+        <div class="section">
+          <div class="ai">
+            <div class="ai-icon">🎙️</div>
+            <div>
+              <div class="ai-badge">Kisan Mitra · AI</div>
+              <div class="ai-text">Apply 2nd dose of urea to wheat this week for better yield.</div>
+            </div>
+            <div class="ai-cta">›</div>
+          </div>
+        </div>
+
+        <!-- quick actions -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">⚡ Quick Actions</div></div>
+          <div class="qgrid">
+            <div class="qbtn"><div class="qicon" style="background:var(--green-100);">🌱</div><div class="qlabel">My Crops</div></div>
+            <div class="qbtn"><div class="qicon" style="background:var(--amber-100);">🏞️</div><div class="qlabel">Find Land</div></div>
+            <div class="qbtn"><div class="qicon" style="background:var(--blue-100);">📈</div><div class="qlabel">Mandi Prices</div></div>
+            <div class="qbtn"><div class="qicon" style="background:var(--green-100);">🧪</div><div class="qlabel">Soil Test</div></div>
+            <div class="qbtn"><div class="qicon" style="background:var(--amber-100);">👷</div><div class="qlabel">Hire Labor</div></div>
+            <div class="qbtn"><div class="qicon" style="background:var(--purple-100);">🛰️</div><div class="qlabel">Satellite</div></div>
+          </div>
+        </div>
+
+        <!-- today's tasks -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">📋 Today's Tasks</div><div class="sec-link">View all</div></div>
+          <div class="card">
+            <div class="task"><div class="task-icon" style="background:var(--blue-100);">💧</div><div><div class="task-title">Irrigation · North plot</div><div class="task-sub">Best before 9 AM</div></div><div class="task-btn" style="background:var(--blue);">Schedule</div></div>
+            <div class="task"><div class="task-icon" style="background:var(--amber-100);">👥</div><div><div class="task-title">Confirm 3 laborers · Harvest</div><div class="task-sub">Applied for tomorrow</div></div><div class="task-btn" style="background:var(--amber);">Confirm</div></div>
+            <div class="task"><div class="task-icon" style="background:var(--red-100);">📄</div><div><div class="task-title">Lease expiring · Suresh</div><div class="task-sub">In 20 days · renew now</div></div><div class="task-btn" style="background:var(--red);">Renew</div></div>
+          </div>
+        </div>
+
+        <!-- crop health -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🌾 Crop Health</div><div class="sec-link">See all</div></div>
+          <div class="card">
+            <div class="crop">
+              <div class="crop-top"><div class="crop-emoji">🌾</div><div><div class="crop-name">Wheat · North plot</div><div class="crop-stage">Flowering · harvest in 8 days</div></div><div class="crop-status" style="background:var(--green-100);color:var(--green-700);">Healthy</div></div>
+              <div class="bar"><i style="width:78%;background:#2E9E5B;"></i></div>
+            </div>
+            <div class="crop">
+              <div class="crop-top"><div class="crop-emoji">🍅</div><div><div class="crop-name">Tomato · East plot</div><div class="crop-stage">Fruiting · early blight detected</div></div><div class="crop-status" style="background:var(--red-100);color:var(--red);">Disease risk</div></div>
+              <div class="bar"><i style="width:62%;background:#E0A21B;"></i></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- mandi prices -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🪙 Mandi Prices</div><div class="sec-link">See all</div></div>
+          <div class="card">
+            <div class="mandi-row"><div class="mandi-emoji">🍅</div><div><div class="mandi-name">Tomato</div><div class="mandi-unit">per kg</div></div><div class="mandi-price"><div class="mandi-val">₹18</div><div class="mandi-down">▼ 3%</div></div></div>
+            <div class="mandi-row"><div class="mandi-emoji">🧅</div><div><div class="mandi-name">Onion</div><div class="mandi-unit">per kg</div></div><div class="mandi-price"><div class="mandi-val">₹24</div><div class="mandi-up">▲ 2%</div></div></div>
+            <div class="mandi-row"><div class="mandi-emoji">🌶️</div><div><div class="mandi-name">Chilli</div><div class="mandi-unit">per kg</div></div><div class="mandi-price"><div class="mandi-val">₹96</div><div class="mandi-up">▲ 4%</div></div></div>
+          </div>
+        </div>
+
+        <!-- land near you -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🏞️ Land Near You</div><div class="sec-link">See all</div></div>
+          <div class="card land">
+            <div class="land-img"><div class="land-badge">5 Acres</div><div class="land-price">₹12k/yr</div></div>
+            <div class="land-body">
+              <div class="land-title">Fertile Wheat Land</div>
+              <div class="land-meta">📍 Kasba, Purnea · 2 km away</div>
+              <div class="land-meta">🌱 Alluvial Soil · Fixed Rent · 3 yrs</div>
+              <div class="land-cta">View Details</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- govt schemes -->
+        <div class="section" style="padding-bottom:90px;">
+          <div class="sec-head"><div class="sec-title">🏛️ Schemes &amp; Alerts</div><div class="sec-link">More</div></div>
+          <div class="card">
+            <div class="news"><div class="news-icon" style="background:var(--blue-100);">🏢</div><div><div class="news-title">New Govt. Subsidy</div><div class="news-sub">50% subsidy on solar pumps for farmers</div></div></div>
+            <div class="news"><div class="news-icon" style="background:var(--green-100);">📈</div><div><div class="news-title">Crop Price Alert</div><div class="news-sub">Wheat prices expected to rise next week</div></div></div>
+          </div>
+        </div>
+
+        <div class="fab">🎙️</div>
+      </div></div>
+    </div>
+
+    <!-- ============ OWNER HOME ============ -->
+    <div class="col">
+      <div class="col-label">🏡 Owner Home</div>
+      <div class="phone"><div class="screen">
+
+        <div class="header">
+          <div class="htop">
+            <div class="avatar">NP</div>
+            <div>
+              <div class="greet">Good morning 👋</div>
+              <div class="uname">Niranjangouda</div>
+              <div class="loc">📍 Belagavi, Karnataka</div>
+            </div>
+            <div class="htools"><div class="hicon">🔔<span class="dot"></span></div></div>
+          </div>
+          <div class="port">
+            <div class="port-label">Total portfolio value</div>
+            <div class="port-val">₹48.5 L</div>
+            <div class="port-chip">📈 +12% this year</div>
+            <div class="port-stats">
+              <div class="pst"><div class="pst-v">6</div><div class="pst-l">Lands</div></div>
+              <div class="pst"><div class="pst-v">4</div><div class="pst-l">Leased</div></div>
+              <div class="pst"><div class="pst-v">2</div><div class="pst-l">Vacant</div></div>
+              <div class="pst"><div class="pst-v">21</div><div class="pst-l">Acres</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- revenue -->
+        <div class="section">
+          <div class="card">
+            <div class="rev">
+              <div>
+                <div class="rev-label">Revenue · this month</div>
+                <div class="rev-val">₹1.2 L</div>
+                <div class="rev-chip">▲ 8% vs last month</div>
+              </div>
+              <div class="spark"><span style="height:40%"></span><span style="height:55%"></span><span style="height:45%"></span><span style="height:70%"></span><span style="height:60%"></span><span class="hi" style="height:90%"></span></div>
+            </div>
+            <div class="payout">📅 Next payout <b>₹45,000</b> · due Jun 25 <span class="go">Details ›</span></div>
+          </div>
+        </div>
+
+        <!-- key metrics -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">📊 Key Metrics</div></div>
+          <div class="mgrid">
+            <div class="metric"><div class="m-icon" style="background:var(--green-100);">🥧</div><div class="m-val">67%</div><div class="m-label">Occupancy</div><div class="m-sub" style="color:var(--green-700);">4 of 6 leased</div></div>
+            <div class="metric"><div class="m-icon" style="background:var(--blue-100);">📄</div><div class="m-val">4</div><div class="m-label">Active leases</div><div class="m-sub" style="color:var(--blue);">All current</div></div>
+            <div class="metric"><div class="m-icon" style="background:var(--red-100);">⚠️</div><div class="m-val" style="color:var(--red);">₹15k</div><div class="m-label">Pending dues</div><div class="m-sub" style="color:var(--red);">1 overdue</div></div>
+            <div class="metric"><div class="m-icon" style="background:var(--amber-100);">💰</div><div class="m-val">₹15k</div><div class="m-label">Avg rent / acre</div><div class="m-sub" style="color:var(--muted);">per year</div></div>
+          </div>
+        </div>
+
+        <!-- action required -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">⚡ Action Required</div><div class="sec-link">View all</div></div>
+          <div class="alert" style="background:var(--amber-100);">
+            <div class="alert-icon">🤝</div>
+            <div><div class="alert-title" style="color:var(--amber);">New lease request</div><div class="alert-sub" style="color:var(--amber);">Suresh applied for Patil Farm</div></div>
+            <div class="alert-btn" style="background:var(--amber);">Review</div>
+          </div>
+          <div class="alert" style="background:var(--red-100);">
+            <div class="alert-icon">💸</div>
+            <div><div class="alert-title" style="color:var(--red);">Payment overdue</div><div class="alert-sub" style="color:var(--red);">₹15,000 · Green Acres · 5 days late</div></div>
+            <div class="alert-btn" style="background:var(--red);">Remind</div>
+          </div>
+        </div>
+
+        <!-- my properties -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🗺️ My Properties</div><div class="sec-link">All 6 ›</div></div>
+          <div class="card">
+            <div class="prop">
+              <div class="prop-img">🌾</div>
+              <div><div class="prop-name">Patil Farm <span class="chip leased">Leased</span></div><div class="prop-meta">1 acre · Cash Rent · Belagavi</div></div>
+              <div class="prop-right"><div class="prop-rent">₹15k/yr</div><div class="prop-next">Next: Jun 25</div></div>
+            </div>
+            <div class="prop">
+              <div class="prop-img">🌱</div>
+              <div><div class="prop-name">North Field <span class="chip vacant">Vacant</span></div><div class="prop-meta">3 acres · Belagavi</div></div>
+              <div class="prop-right"><div class="prop-cta">List now ›</div></div>
+            </div>
+            <div class="prop">
+              <div class="prop-img">🥬</div>
+              <div><div class="prop-name">Green Acres <span class="chip leased">Leased</span></div><div class="prop-meta">5 acres · Crop Share · Belagavi</div></div>
+              <div class="prop-right"><div class="prop-rent">₹40k/yr</div><div class="prop-next">Next: Jul 01</div></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- farm tools -->
+        <div class="section">
+          <div class="sec-head"><div class="sec-title">🧰 Farm Tools</div></div>
+          <div class="tools">
+            <div class="tool"><div class="ti" style="background:var(--green-100);">🛰️</div><div class="tl">Satellite</div></div>
+            <div class="tool"><div class="ti" style="background:var(--amber-100);">🧪</div><div class="tl">Soil Test</div></div>
+            <div class="tool"><div class="ti" style="background:var(--blue-100);">📈</div><div class="tl">Market</div></div>
+            <div class="tool"><div class="ti" style="background:var(--purple-100);">📄</div><div class="tl">Agreements</div></div>
+            <div class="tool"><div class="ti" style="background:var(--green-100);">👥</div><div class="tl">Tenants</div></div>
+            <div class="tool"><div class="ti" style="background:var(--amber-100);">➕</div><div class="tl">Add Land</div></div>
+          </div>
+        </div>
+
+        <!-- recent activity -->
+        <div class="section" style="padding-bottom:90px;">
+          <div class="sec-head"><div class="sec-title">🕒 Recent Activity</div><div class="sec-link">View all</div></div>
+          <div class="card">
+            <div class="act"><div class="act-dot" style="background:var(--green-100);">💰</div><div><div class="act-title">Rent received · Patil Farm</div><div class="act-sub">₹15,000 from Suresh</div></div><div class="act-time">2h ago</div></div>
+            <div class="act"><div class="act-dot" style="background:var(--blue-100);">✍️</div><div><div class="act-title">Agreement signed</div><div class="act-sub">Green Acres · Crop Share</div></div><div class="act-time">1d ago</div></div>
+            <div class="act"><div class="act-dot" style="background:var(--amber-100);">📋</div><div><div class="act-title">New application</div><div class="act-sub">North Field · 2 farmers</div></div><div class="act-time">2d ago</div></div>
+          </div>
+        </div>
+
+        <div class="fab">🎙️</div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- what changed -->
+  <div class="note">
+    <h3>What changed in v2 (your feedback applied)</h3>
+    <ul>
+      <li><span class="tag">KEPT</span> Farmer Home keeps all the useful info: <b>Weather + advisory, My Farm stats, Kisan Mitra tip, Quick Actions, Today's Tasks, Crop Health, Mandi Prices, Land Near You, Govt Schemes &amp; Alerts.</b></li>
+      <li><span class="tag">KEPT</span> Owner Home keeps everything: Portfolio, Revenue, Key Metrics, Action Required, My Properties, <b>Farm Tools</b> &amp; <b>Recent Activity</b> (these are back).</li>
+      <li><span class="tag">FONTS</span> Body <b>10px → 14–15px</b>, titles <b>14px → 18px</b>, big numbers <b>26px → 36–38px</b>. Readable for farmers outdoors.</li>
+      <li><span class="tag">GROUPED</span> Each topic is now its own titled card with breathing room — fixes the "jumbled" feeling without losing content.</li>
+      <li><span class="tag cut">REMOVED</span> Only the genuinely redundant bits: <b>"Browse by crop"</b> strip (duplicates Find Land) and the duplicate AI/weather cards merged into one. Nothing a farmer needs was dropped.</li>
+    </ul>
+  </div>
+</body>
+</html>

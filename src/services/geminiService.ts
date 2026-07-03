@@ -119,6 +119,61 @@ function safeParse(raw: string): GeminiReply | null {
   return null;
 }
 
+/**
+ * Vision: diagnose a crop photo (disease / pest / nutrient deficiency) and
+ * recommend treatment. Uses the same Gemini model with an inline image.
+ */
+export async function generateGeminiVisionReply(args: {
+  base64: string;
+  mimeType: string;
+  language: Language;
+  userText?: string;
+  signal?: AbortSignal;
+}): Promise<GeminiReply | null> {
+  if (!isGeminiConfigured || !args.base64) return null;
+  const lang = LANG_NAME[args.language] || 'English';
+  const prompt = [
+    'You are "Kisan Mitra". A farmer has sent a photo of their crop/plant.',
+    'Identify the crop (if visible) and the most likely problem — disease, pest,',
+    'or nutrient deficiency. Give: the problem name, how severe it looks, a clear',
+    'treatment (one organic option AND one chemical option with approximate dosage',
+    'per acre), and one prevention tip. If the image is unclear or not a plant, say',
+    'so politely and ask for a closer photo.',
+    args.userText ? `The farmer also said: "${args.userText}".` : '',
+    `Reply in ${lang}. Respond ONLY as JSON:`,
+    `{"reply":"<answer in ${lang}>","replyEnglish":"<same in English>","suggestions":["<q1>","<q2>","<q3>"]}`,
+  ].join(' ');
+
+  const url = `${ENV.geminiBaseUrl}/models/${ENV.geminiModel}:generateContent?key=${ENV.geminiApiKey}`;
+  const body = {
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          { text: prompt },
+          { inline_data: { mime_type: args.mimeType || 'image/jpeg', data: args.base64 } },
+        ],
+      },
+    ],
+    generationConfig: { temperature: 0.4, maxOutputTokens: 2048, responseMimeType: 'application/json' },
+  };
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: args.signal,
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    const text: string | undefined = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+    return text ? safeParse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateGeminiReply(args: {
   userText: string;
   language: Language;

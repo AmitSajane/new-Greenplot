@@ -88,6 +88,8 @@ export default function AddFarmScreen() {
     const initialAcres = route?.params?.acres;
     return initialAcres ? String(initialAcres) : '';
   });
+
+ 
   const [pincode, setPincode] = useState('');
   const [pinLoading, setPinLoading] = useState(false);
   const [pinError, setPinError] = useState('');
@@ -125,6 +127,15 @@ export default function AddFarmScreen() {
   // Auto-fill location from the satellite-map boundary (reverse-geocoded centroid).
   // Runs once: matches state/district against the bundled dropdown data; always
   // fills the free-text location so the farmer sees their detected place.
+
+  useEffect(()=>{
+  apicall();
+  },[])
+
+  const apicall = async () => {
+    console.log("api call")
+  }
+
   useEffect(() => {
     const p = route?.params || {};
     if (p.location) setLocation(p.location);

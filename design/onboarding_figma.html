@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GreenPlot — Onboarding (single screen)</title>
+<style>
+  :root{
+    --green-900:#092E18;--green-800:#0F4A28;--green-700:#1A6B3A;--green-500:#2E9E5B;
+    --green-100:#E4F4EC;--amber:#B87214;--amber-100:#FDF5E0;--ink:#0D1509;--ink-2:#3A5040;
+    --muted:#6B8074;--line:#E6EFE9;--bg:#F4F8F5;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-font-smoothing:antialiased;font-family:'Segoe UI',system-ui,Roboto,sans-serif;}
+  body{background:#0c241a;padding:32px 16px 64px;color:var(--ink);}
+  .title{text-align:center;color:#fff;font-size:26px;font-weight:800;margin-bottom:6px;}
+  .sub{text-align:center;color:#8fcfa8;font-size:15px;margin-bottom:28px;}
+  .frames{display:flex;gap:40px;justify-content:center;flex-wrap:wrap;align-items:flex-start;}
+  .col{display:flex;flex-direction:column;align-items:center;gap:14px;}
+  .col-label{color:#cfeeda;font-size:14px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;}
+  .phone{width:392px;background:var(--bg);border-radius:42px;padding:14px;box-shadow:0 30px 70px rgba(0,0,0,.5);border:1px solid #15321f;}
+  .screen{width:100%;height:850px;background:var(--bg);border-radius:30px;overflow-y:auto;position:relative;}
+  .screen::-webkit-scrollbar{width:0;}
+
+  .hero{background:linear-gradient(135deg,#092E18,#0F4A28 55%,#1A6B3A);padding:30px 22px 24px;color:#fff;border-bottom-left-radius:22px;border-bottom-right-radius:22px;}
+  .logo{width:54px;height:54px;border-radius:16px;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:12px;}
+  .hello{font-size:25px;font-weight:800;}
+  .hello small{display:block;font-size:15px;font-weight:500;color:rgba(255,255,255,.8);margin-top:4px;}
+
+  .body{padding:20px 18px 30px;}
+  .label{font-size:15px;font-weight:800;color:var(--ink);margin:18px 0 9px;}
+  .label .opt{font-weight:600;color:var(--muted);font-size:13px;}
+  .input{width:100%;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:15px 14px;font-size:16px;color:var(--ink);}
+  .input.ph{color:#9EB8A8;}
+  .phoneRow{display:flex;align-items:center;gap:10px;}
+  .cc{background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:15px 12px;font-size:16px;font-weight:800;color:var(--ink-2);}
+
+  /* user type cards */
+  .types{display:flex;gap:12px;}
+  .type{flex:1;background:#fff;border:2px solid var(--line);border-radius:18px;padding:18px 12px;text-align:center;position:relative;}
+  .type.sel{border-color:var(--green-700);background:var(--green-100);}
+  .type .emoji{font-size:38px;}
+  .type .t{font-size:17px;font-weight:800;color:var(--ink);margin-top:8px;}
+  .type .d{font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.35;}
+  .type .tick{position:absolute;top:10px;right:10px;width:24px;height:24px;border-radius:12px;background:var(--green-700);color:#fff;display:none;align-items:center;justify-content:center;font-size:14px;font-weight:800;}
+  .type.sel .tick{display:flex;}
+
+  /* whatsapp same toggle */
+  .toggleRow{display:flex;align-items:center;gap:10px;margin-top:10px;}
+  .check{width:24px;height:24px;border-radius:7px;border:2px solid var(--green-700);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;}
+  .check.on{background:var(--green-700);}
+  .toggleRow span{font-size:14px;color:var(--ink-2);font-weight:600;}
+  .wa{color:#25D366;}
+
+  /* location */
+  .locBtn{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px dashed var(--green-700);border-radius:14px;padding:14px;color:var(--green-800);font-weight:800;font-size:15px;}
+  .locDetected{display:flex;align-items:center;gap:10px;background:var(--green-100);border:1.5px solid #CDE9D8;border-radius:14px;padding:14px;}
+  .locDetected .pin{font-size:20px;}
+  .locDetected .txt{flex:1;}
+  .locDetected .txt b{font-size:15px;color:var(--ink);}
+  .locDetected .txt small{display:block;font-size:13px;color:var(--muted);margin-top:1px;}
+  .locDetected .edit{color:var(--green-700);font-weight:800;font-size:13px;}
+
+  /* language pills */
+  .pills{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{padding:9px 15px;border-radius:20px;background:#fff;border:1.5px solid var(--line);font-size:14px;font-weight:700;color:var(--ink-2);}
+  .pill.sel{background:var(--green-700);border-color:var(--green-700);color:#fff;}
+
+  .cta{margin-top:24px;background:var(--green-700);border-radius:16px;padding:17px;text-align:center;color:#fff;font-size:17px;font-weight:800;box-shadow:0 10px 22px rgba(15,74,40,.35);}
+  .ctaHint{text-align:center;font-size:12.5px;color:var(--muted);margin-top:10px;}
+
+  .note{max-width:880px;margin:34px auto 0;background:#10301f;border:1px solid #1d4a30;border-radius:18px;padding:22px 26px;color:#d7f0e0;}
+  .note h3{color:#fff;font-size:18px;margin-bottom:12px;}
+  .note ul{margin-left:18px;line-height:1.85;font-size:15px;}
+  .note .tag{display:inline-block;background:#1A6B3A;color:#fff;font-size:12px;font-weight:700;padding:2px 9px;border-radius:8px;margin-right:6px;}
+  .arrow{color:#8fcfa8;font-size:40px;align-self:center;}
+</style>
+</head>
+<body>
+  <div class="title">GreenPlot — One-Screen Onboarding</div>
+  <div class="sub">No password · No OTP · Pick role → straight to your dashboard</div>
+
+  <div class="frames">
+    <!-- ===== FARMER fills the form ===== -->
+    <div class="col">
+      <div class="col-label">① Farmer signs up</div>
+      <div class="phone"><div class="screen">
+        <div class="hero">
+          <div class="logo">🌱</div>
+          <div class="hello">Welcome to GreenPlot<small>Let's set up your profile — takes 30 seconds</small></div>
+        </div>
+        <div class="body">
+          <div class="label">Your name</div>
+          <input class="input" value="Rajesh Kumar" />
+
+          <div class="label">I am a…</div>
+          <div class="types">
+            <div class="type sel">
+              <div class="tick">✓</div>
+              <div class="emoji">👨‍🌾</div>
+              <div class="t">Farmer</div>
+              <div class="d">I want to lease land &amp; grow crops</div>
+            </div>
+            <div class="type">
+              <div class="emoji">🏡</div>
+              <div class="t">Land Owner</div>
+              <div class="d">I have land to give on lease</div>
+            </div>
+          </div>
+
+          <div class="label">Phone number</div>
+          <div class="phoneRow">
+            <div class="cc">🇮🇳 +91</div>
+            <input class="input" value="98765 43210" />
+          </div>
+          <div class="toggleRow"><div class="check on">✓</div><span>This number is also on <b class="wa">WhatsApp</b> 🟢</span></div>
+
+          <div class="label">Your location</div>
+          <div class="locDetected">
+            <div class="pin">📍</div>
+            <div class="txt"><b>Kasba, Purnea</b><small>Bihar · auto-detected via GPS</small></div>
+            <div class="edit">Change</div>
+          </div>
+
+          <div class="label">Language <span class="opt">· optional</span></div>
+          <div class="pills">
+            <div class="pill sel">English</div>
+            <div class="pill">हिंदी</div>
+            <div class="pill">ಕನ್ನಡ</div>
+            <div class="pill">मराठी</div>
+          </div>
+
+          <div class="cta">Continue →</div>
+          <div class="ctaHint">Farmer selected → opens 👨‍🌾 Farmer Dashboard</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="arrow">→</div>
+
+    <!-- ===== OWNER variant ===== -->
+    <div class="col">
+      <div class="col-label">② Owner signs up</div>
+      <div class="phone"><div class="screen">
+        <div class="hero">
+          <div class="logo">🌱</div>
+          <div class="hello">Welcome to GreenPlot<small>Let's set up your profile — takes 30 seconds</small></div>
+        </div>
+        <div class="body">
+          <div class="label">Your name</div>
+          <input class="input" value="Niranjangouda Patil" />
+
+          <div class="label">I am a…</div>
+          <div class="types">
+            <div class="type">
+              <div class="emoji">👨‍🌾</div>
+              <div class="t">Farmer</div>
+              <div class="d">I want to lease land &amp; grow crops</div>
+            </div>
+            <div class="type sel">
+              <div class="tick">✓</div>
+              <div class="emoji">🏡</div>
+              <div class="t">Land Owner</div>
+              <div class="d">I have land to give on lease</div>
+            </div>
+          </div>
+
+          <div class="label">Phone number</div>
+          <div class="phoneRow">
+            <div class="cc">🇮🇳 +91</div>
+            <input class="input" value="90123 45678" />
+          </div>
+          <div class="toggleRow"><div class="check on">✓</div><span>This number is also on <b class="wa">WhatsApp</b> 🟢</span></div>
+
+          <div class="label">Your location</div>
+          <div class="locBtn">📍 Use my current location (GPS)</div>
+          <div style="text-align:center;font-size:13px;color:var(--muted);margin-top:8px;">or type it manually below</div>
+          <input class="input ph" style="margin-top:8px;" value="Village / Town, District, State" />
+
+          <div class="label">Language <span class="opt">· optional</span></div>
+          <div class="pills">
+            <div class="pill">English</div>
+            <div class="pill">हिंदी</div>
+            <div class="pill sel">ಕನ್ನಡ</div>
+            <div class="pill">मराठी</div>
+          </div>
+
+          <div class="cta">Continue →</div>
+          <div class="ctaHint">Owner selected → opens 🏡 Owner Dashboard</div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <div class="note">
+    <h3>How it works</h3>
+    <ul>
+      <li><span class="tag">ONE SCREEN</span> Replaces Login / OTP / password. Farmer fills name, role, phone, WhatsApp, location → taps <b>Continue</b>.</li>
+      <li><span class="tag">ROLE ROUTING</span> <b>Farmer</b> → Farmer Dashboard · <b>Land Owner</b> → Owner Dashboard (the toggle decides which app they see).</li>
+      <li><span class="tag">LOCATION</span> One-tap GPS auto-detect (village, district, state via reverse-geocode) with a manual fallback.</li>
+      <li><span class="tag">WHATSAPP</span> Just one phone field + a checkbox "This number is also on WhatsApp" (on by default) — no second field.</li>
+      <li><span class="tag">SAVED</span> Profile stored locally (and to Supabase when backend is on) → next launch skips onboarding and goes straight to the right dashboard.</li>
+      <li><span class="tag cut" style="background:#7a2230;">NEW FIELDS</span> Adds <b>location</b> &amp; <b>hasWhatsapp</b> (boolean) to the user profile (name, role, phone already exist).</li>
+    </ul>
+  </div>
+</body>
+</html>

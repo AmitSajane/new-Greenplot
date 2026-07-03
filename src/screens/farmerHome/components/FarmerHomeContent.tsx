@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { FarmerHomeViewModel } from '../hooks/useFarmerHome';
+import useCurrentLocation from '../hooks/useCurrentLocation';
 import { farmerHomeStyles as s } from '../styles/farmerHome.styles';
 import { LanguagePickerModal } from './LanguagePickerModal';
 import {
@@ -21,6 +22,7 @@ import {
 
 export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const { onAction } = vm;
+  const { address, loading } = useCurrentLocation();
   const [langOpen, setLangOpen] = useState(false);
 
   // Derived, stable handlers (onAction is memoised in the hook, so these are too).
@@ -42,7 +44,8 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         <FarmerHeader
           name={vm.userName}
-          location={vm.locationLabel}
+          location={address ?? vm.locationLabel}
+          loading={loading}
           onAvatar={onSettings}
           onLanguage={onLanguage}
           onNotifications={onNotifications}
