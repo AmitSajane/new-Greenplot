@@ -66,6 +66,7 @@ export const mandiApi = {
       const res = await fetch(`${ENV.dataGovBaseUrl}/${RESOURCE}?${params.toString()}`, { signal });
       if (!res.ok) return [];
       const json = await res.json();
+      console.log('mandiApi.fetchPrices', json);
       const records: any[] = Array.isArray(json.records) ? json.records : [];
       return records.map(mapRecord).filter(r => r.modalPrice > 0);
     } catch {

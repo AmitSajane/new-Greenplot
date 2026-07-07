@@ -18,6 +18,8 @@ import {
   YOUTUBE_API_KEY,
   YOUTUBE_API_BASE_URL,
   DATA_GOV_API_KEY,
+  WEATHER_API_KEY,
+  WEATHER_API_BASE_URL,
   GEMINI_API_KEY,
   GEMINI_MODEL,
 } from '@env';
@@ -27,25 +29,28 @@ import {
  * it lets the app work out-of-the-box for the demo. Users can drop their own
  * free key into .env (DATA_GOV_API_KEY) for higher rate limits.
  */
-const DATA_GOV_SAMPLE_KEY = '579b464db66ec23bdd000001cdd3946e44ce4aad7209ff7b23ac571b';
+const DATA_GOV_SAMPLE_KEY = '';
+const cleanEnv = (value: string | undefined, fallback = '') => value?.trim() || fallback;
 
 export const ENV = {
-  mapboxToken: MAPBOX_ACCESS_TOKEN ?? '',
-  geocodeApiKey: GEOCODE_API_KEY ?? '',
-  geocodeBaseUrl: GEOCODE_BASE_URL ?? 'https://geocode.maps.co',
-  soilApiBaseUrl: SOIL_API_BASE_URL ?? 'https://www.kaegro.com/farms/api/soil',
-  supabaseUrl: SUPABASE_URL ?? '',
-  supabaseAnonKey: SUPABASE_ANON_KEY ?? '',
-  newsApiKey: NEWS_API_KEY ?? '',
-  newsApiBaseUrl: NEWS_API_BASE_URL ?? 'https://newsdata.io/api/1',
-  youtubeApiKey: YOUTUBE_API_KEY ?? '',
-  youtubeApiBaseUrl: YOUTUBE_API_BASE_URL ?? 'https://www.googleapis.com/youtube/v3',
+  mapboxToken: cleanEnv(MAPBOX_ACCESS_TOKEN),
+  geocodeApiKey: cleanEnv(GEOCODE_API_KEY),
+  geocodeBaseUrl: cleanEnv(GEOCODE_BASE_URL, 'https://geocode.maps.co'),
+  soilApiBaseUrl: cleanEnv(SOIL_API_BASE_URL, 'https://www.kaegro.com/farms/api/soil'),
+  supabaseUrl: cleanEnv(SUPABASE_URL),
+  supabaseAnonKey: cleanEnv(SUPABASE_ANON_KEY),
+  newsApiKey: cleanEnv(NEWS_API_KEY),
+  newsApiBaseUrl: cleanEnv(NEWS_API_BASE_URL, 'https://newsdata.io/api/1'),
+  youtubeApiKey: cleanEnv(YOUTUBE_API_KEY),
+  youtubeApiBaseUrl: cleanEnv(YOUTUBE_API_BASE_URL, 'https://www.googleapis.com/youtube/v3'),
   // Mandi prices (data.gov.in Agmarknet). Free public sample key by default.
-  dataGovApiKey: DATA_GOV_API_KEY || DATA_GOV_SAMPLE_KEY,
+  dataGovApiKey: cleanEnv(DATA_GOV_API_KEY, DATA_GOV_SAMPLE_KEY),
   dataGovBaseUrl: 'https://api.data.gov.in/resource',
+  weatherApiKey: cleanEnv(WEATHER_API_KEY),
+  weatherApiBaseUrl: cleanEnv(WEATHER_API_BASE_URL, 'https://api.openweathermap.org/data/2.5/weather'),
   // Kisan Mitra real AI (Google Gemini, free tier). No key → offline engine.
-  geminiApiKey: GEMINI_API_KEY ?? '',
-  geminiModel: GEMINI_MODEL || 'gemini-2.5-flash-lite',
+  geminiApiKey: cleanEnv(GEMINI_API_KEY),
+  geminiModel: cleanEnv(GEMINI_MODEL, 'gemini-2.5-flash-lite'),
   geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
 };
 
@@ -58,6 +63,9 @@ export const isNewsConfigured = !!ENV.newsApiKey;
 /** True once a YouTube Data API key is present (enables in-app video SEARCH;
  *  RSS-based category feeds work without it). */
 export const isYoutubeConfigured = !!ENV.youtubeApiKey;
+
+/** True once an OpenWeather API key is present. */
+export const isWeatherConfigured = !!ENV.weatherApiKey;
 
 /** True once a Gemini key is present → Kisan Mitra uses real AI (else offline engine). */
 export const isGeminiConfigured = !!ENV.geminiApiKey;

@@ -11,18 +11,27 @@ import {
   HubHeader,
   LearnStrip,
   PostCard,
+  PostComposerModal,
   ReferEarnBanner,
   RewardsStrip,
   SectionHeader,
   SpotlightCard,
+  StoriesTray,
+  StoryComposerModal,
+  StoryViewerModal,
 } from './community';
 
 export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   const {
     stats, reward, referral, contributors, spotlight, guides, categories, posts, category,
     setCategory, onToggleLike, onToggleSave, onSharePost, onComment,
-    onAddPhoto, onAddVideo, onWriteStory, onReferEarn, onRewards, onLeaderboard,
+    onAddPhoto, onAddVideo, onWritePost, onReferEarn, onRewards, onLeaderboard,
     onSpotlight, onGuidesAll, onGuidePress, onSearch,
+    postComposerVisible, postDraft, postMediaBusy, postSubmitting, closePostComposer, onPostComposerShown,
+    setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
+    stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
+    onStoryTrayPress, openStoryComposer, closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
+    closeStoryViewer,
   } = vm;
 
   const renderItem = useCallback(
@@ -44,8 +53,9 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     () => (
       <>
         <HubHeader stats={stats} onSearch={onSearch} onRewards={onRewards} />
+        <StoriesTray stories={stories} onPress={onStoryTrayPress} onAdd={openStoryComposer} />
         <RewardsStrip reward={reward} onPress={onRewards} />
-        <Composer onAddPhoto={onAddPhoto} onAddVideo={onAddVideo} onWriteStory={onWriteStory} />
+        <Composer onAddPhoto={onAddPhoto} onAddVideo={onAddVideo} onWritePost={onWritePost} />
         <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
         <SpotlightCard spotlight={spotlight} onPress={onSpotlight} />
         <ContributorsStrip contributors={contributors} onSeeAll={onLeaderboard} />
@@ -58,7 +68,8 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     ),
     [
       stats, reward, referral, contributors, spotlight, guides, categories, category,
-      setCategory, onSearch, onRewards, onAddPhoto, onAddVideo, onWriteStory,
+      stories, onStoryTrayPress, openStoryComposer,
+      setCategory, onSearch, onRewards, onAddPhoto, onAddVideo, onWritePost,
       onSpotlight, onLeaderboard, onReferEarn, onGuidePress, onGuidesAll,
     ],
   );
@@ -87,9 +98,41 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         windowSize={9}
         removeClippedSubviews
       />
-      <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onWriteStory}>
+      <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onWritePost}>
         <Ionicons name="add" size={26} color="#fff" />
       </TouchableOpacity>
+
+      <StoryComposerModal
+        visible={storyComposerVisible}
+        pendingStory={pendingStory}
+        busy={storyMediaBusy}
+        submitting={storySubmitting}
+        onPick={pickStoryMedia}
+        onConfirm={confirmStory}
+        onDiscard={discardPendingStory}
+        onClose={closeStoryComposer}
+      />
+      <StoryViewerModal
+        visible={viewerOpen}
+        stories={stories}
+        index={viewerIndex}
+        setIndex={setViewerIndex}
+        onClose={closeStoryViewer}
+      />
+      <PostComposerModal
+        visible={postComposerVisible}
+        draft={postDraft}
+        categories={categories}
+        busy={postMediaBusy}
+        submitting={postSubmitting}
+        onClose={closePostComposer}
+        onShown={onPostComposerShown}
+        onChangeText={setPostText}
+        onChangeCategory={setPostCategory}
+        onPickMedia={pickPostMedia}
+        onClearMedia={clearPostMedia}
+        onSubmit={submitPost}
+      />
     </View>
   );
 };

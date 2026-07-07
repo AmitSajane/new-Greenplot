@@ -93,9 +93,9 @@ export const ProfileSetupForm: React.FC<ProfileSetupFormProps> = ({
           disabled={!isValid}
           activeOpacity={0.9}
         >
-          <Text variant="subtitle" weight="bold" color={colors.surface}>
+          {/* <Text variant="subtitle" weight="bold" color={colors.surface}>
             Continue
-          </Text>
+          </Text> */}
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>

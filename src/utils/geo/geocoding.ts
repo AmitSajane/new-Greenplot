@@ -14,6 +14,8 @@ export interface GeoPlace {
   lat: number;
   lon: number;
   label: string;
+  district?: string;
+  state?: string;
 }
 
 interface GeocodeAddress {
@@ -87,5 +89,12 @@ export async function forwardGeocode(query: string): Promise<GeoPlace | null> {
   const lat = parseFloat(first.lat ?? '');
   const lon = parseFloat(first.lon ?? '');
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  return { lat, lon, label: formatAddress(first) };
+  const a = first.address || {};
+  return {
+    lat,
+    lon,
+    label: formatAddress(first),
+    district: a.state_district || a.district || a.county || undefined,
+    state: a.state || undefined,
+  };
 }

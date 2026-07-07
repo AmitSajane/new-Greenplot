@@ -24,6 +24,7 @@ const CATEGORIES: { key: VideoCategory; label: string; icon: string }[] = [
   { key: 'technology', label: 'Technology', icon: 'hardware-chip' },
   { key: 'training', label: 'Training', icon: 'school' },
   { key: 'innovations', label: 'AgriTech', icon: 'bulb' },
+  // { key: 'machinery', label: 'Machine Usage', icon: 'tractor' },
 ];
 
 interface CardProps {

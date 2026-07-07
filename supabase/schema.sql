@@ -20,7 +20,6 @@ create table if not exists profiles (
   id           uuid primary key references auth.users(id) on delete cascade,
   name         text not null default '',
   phone        text,
-  email        text,
   role         user_role not null default 'farmer',
   location     text,
   district     text,
@@ -186,9 +185,38 @@ create table if not exists rewards (
 create or replace function handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, name, phone, email)
-  values (new.id, coalesce(new.raw_user_meta_data->>'name', ''), new.phone, new.email)
-  on conflict (id) do nothing;
+  insert into public.profiles (
+    id,
+    name,
+    phone,
+    role,
+    location,
+    district,
+    state,
+    has_whatsapp
+  )
+  values (
+    new.id,
+    coalesce(nullif(new.raw_user_meta_data->>'name', ''), nullif(new.raw_user_meta_data->>'full_name', ''), ''),
+    coalesce(new.phone, nullif(new.raw_user_meta_data->>'phone', '')),
+    case
+      when new.raw_user_meta_data->>'role' in ('farmer', 'owner')
+        then (new.raw_user_meta_data->>'role')::user_role
+      else 'farmer'::user_role
+    end,
+    nullif(new.raw_user_meta_data->>'location', ''),
+    nullif(new.raw_user_meta_data->>'district', ''),
+    nullif(new.raw_user_meta_data->>'state', ''),
+    coalesce((new.raw_user_meta_data->>'has_whatsapp')::boolean, true)
+  )
+  on conflict (id) do update set
+    name = coalesce(nullif(excluded.name, ''), public.profiles.name),
+    phone = coalesce(excluded.phone, public.profiles.phone),
+    role = coalesce(excluded.role, public.profiles.role),
+    location = coalesce(excluded.location, public.profiles.location),
+    district = coalesce(excluded.district, public.profiles.district),
+    state = coalesce(excluded.state, public.profiles.state),
+    has_whatsapp = coalesce(excluded.has_whatsapp, public.profiles.has_whatsapp);
   return new;
 end; $$;
 
@@ -196,6 +224,24 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function handle_new_user();
+
+-- Backfill profiles for users that existed before the trigger was installed.
+insert into public.profiles (id, name, phone, role)
+select
+  u.id,
+  coalesce(nullif(u.raw_user_meta_data->>'name', ''), nullif(u.raw_user_meta_data->>'full_name', ''), ''),
+  coalesce(u.phone, nullif(u.raw_user_meta_data->>'phone', ''), regexp_replace(coalesce(u.email, ''), '@greenplot\.app$', '')),
+  case
+    when u.raw_user_meta_data->>'role' in ('farmer', 'owner')
+      then (u.raw_user_meta_data->>'role')::user_role
+    else 'farmer'::user_role
+  end
+from auth.users u
+where not exists (
+  select 1
+  from public.profiles p
+  where p.id = u.id
+);
 
 -- ============================================================================
 -- Row Level Security (RLS) — every table locked down; policies grant access.
@@ -217,7 +263,70 @@ alter table rewards         enable row level security;
 
 -- Profiles: anyone signed-in can read; you can only edit your own.
 create policy "profiles read"   on profiles for select using (true);
-create policy "profiles update" on profiles for update using (auth.uid() = id);
+create policy "profiles insert" on profiles for insert with check (auth.uid() = id);
+create policy "profiles update" on profiles for update using (auth.uid() = id) with check (auth.uid() = id);
+
+create or replace function public.save_own_profile(
+  p_id uuid,
+  p_name text,
+  p_role text,
+  p_phone text,
+  p_location text default null,
+  p_district text default null,
+  p_state text default null,
+  p_has_whatsapp boolean default true
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.uid() is null or auth.uid() <> p_id then
+    raise exception 'Not allowed to save this profile';
+  end if;
+
+  insert into public.profiles (
+    id,
+    name,
+    role,
+    phone,
+    location,
+    district,
+    state,
+    has_whatsapp
+  )
+  values (
+    p_id,
+    coalesce(p_name, ''),
+    case when p_role in ('farmer', 'owner') then p_role::user_role else 'farmer'::user_role end,
+    p_phone,
+    p_location,
+    p_district,
+    p_state,
+    coalesce(p_has_whatsapp, true)
+  )
+  on conflict (id) do update set
+    name = excluded.name,
+    role = excluded.role,
+    phone = excluded.phone,
+    location = excluded.location,
+    district = excluded.district,
+    state = excluded.state,
+    has_whatsapp = excluded.has_whatsapp;
+end;
+$$;
+
+grant execute on function public.save_own_profile(
+  uuid,
+  text,
+  text,
+  text,
+  text,
+  text,
+  text,
+  boolean
+) to authenticated;
 
 -- Lands: public read (marketplace); only the owner can write their own.
 create policy "lands read"   on lands for select using (true);
@@ -361,3 +470,94 @@ alter publication supabase_realtime add table leases;
 do $$ begin
   create policy "lease write" on leases for all using (auth.uid() in (farmer_id, owner_id)) with check (auth.uid() in (farmer_id, owner_id));
 exception when duplicate_object then null; end $$;
+
+-- ============================================================================
+-- Community Hub: Stories (24h ephemeral) + real storage RLS for uploads
+-- ============================================================================
+
+-- Stories: 24h-ephemeral media, own-only (no multi-author feed yet).
+create table if not exists stories (
+  id           uuid primary key default gen_random_uuid(),
+  author_id    uuid not null references profiles(id) on delete cascade,
+  media_type   text not null check (media_type in ('image', 'video')),
+  media_url    text not null,
+  media_path   text not null, -- storage object path, used to delete the file on expiry
+  duration_sec int,
+  created_at   timestamptz not null default now(),
+  expires_at   timestamptz not null
+);
+create index if not exists stories_author_idx on stories(author_id);
+create index if not exists stories_expires_idx on stories(expires_at);
+
+alter table stories enable row level security;
+
+do $$ begin
+  create policy "stories read"   on stories for select using (expires_at > now());
+  create policy "stories insert" on stories for insert with check (auth.uid() = author_id);
+  create policy "stories delete" on stories for delete using (auth.uid() = author_id);
+exception when duplicate_object then null; end $$;
+
+insert into storage.buckets (id, name, public)
+values ('stories', 'stories', true)
+on conflict (id) do nothing;
+
+-- Storage RLS: uploads/deletes require the object's first path segment to be
+-- the caller's own uid (matches the `${userId}/...` path convention used by
+-- storageApi.ts). Without this, uploads are default-denied by RLS even though
+-- the bucket itself is public-read — same class of bug as the profiles fix.
+-- (RLS is already enabled on storage.objects by default on every Supabase
+-- project — only project owners can toggle that, so we can't run
+-- `alter table storage.objects enable row level security` ourselves.)
+
+do $$ begin
+  create policy "media read" on storage.objects for select
+    using (bucket_id in ('farm-media', 'post-media', 'land-images', 'avatars', 'stories'));
+
+  create policy "media insert" on storage.objects for insert
+    with check (
+      bucket_id in ('farm-media', 'post-media', 'land-images', 'avatars', 'stories')
+      and auth.uid()::text = (storage.foldername(name))[1]
+    );
+
+  create policy "media delete" on storage.objects for delete
+    using (
+      bucket_id in ('farm-media', 'post-media', 'land-images', 'avatars', 'stories')
+      and auth.uid()::text = (storage.foldername(name))[1]
+    );
+exception when duplicate_object then null; end $$;
+
+-- ============================================================================
+-- Atomic like/unlike toggle: updates post_likes AND posts.likes_count
+-- together, so the counter can't race between concurrent likers. Runs as
+-- security definer since regular users can't update someone else's post row.
+-- ============================================================================
+create or replace function public.toggle_post_like(p_post_id uuid)
+returns boolean -- true if now liked, false if now unliked
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  already_liked boolean;
+begin
+  if auth.uid() is null then
+    raise exception 'Not signed in';
+  end if;
+
+  select exists(
+    select 1 from post_likes where post_id = p_post_id and user_id = auth.uid()
+  ) into already_liked;
+
+  if already_liked then
+    delete from post_likes where post_id = p_post_id and user_id = auth.uid();
+    update posts set likes_count = greatest(likes_count - 1, 0) where id = p_post_id;
+    return false;
+  else
+    insert into post_likes (post_id, user_id) values (p_post_id, auth.uid());
+    update posts set likes_count = likes_count + 1 where id = p_post_id;
+    return true;
+  end if;
+end;
+$$;
+
+grant execute on function public.toggle_post_like(uuid) to authenticated;

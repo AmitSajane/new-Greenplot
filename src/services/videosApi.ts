@@ -12,7 +12,7 @@
  */
 import { ENV, isYoutubeConfigured } from '../config/env';
 
-export type VideoCategory = 'news' | 'technology' | 'training' | 'innovations';
+export type VideoCategory = 'news' | 'technology' | 'training' | 'innovations' ;
 
 export interface VideoItem {
   id: string; // provider video id

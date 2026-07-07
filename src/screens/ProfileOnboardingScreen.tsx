@@ -22,9 +22,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
 import { getCurrentCoords } from '../utils/geo/location';
-import { reverseGeocodeDetailed } from '../utils/geo/geocoding';
+import { forwardGeocode, reverseGeocodeDetailed } from '../utils/geo/geocoding';
 import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import { useTranslation } from 'react-i18next';
+
+const sanitizeName = (value: string) => value.replace(/[^\p{L}\p{M}\s]/gu, '');
 
 export default function ProfileOnboardingScreen() {
   const { onboard, loginWithPhone, isLoading } = useAuth();
@@ -38,22 +40,53 @@ export default function ProfileOnboardingScreen() {
   const [location, setLocation] = useState('');
   const [district, setDistrict] = useState<string | undefined>();
   const [state, setState] = useState<string | undefined>();
+  const [locationVerified, setLocationVerified] = useState(false);
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const handleNameChange = useCallback((value: string) => {
+    setName(sanitizeName(value));
+  }, []);
+
+  const getGpsLocation = useCallback(async () => {
+    const { lat, lon } = await getCurrentCoords();
+    return reverseGeocodeDetailed(lat, lon);
+  }, []);
+
   const detectLocation = useCallback(async () => {
+    const typedLocation = location.trim();
     setLocating(true);
     try {
-      const { lat, lon } = await getCurrentCoords();
-      const detail = await reverseGeocodeDetailed(lat, lon);
+      if (typedLocation) {
+        const detail = await forwardGeocode(typedLocation);
+        if (!detail) {
+          Alert.alert('Location', 'Could not find that place. Please check the spelling or use GPS.');
+          return;
+        }
+        setLocation(detail.label);
+        setDistrict(detail.district);
+        setState(detail.state);
+        setLocationVerified(true);
+        return;
+      }
+
+      const detail = await getGpsLocation();
       setLocation(detail.label);
       setDistrict(detail.district);
       setState(detail.state);
+      setLocationVerified(true);
     } catch {
       Alert.alert('Location', 'Could not detect location. Please type it manually.');
     } finally {
       setLocating(false);
     }
+  }, [getGpsLocation, location]);
+
+  const handleLocationChange = useCallback((value: string) => {
+    setLocation(value);
+    setDistrict(undefined);
+    setState(undefined);
+    setLocationVerified(false);
   }, []);
 
   const onContinue = useCallback(async () => {
@@ -75,14 +108,62 @@ export default function ProfileOnboardingScreen() {
     }
 
     // New user → full sign-up.
-    if (!name.trim()) return Alert.alert('Name', 'Please enter your name.');
+    const cleanName = sanitizeName(name).trim();
+    if (!cleanName) return Alert.alert('Name', 'Please enter your name.');
+    if (cleanName !== name) setName(cleanName);
     if (!role) return Alert.alert('Role', 'Please choose Farmer or Land Owner.');
     setSubmitting(true);
-    const res = await onboard({ name, role, phone, location, district, state, hasWhatsapp });
+    let profileLocation = location;
+    let profileDistrict = district;
+    let profileState = state;
+
+    if (!locationVerified) {
+      try {
+        setLocating(true);
+        const detail = await getGpsLocation();
+        profileLocation = detail.label;
+        profileDistrict = detail.district;
+        profileState = detail.state;
+        setLocation(detail.label);
+        setDistrict(detail.district);
+        setState(detail.state);
+        setLocationVerified(true);
+      } catch {
+        setSubmitting(false);
+        setLocating(false);
+        Alert.alert('Location', 'Please allow location access so we can save your current location.');
+        return;
+      } finally {
+        setLocating(false);
+      }
+    }
+
+    const res = await onboard({
+      name: cleanName,
+      role,
+      phone,
+      location: profileLocation,
+      district: profileDistrict,
+      state: profileState,
+      hasWhatsapp,
+    });
     setSubmitting(false);
     if (!res.success) Alert.alert('Could not continue', res.error || 'Please try again.');
     // On success the navigator switches to the dashboard automatically.
-  }, [mode, name, role, phone, location, district, state, hasWhatsapp, onboard, loginWithPhone]);
+  }, [
+    mode,
+    name,
+    role,
+    phone,
+    location,
+    district,
+    state,
+    locationVerified,
+    hasWhatsapp,
+    getGpsLocation,
+    onboard,
+    loginWithPhone,
+  ]);
 
   const busy = submitting || isLoading;
   const isLogin = mode === 'login';
@@ -113,7 +194,9 @@ export default function ProfileOnboardingScreen() {
                   placeholder="e.g. Rajesh Kumar"
                   placeholderTextColor="#9EB8A8"
                   value={name}
-                  onChangeText={setName}
+                  onChangeText={handleNameChange}
+                  autoCapitalize="words"
+                  autoCorrect={false}
                 />
 
                 {/* Role */}
@@ -169,9 +252,15 @@ export default function ProfileOnboardingScreen() {
                     <Text style={{ fontSize: 20 }}>📍</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.locName}>{location}</Text>
-                      <Text style={styles.locSub}>Tap "Detect" to update</Text>
+                      <Text style={styles.locSub}>Tap "Detect" to verify this place</Text>
                     </View>
-                    <TouchableOpacity onPress={detectLocation}><Text style={styles.locEdit}>Detect</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={detectLocation} disabled={locating}>
+                      {locating ? (
+                        <ActivityIndicator color="#0F4A28" />
+                      ) : (
+                        <Text style={styles.locEdit}>Detect</Text>
+                      )}
+                    </TouchableOpacity>
                   </View>
                 ) : (
                   <TouchableOpacity style={styles.locBtn} activeOpacity={0.8} onPress={detectLocation} disabled={locating}>
@@ -184,7 +273,7 @@ export default function ProfileOnboardingScreen() {
                   placeholder="or type Village, District, State"
                   placeholderTextColor="#9EB8A8"
                   value={location}
-                  onChangeText={setLocation}
+                  onChangeText={handleLocationChange}
                 />
 
                 {/* Language */}

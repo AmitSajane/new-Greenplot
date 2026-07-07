@@ -11,6 +11,8 @@ declare module '@env' {
   export const YOUTUBE_API_KEY: string | undefined;
   export const YOUTUBE_API_BASE_URL: string | undefined;
   export const DATA_GOV_API_KEY: string | undefined;
+  export const WEATHER_API_KEY: string | undefined;
+  export const WEATHER_API_BASE_URL: string | undefined;
   export const GEMINI_API_KEY: string | undefined;
   export const GEMINI_MODEL: string | undefined;
 }

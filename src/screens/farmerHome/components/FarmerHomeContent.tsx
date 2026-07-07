@@ -3,6 +3,7 @@ import { ScrollView, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { FarmerHomeViewModel } from '../hooks/useFarmerHome';
 import useCurrentLocation from '../hooks/useCurrentLocation';
+import useWeather from '../../../hooks/useWeather';
 import { farmerHomeStyles as s } from '../styles/farmerHome.styles';
 import { LanguagePickerModal } from './LanguagePickerModal';
 import {
@@ -23,6 +24,8 @@ import {
 export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const { onAction } = vm;
   const { address, loading } = useCurrentLocation();
+  const weatherLocation = vm.locationLabel || address || '';
+  const liveWeather = useWeather(weatherLocation);
   const [langOpen, setLangOpen] = useState(false);
 
   // Derived, stable handlers (onAction is memoised in the hook, so these are too).
@@ -50,7 +53,12 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           onLanguage={onLanguage}
           onNotifications={onNotifications}
         />
-        <WeatherHero weather={vm.weather} onPress={onWeather} />
+        <WeatherHero
+          weather={liveWeather.weather}
+          loading={liveWeather.loading}
+          location={weatherLocation}
+          onPress={onWeather}
+        />
         <FarmSnapshot items={vm.snapshot} onAction={onAction} />
         <AiAdvisoryCard
           badge={vm.aiAdvisory.badge}

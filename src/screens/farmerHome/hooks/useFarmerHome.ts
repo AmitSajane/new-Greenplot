@@ -15,7 +15,6 @@ import {
   FARMER_SNAPSHOT,
   FARMER_TASKS,
   FARMER_TICKER,
-  FARMER_WEATHER,
   type FarmerAction,
   type NearbyChip,
 } from '../constants/farmerDashboardData';
@@ -137,11 +136,10 @@ export function useFarmerHome() {
   );
 
   return {
-    userName: user?.name || 'Hi User',
+    userName: user?.name?.trim() || 'Farmer',
     locationLabel: (user as { location?: string })?.location || '',
 
     // Static (stable) content
-    weather: FARMER_WEATHER,
     snapshot: FARMER_SNAPSHOT,
     aiAdvisory: FARMER_AI_ADVISORY,
     ticker: FARMER_TICKER,

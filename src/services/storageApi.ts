@@ -8,7 +8,7 @@
  */
 import { supabase } from './supabase';
 
-const BUCKET = 'farm-media';
+const DEFAULT_BUCKET = 'farm-media';
 
 /** Dependency-free base64 → Uint8Array (RN has no reliable atob/Buffer). */
 function base64ToBytes(b64: string): Uint8Array {
@@ -52,33 +52,65 @@ export const storageApi = {
   },
 
   /** Upload an image (base64 from the picker). Returns a public URL or null. */
-  async uploadImage(base64: string, mime: string, ownerId: string): Promise<string | null> {
+  async uploadImage(base64: string, mime: string, ownerId: string, bucket = DEFAULT_BUCKET): Promise<string | null> {
     if (!supabase || !base64) return null;
     try {
       const path = uniquePath(ownerId, extFromMime(mime));
       const { error } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .upload(path, base64ToBytes(base64).buffer, { contentType: mime || 'image/jpeg', upsert: true });
       if (error) return null;
-      return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
     } catch {
       return null;
     }
   },
 
   /** Upload a file (e.g. video) from its local URI via a blob. Returns URL or null. */
-  async uploadFromUri(uri: string, mime: string, ownerId: string): Promise<string | null> {
+  async uploadFromUri(uri: string, mime: string, ownerId: string, bucket = DEFAULT_BUCKET): Promise<string | null> {
     if (!supabase || !uri) return null;
     try {
       const blob = await (await fetch(uri)).blob();
       const path = uniquePath(ownerId, extFromMime(mime));
       const { error } = await supabase.storage
-        .from(BUCKET)
+        .from(bucket)
         .upload(path, blob, { contentType: mime || blob.type || 'video/mp4', upsert: true });
       if (error) return null;
-      return supabase.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+      return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
     } catch {
       return null;
     }
+  },
+
+  /** Upload from base64 (photo or video), returning the failure reason instead
+   * of swallowing it. Prefer this over a blob/fetch(uri) upload — converting a
+   * local file to a Blob and re-uploading it often serializes as empty
+   * content in React Native's networking layer ("No content provided"). */
+  async uploadBase64Detailed(
+    base64: string,
+    mime: string,
+    ownerId: string,
+    bucket = DEFAULT_BUCKET,
+  ): Promise<{ url: string; path: string } | { error: string }> {
+    if (!supabase) return { error: 'Backend not configured' };
+    if (!base64) return { error: 'No file to upload' };
+    try {
+      const path = uniquePath(ownerId, extFromMime(mime));
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(path, base64ToBytes(base64).buffer, { contentType: mime || 'image/jpeg', upsert: true });
+      if (error) return { error: error.message };
+      const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      return { url, path };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Upload failed' };
+    }
+  },
+
+  /** Delete an uploaded object (e.g. an expired story). */
+  async remove(path: string, bucket = DEFAULT_BUCKET): Promise<boolean> {
+    if (!supabase || !path) return false;
+    const { error } = await supabase.storage.from(bucket).remove([path]);
+    return !error;
   },
 };

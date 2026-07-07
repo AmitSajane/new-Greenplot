@@ -5,8 +5,9 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
 import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
-import { SchemesNewsSection, VideosSection } from '../../farmerHome/components/sections';
+import { SchemesNewsSection, VideosSection, WeatherHero } from '../../farmerHome/components/sections';
 import useCurrentLocation from '../../../hooks/useCurrentLocation';
+import useWeather from '../../../hooks/useWeather';
 
 function initials(name: string) {
   return name
@@ -19,6 +20,9 @@ function initials(name: string) {
 
 export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
   const { address, loading } = useCurrentLocation();
+  const headerLocation = vm.locationLabel || address || '';
+  const liveWeather = useWeather(headerLocation);
+
   return (
     <View style={s.safeArea}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
@@ -35,7 +39,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
                   <Text style={s.name}>{vm.userName}</Text>
                   <View style={s.locRow}>
                     <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />
-                    <Text style={s.locText}>{address ?? vm.locationLabel}</Text>
+                    <Text style={s.locText}>{headerLocation}</Text>
                     {loading ? (
                       <ActivityIndicator style={{ marginLeft: 8 }} size="small" color="rgba(255,255,255,0.9)" />
                     ) : null}
@@ -71,6 +75,13 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
             </View>
           </SafeAreaView>
         </LinearGradient>
+
+        <WeatherHero
+          weather={liveWeather.weather}
+          loading={liveWeather.loading}
+          location={headerLocation}
+          onPress={vm.onWeatherPress}
+        />
 
         {/* ───────── Revenue ───────── */}
         <View style={s.section}>

@@ -113,23 +113,6 @@ export interface BrowseCrop {
   emoji: string;
 }
 
-export const FARMER_WEATHER: WeatherInfo = {
-  emoji: '☀️',
-  tempC: 32,
-  condition: 'Sunny & Dry',
-  advice: 'Good day for harvesting',
-  humidityPct: 45,
-  windKmh: 12,
-  location: 'Purnea',
-  advisory: 'Wheat ready to harvest in ~8 days · keep fields dry',
-  forecast: [
-    { id: 'f1', day: 'Tmrw', emoji: '☀️', temp: '30°' },
-    { id: 'f2', day: 'Wed', emoji: '🌧', temp: '28°' },
-    { id: 'f3', day: 'Thu', emoji: '🌧', temp: '26°' },
-    { id: 'f4', day: 'Fri', emoji: '⛅', temp: '29°' },
-  ],
-};
-
 export const FARMER_SNAPSHOT: readonly SnapStat[] = [
   { id: 's1', emoji: '📄', value: '2', label: 'Active leases', action: 'leases' },
   { id: 's2', emoji: '🌾', value: '7.5', label: 'Acres farmed', action: 'satellite' },

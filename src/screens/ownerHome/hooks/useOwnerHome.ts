@@ -206,8 +206,8 @@ export function useOwnerHome() {
   );
 
   return {
-    userName: user?.name || 'Rajesh Kumar',
-    locationLabel: 'Dharwad, Karnataka',
+    userName: user?.name?.trim() || 'Owner',
+    locationLabel: user?.location?.trim() || '',
     hasNotifications: true,
     portfolio,
     revenue: OWNER_REVENUE,
@@ -223,6 +223,7 @@ export function useOwnerHome() {
 
     // Handlers
     onBell: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),
+    onWeatherPress: useCallback(() => navigation.navigate('SatelliteMap'), [navigation]),
     onAvatar: useCallback(() => goTab('Settings'), [goTab]),
     onPortfolioPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onRevenuePress: useCallback(() => goTab('MyProperties'), [goTab]),

@@ -3,9 +3,11 @@ import { User, UserRole } from '../types/auth';
 import {
   verifyOTP,
   getUserRoleByPhone,
+  getUserByPhone,
   registerUser,
 } from '../services/authService';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 interface AuthResult {
   success: boolean;
@@ -48,6 +50,21 @@ const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
 const phoneToEmail = (phone: string) => `${cleanPhone(phone)}@greenplot.app`;
 /** Deterministic password from the phone — invisible to the farmer (no OTP / no typing). */
 const phoneToPassword = (phone: string) => `GreenPlot-${cleanPhone(phone)}-v1`;
+const roleLabel = (role?: UserRole | null) => (role === 'owner' ? 'owner' : 'farmer');
+const roleArticle = (role?: UserRole | null) => (role === 'owner' ? 'an' : 'a');
+const alreadyRegisteredMessage = (role?: UserRole | null) =>
+  `You already registered with this number as ${roleArticle(role)} ${roleLabel(role)}. Please log in.`;
+
+type ProfileRow = {
+  id: string;
+  name?: string | null;
+  role?: UserRole | null;
+  phone?: string | null;
+  location?: string | null;
+  district?: string | null;
+  state?: string | null;
+  has_whatsapp?: boolean | null;
+};
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -55,35 +72,141 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Build the app User from a Supabase session + the profiles row.
-  const loadUserFromSession = useCallback(async (uid: string) => {
-    if (!supabase) return;
-    const { data } = await supabase
+  const findProfileByPhone = useCallback(async (phone: string): Promise<ProfileRow | null> => {
+    if (!supabase) return null;
+
+    const digits = cleanPhone(phone);
+    const variants = [digits, `91${digits}`, `+91${digits}`];
+
+    const { data, error } = await supabase
       .from('profiles')
-      .select('name, role, phone, email, location, district, state, has_whatsapp')
+      .select('id, name, role, phone, location, district, state, has_whatsapp')
+      .in('phone', variants)
+      .limit(1);
+
+    if (error || !data?.length) return null;
+    return data[0] as ProfileRow;
+  }, []);
+
+  const findProfileById = useCallback(async (id: string): Promise<ProfileRow | null> => {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, name, role, phone, location, district, state, has_whatsapp')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error || !data) return null;
+    return data as ProfileRow;
+  }, []);
+
+  const saveOwnProfile = useCallback(
+    async (profile: ProfileRow): Promise<string | null> => {
+      if (!supabase) return 'Backend not configured';
+
+      const payload = {
+        p_id: profile.id,
+        p_name: profile.name || '',
+        p_role: profile.role || 'farmer',
+        p_phone: profile.phone || null,
+        p_location: profile.location || null,
+        p_district: profile.district || null,
+        p_state: profile.state || null,
+        p_has_whatsapp: profile.has_whatsapp ?? true,
+      };
+
+      const rpcResult = await supabase.rpc('save_own_profile', payload);
+      if (!rpcResult.error) return null;
+
+      const { error } = await supabase
+        .from('profiles')
+        .upsert(
+          {
+            id: profile.id,
+            name: payload.p_name,
+            role: payload.p_role,
+            phone: payload.p_phone,
+            location: payload.p_location,
+            district: payload.p_district,
+            state: payload.p_state,
+            has_whatsapp: payload.p_has_whatsapp,
+          },
+          { onConflict: 'id' },
+        );
+
+      return error?.message || null;
+    },
+    [],
+  );
+
+  // Build the app User from a Supabase session + the profiles row.
+  const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
+    if (!supabase) return;
+
+    const metadata = authUser?.user_metadata as { name?: string; phone?: string } | undefined;
+    const fallbackPhone = cleanPhone(metadata?.phone || authUser?.phone || authUser?.email || '');
+    const fallbackName = metadata?.name?.trim() || '';
+
+    const profileResult = await supabase
+      .from('profiles')
+      .select('name, role, phone, location, district, state, has_whatsapp')
       .eq('id', uid)
       .single();
+
+    let profile = profileResult.data as ProfileRow | null;
+
+    if (profileResult.error || !profile) {
+      const minimalProfileResult = await supabase
+        .from('profiles')
+        .select('name, role, phone')
+        .eq('id', uid)
+        .single();
+
+      profile = minimalProfileResult.data as typeof profile;
+    }
+
+    if (!profile) {
+      const recoveredProfile: ProfileRow = {
+        id: uid,
+        name: fallbackName,
+        role: 'farmer',
+        phone: fallbackPhone,
+      };
+
+      await saveOwnProfile(recoveredProfile);
+
+      setUser({
+        id: recoveredProfile.id,
+        name: recoveredProfile.name || '',
+        role: recoveredProfile.role || 'farmer',
+        email: authUser?.email || undefined,
+        phoneNumber: recoveredProfile.phone || '',
+      });
+      return;
+    }
+
     setUser({
       id: uid,
-      name: data?.name || 'User',
-      role: (data?.role as UserRole) || 'farmer',
-      email: data?.email || undefined,
-      phoneNumber: data?.phone || '',
-      location: data?.location || undefined,
-      district: data?.district || undefined,
-      state: data?.state || undefined,
-      hasWhatsapp: data?.has_whatsapp ?? undefined,
+      name: profile.name?.trim() || fallbackName,
+      role: profile.role || 'farmer',
+      email: authUser?.email || undefined,
+      phoneNumber: profile.phone || fallbackPhone,
+      location: profile.location || undefined,
+      district: profile.district || undefined,
+      state: profile.state || undefined,
+      hasWhatsapp: profile.has_whatsapp ?? undefined,
     });
-  }, []);
+  }, [saveOwnProfile]);
 
   // Restore a saved Supabase session on launch + react to auth changes.
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) loadUserFromSession(data.session.user.id);
+      if (data.session?.user) loadUserFromSession(data.session.user.id, data.session.user);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) loadUserFromSession(session.user.id);
+      if (session?.user) loadUserFromSession(session.user.id, session.user);
       else setUser(null);
     });
     return () => sub.subscription.unsubscribe();
@@ -127,7 +250,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: phoneToEmail(phone), password });
       if (error) return { success: false, error: 'Wrong phone number or password.' };
-      if (data.user) await loadUserFromSession(data.user.id);
+      if (data.user) await loadUserFromSession(data.user.id, data.user);
       return { success: true };
     } finally {
       setIsLoading(false);
@@ -141,24 +264,36 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
       setIsLoading(true);
       try {
+        const existingProfile = await findProfileByPhone(digits);
+        if (existingProfile) {
+          return { success: false, error: alreadyRegisteredMessage(existingProfile.role) };
+        }
+
         const { data, error } = await supabase.auth.signUp({
           email: phoneToEmail(phone),
           password,
-          options: { data: { name: name.trim(), phone: digits } },
+          options: { data: { name: name.trim(), phone: digits, role } },
         });
         if (error) return { success: false, error: error.message };
         if (!data.session) {
           // Email confirmation is ON → blocks sign-up. Must be turned OFF in Supabase.
           return { success: false, error: 'Turn OFF "Confirm email" in Supabase → Authentication → Providers → Email, then try again.' };
         }
-        await supabase.from('profiles').update({ name: name.trim(), role, phone: digits }).eq('id', data.user!.id);
-        await loadUserFromSession(data.user!.id);
+        await supabase.auth.setSession(data.session);
+        const profileError = await saveOwnProfile({
+          id: data.user!.id,
+          name: name.trim(),
+          role,
+          phone: digits,
+        });
+        if (profileError) return { success: false, error: profileError };
+        await loadUserFromSession(data.user!.id, data.user);
         return { success: true };
       } finally {
         setIsLoading(false);
       }
     },
-    [loadUserFromSession],
+    [findProfileByPhone, loadUserFromSession, saveOwnProfile],
   );
 
   // ── Password-less onboarding (single screen) ────────────────────────────────
@@ -180,6 +315,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       // ── Mock mode (no backend): persist locally ──
       if (!supabase) {
+        const existingRole = getUserRoleByPhone(digits);
+        if (existingRole) {
+          return { success: false, error: alreadyRegisteredMessage(existingRole) };
+        }
+
         const newUser: User = {
           id: `user-${digits}`,
           name: profileFields.name,
@@ -200,31 +340,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const email = phoneToEmail(digits);
         const password = phoneToPassword(digits);
+        const existingProfile = await findProfileByPhone(digits);
+        if (existingProfile) {
+          return { success: false, error: alreadyRegisteredMessage(existingProfile.role) };
+        }
 
         let uid: string | undefined;
+        let signedInUser: SupabaseUser | null | undefined;
         const signUp = await supabase.auth.signUp({
           email,
           password,
-          options: { data: { name: profileFields.name, phone: digits } },
+          options: {
+            data: {
+              name: profileFields.name,
+              phone: digits,
+              role: profileFields.role,
+              location: profileFields.location,
+              district: profileFields.district,
+              state: profileFields.state,
+              has_whatsapp: profileFields.has_whatsapp,
+            },
+          },
         });
 
         if (signUp.error) {
           // Already registered → sign the returning user back in.
           const signIn = await supabase.auth.signInWithPassword({ email, password });
           if (signIn.error || !signIn.data.user) {
-            return { success: false, error: 'This number is already registered on another device.' };
+            return { success: false, error: 'This number is already registered, but login could not be restored.' };
           }
           uid = signIn.data.user.id;
+          signedInUser = signIn.data.user;
+          if (signIn.data.session) await supabase.auth.setSession(signIn.data.session);
+          const signedInProfile = await findProfileById(uid);
+          if (signedInProfile?.role) {
+            return { success: false, error: alreadyRegisteredMessage(signedInProfile.role) };
+          }
         } else if (signUp.data.session && signUp.data.user) {
           uid = signUp.data.user.id;
+          signedInUser = signUp.data.user;
+          await supabase.auth.setSession(signUp.data.session);
         } else {
           // No session → email confirmation is still ON in Supabase.
           return { success: false, error: 'Turn OFF "Confirm email" in Supabase → Authentication → Providers → Email.' };
         }
 
-        // The on_auth_user_created trigger seeds the row; fill in all the details.
-        await supabase.from('profiles').update(profileFields).eq('id', uid);
-        await loadUserFromSession(uid);
+        const profileError = await saveOwnProfile({
+          id: uid,
+          ...profileFields,
+        });
+        if (profileError) return { success: false, error: profileError };
+        await loadUserFromSession(uid, signedInUser);
         return { success: true };
       } catch {
         return { success: false, error: 'Something went wrong. Please try again.' };
@@ -232,7 +398,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
       }
     },
-    [loadUserFromSession],
+    [findProfileById, findProfileByPhone, loadUserFromSession, saveOwnProfile],
   );
 
   // ── Returning-user login (phone only) ──────────────────────────────────────
@@ -243,9 +409,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       if (!supabase) {
         // Mock mode: only role is known by phone; treat missing as new user.
-        const role = getUserRoleByPhone(digits);
-        if (!role) return { success: false, error: 'No account found for this number.', isNewUser: true };
-        setUser({ id: `user-${digits}`, name: 'User', phoneNumber: digits, role });
+        const existingUser = getUserByPhone(digits);
+        if (!existingUser) return { success: false, error: 'No account found for this number.', isNewUser: true };
+        setUser(existingUser);
         return { success: true };
       }
 
@@ -256,15 +422,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           password: phoneToPassword(digits),
         });
         if (error || !data.user) {
+          const existingProfile = await findProfileByPhone(digits);
+          if (existingProfile) {
+            return {
+              success: false,
+              error:
+                'Profile found for this number, but login is out of sync. Ask admin to reset this account login.',
+            };
+          }
           return { success: false, error: 'No account found for this number. Please create one.', isNewUser: true };
         }
-        await loadUserFromSession(data.user.id);
+        await loadUserFromSession(data.user.id, data.user);
         return { success: true };
       } finally {
         setIsLoading(false);
       }
     },
-    [loadUserFromSession],
+    [findProfileByPhone, loadUserFromSession],
   );
 
   const logout = useCallback(() => {

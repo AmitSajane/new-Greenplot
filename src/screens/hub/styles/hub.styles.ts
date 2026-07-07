@@ -15,10 +15,11 @@ const BORDER = '#E8F0EC';
 const TEXT2 = '#6B8074';
 
 export const hubStyles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#F4F8F5' },
+  safeArea: { flex: 1, backgroundColor: '#F4F8F5', },
   listContent: { paddingBottom: 96 },
   flex1: { flex: 1 },
   noBottomBorder: { borderBottomWidth: 0 },
+  safeAreaModal:{ flex: 1, backgroundColor: '#F4F8F5',marginTop:30 },
 
   // Header
   header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
@@ -155,4 +156,75 @@ export const hubStyles = StyleSheet.create({
 
   // FAB
   fab: { position: 'absolute', right: 18, bottom: 24, width: 54, height: 54, borderRadius: 27, backgroundColor: '#1A6B3A', alignItems: 'center', justifyContent: 'center', shadowColor: '#0F4A28', shadowOpacity: 0.45, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14, elevation: 8 },
+
+  // Stories tray
+  storyTray: { flexDirection: 'row', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4, gap: 14 },
+  storyItem: { alignItems: 'center', width: 64 },
+  storyRingWrap: { width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#1A6B3A' },
+  storyRingEmpty: { borderWidth: 2, borderColor: '#C8D8CC', borderStyle: 'dashed' },
+  storyAvatarInner: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', backgroundColor: '#E4F4EC' },
+  storyAvatarImg: { width: 54, height: 54, borderRadius: 27 },
+  storyAddBadge: { position: 'absolute', right: -2, bottom: -2, width: 22, height: 22, borderRadius: 11, backgroundColor: '#1A6B3A', borderWidth: 2, borderColor: '#F4F8F5', alignItems: 'center', justifyContent: 'center' },
+  storyLabel: { fontSize: 10, fontWeight: '600', color: '#3A5040', marginTop: 5, textAlign: 'center' },
+
+  // Modal shared
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, paddingHorizontal: 18, paddingTop: 10, paddingBottom: 30 },
+  sheetHandle: { alignSelf: 'center', width: 42, height: 5, borderRadius: 3, backgroundColor: '#D7E2DB', marginBottom: 14 },
+  sheetTitle: { fontSize: 18, fontWeight: '800', color: '#0D1509' },
+  sheetSub: { fontSize: 12, color: TEXT2, marginTop: 3, marginBottom: 16, lineHeight: 17 },
+
+  // Story composer
+  sourceGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  sourceBtn: { width: '47%', alignItems: 'center', gap: 7, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 14, paddingVertical: 18 },
+  sourceIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  sourceLabel: { fontSize: 12, fontWeight: '700', color: '#1C2E18' },
+  sheetCancel: { alignSelf: 'center', marginTop: 16, paddingVertical: 6, paddingHorizontal: 16 },
+  sheetCancelText: { fontSize: 13, fontWeight: '700', color: TEXT2 },
+
+  previewMediaImg: { width: '100%', height: 320, borderRadius: 16, backgroundColor: '#E4F4EC' },
+  previewVideoCard: { width: '100%', height: 320, borderRadius: 16, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  previewVideoText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+  previewMeta: { fontSize: 11, color: TEXT2, marginTop: 10, textAlign: 'center' },
+  previewActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  previewBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 13 },
+  previewDiscard: { backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER },
+  previewDiscardText: { fontSize: 13, fontWeight: '700', color: '#6B8074' },
+  previewConfirm: { backgroundColor: '#1A6B3A' },
+  previewConfirmText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+
+  // Story viewer (full-screen)
+  viewerRoot: { flex: 1, backgroundColor: '#000' },
+  viewerProgressRow: { flexDirection: 'row', gap: 4, paddingHorizontal: 10, paddingTop: 12 },
+  viewerProgressTrack: { flex: 1, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)', overflow: 'hidden' },
+  viewerProgressFill: { height: 3, backgroundColor: '#fff' },
+  viewerHeaderRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingTop: 10, paddingBottom: 6 },
+  viewerHeaderText: { color: '#fff', fontSize: 12, fontWeight: '700', marginLeft: 8 },
+  viewerClose: { marginLeft: 'auto', padding: 4 },
+  viewerMediaWrap: { flex: 1 },
+  viewerImage: { flex: 1 },
+  viewerVideoWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
+  viewerVideoLabel: { color: '#fff', fontSize: 14, fontWeight: '700' },
+  viewerTapZones: { ...StyleSheet.absoluteFillObject, flexDirection: 'row' },
+  viewerTapZone: { flex: 1 },
+
+  // Post composer (full-screen)
+  composerHeader: { flexDirection: 'row',justifyContent:'space-between' , alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER,},
+  composerHeaderTitle: { fontSize: 15, fontWeight: '800', color: '#0D1509' },
+  composerCancelText: { fontSize: 13, fontWeight: '700', color: TEXT2 },
+  composerPostBtn: {  backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  composerPostBtnDisabled: { backgroundColor: '#C8D8CC' },
+  composerPostBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  composerBody: { flex: 1, padding: 16 },
+  composerAuthorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
+  composerAuthorName: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
+  composerInput: { fontSize: 14, color: '#1C2E18', minHeight: 90, textAlignVertical: 'top', lineHeight: 20 },
+  composerCategoryLabel: { fontSize: 11, fontWeight: '700', color: TEXT2, marginTop: 8, marginBottom: 6 },
+  composerMediaWrap: { marginTop: 14, borderRadius: 14, overflow: 'hidden' },
+  composerMediaImg: { width: '100%', height: 220, backgroundColor: '#E4F4EC' },
+  composerVideoCard: { width: '100%', height: 220, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  composerMediaRemove: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
+  composerAttachRow: { flexDirection: 'row', gap: 10, marginTop: 16, borderTopWidth: 1, borderTopColor: '#F4F8F5', paddingTop: 14 },
+  composerAttachBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F4F8F5', borderRadius: 12, paddingVertical: 11 },
+  composerAttachText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
 });

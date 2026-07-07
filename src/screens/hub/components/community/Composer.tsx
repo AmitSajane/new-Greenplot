@@ -7,13 +7,13 @@ import { Avatar } from './Avatar';
 interface Props {
   onAddPhoto: () => void;
   onAddVideo: () => void;
-  onWriteStory: () => void;
+  onWritePost: () => void;
 }
 
-/** Post composer — quick entry to share a photo, video, or written story. */
-export const Composer = React.memo(({ onAddPhoto, onAddVideo, onWriteStory }: Props) => (
+/** Post composer — quick entry to share a photo, video, or written tip. */
+export const Composer = React.memo(({ onAddPhoto, onAddVideo, onWritePost }: Props) => (
   <View style={s.composer}>
-    <TouchableOpacity style={s.compTop} activeOpacity={0.8} onPress={onWriteStory}>
+    <TouchableOpacity style={s.compTop} activeOpacity={0.8} onPress={onWritePost}>
       <Avatar initials="YO" tone="green" />
       <View style={s.compInput}>
         <Text style={s.compInputText}>Share a success story, tip or photo…</Text>
@@ -28,9 +28,9 @@ export const Composer = React.memo(({ onAddPhoto, onAddVideo, onWriteStory }: Pr
         <Ionicons name="videocam" size={15} color="#C02828" />
         <Text style={[s.compBtnText, s.compTextRed]}>Video</Text>
       </TouchableOpacity>
-      <TouchableOpacity style={[s.compBtn, s.compBtnAmber]} activeOpacity={0.8} onPress={onWriteStory}>
+      <TouchableOpacity style={[s.compBtn, s.compBtnAmber]} activeOpacity={0.8} onPress={onWritePost}>
         <Ionicons name="bulb" size={15} color="#B87214" />
-        <Text style={[s.compBtnText, s.compTextAmber]}>Story / Tip</Text>
+        <Text style={[s.compBtnText, s.compTextAmber]}>Tip</Text>
       </TouchableOpacity>
     </View>
   </View>
