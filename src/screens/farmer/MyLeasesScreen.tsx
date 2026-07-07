@@ -32,7 +32,7 @@ const DUMMY_LEASES = [
 
 export default function MyLeasesScreen() {
   const navigation = useNavigation<NavigationProp>();
-console.log('MyLeasesScreen rendered');
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
