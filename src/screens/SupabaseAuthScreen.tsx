@@ -15,6 +15,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
+import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
 
 const G = { g1: '#092E18', g2: '#0F4A28', g3: '#1A6B3A', g7: '#E4F4EC', a7: '#FDF5E0', a2: '#8A5200', r2: '#C02828', n2: '#1C2E18', n4: '#6B8074', n7: '#E8F0EC', n8: '#F4F8F5' };
 
@@ -30,7 +31,11 @@ export default function SupabaseAuthScreen() {
 
   const submit = useCallback(async () => {
     setError(null);
-    if (!phone.trim() || !password) {
+    if (!isValidIndianMobileNumber(phone)) {
+      setError('Enter a valid Indian mobile number.');
+      return;
+    }
+    if (!password) {
       setError('Enter your mobile number and password.');
       return;
     }
@@ -86,7 +91,7 @@ export default function SupabaseAuthScreen() {
             <TextInput
               style={styles.phoneInput}
               value={phone}
-              onChangeText={t => setPhone(t.replace(/[^\d]/g, '').slice(0, 10))}
+              onChangeText={t => setPhone(sanitizeIndianMobileInput(t))}
               placeholder="98765 43210"
               placeholderTextColor="#9EB8A8"
               keyboardType="phone-pad"

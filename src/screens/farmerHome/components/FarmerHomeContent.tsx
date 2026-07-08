@@ -47,7 +47,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         <FarmerHeader
           name={vm.userName}
-          location={address ?? vm.locationLabel}
+          location={vm.locationLabel || address}
           loading={loading}
           onAvatar={onSettings}
           onLanguage={onLanguage}

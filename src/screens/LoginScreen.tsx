@@ -15,6 +15,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthStack';
 import { useAuth } from '../context/AuthContext';
 import { spacing } from '../theme/tokens';
+import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 
@@ -23,10 +24,10 @@ export default function LoginScreen({ navigation }: Props) {
   const { getUserRole } = useAuth();
 
   const handleMobileNumberChange = (text: string) => {
-    setMobileNumber(text);
+    setMobileNumber(sanitizeIndianMobileInput(text));
   };
 
-  const isValidNumber = mobileNumber.length >= 10;
+  const isValidNumber = isValidIndianMobileNumber(mobileNumber);
   const userRole = getUserRole(mobileNumber);
   const roleHint = userRole === 'farmer' 
     ? '👨‍🌾 Farmer Account' 

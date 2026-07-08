@@ -25,6 +25,7 @@ import { getCurrentCoords } from '../utils/geo/location';
 import { forwardGeocode, reverseGeocodeDetailed } from '../utils/geo/geocoding';
 import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import { useTranslation } from 'react-i18next';
+import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
 
 const sanitizeName = (value: string) => value.replace(/[^\p{L}\p{M}\s]/gu, '');
 
@@ -90,7 +91,7 @@ export default function ProfileOnboardingScreen() {
   }, []);
 
   const onContinue = useCallback(async () => {
-    if (phone.replace(/\D/g, '').length < 10) return Alert.alert('Phone', 'Enter a valid 10-digit mobile number.');
+    if (!isValidIndianMobileNumber(phone)) return Alert.alert('Phone', 'Enter a valid Indian mobile number.');
 
     // Returning user → phone-only login.
     if (mode === 'login') {
@@ -231,7 +232,7 @@ export default function ProfileOnboardingScreen() {
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={phone}
-                onChangeText={t => setPhone(t.replace(/\D/g, ''))}
+                onChangeText={t => setPhone(sanitizeIndianMobileInput(t))}
               />
             </View>
             {!isLogin && (

@@ -15,6 +15,7 @@ import {
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthStack';
 import { spacing } from '../theme/tokens';
+import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -31,7 +32,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const ownerAnim = useRef(new Animated.Value(1)).current;
 
   const isValidName = fullName.trim().length >= 2;
-  const isValidPhone = mobileNumber.length === 10;
+  const isValidPhone = isValidIndianMobileNumber(mobileNumber);
   const isValidEmail = email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const canProceed = isValidName && isValidPhone && isValidEmail;
 
@@ -109,7 +110,7 @@ export default function RegisterScreen({ navigation }: Props) {
                 keyboardType="phone-pad"
                 maxLength={10}
                 value={mobileNumber}
-                onChangeText={setMobileNumber}
+                onChangeText={text => setMobileNumber(sanitizeIndianMobileInput(text))}
                 returnKeyType="next"
               />
             </View>

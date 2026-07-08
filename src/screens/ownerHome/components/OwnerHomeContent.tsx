@@ -35,7 +35,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
                   <Text style={s.avatarText}>{initials(vm.userName)}</Text>
                 </TouchableOpacity>
                 <View>
-                  <Text style={s.hi}>Good morning 👋</Text>
+                 <Text style={s.hi}>Namaste 🙏</Text>
                   <Text style={s.name}>{vm.userName}</Text>
                   <View style={s.locRow}>
                     <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />

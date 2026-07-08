@@ -8,6 +8,7 @@ import {
 } from '../services/authService';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
+import { isValidIndianMobileNumber, normalizeIndianMobileNumber } from '../utils/validation';
 
 interface AuthResult {
   success: boolean;
@@ -46,7 +47,7 @@ export interface OnboardInput {
 }
 
 /** Phone is the real identifier; we back it with a synthetic email Supabase never shows. */
-const cleanPhone = (phone: string) => phone.replace(/\D/g, '');
+const cleanPhone = normalizeIndianMobileNumber;
 const phoneToEmail = (phone: string) => `${cleanPhone(phone)}@greenplot.app`;
 /** Deterministic password from the phone — invisible to the farmer (no OTP / no typing). */
 const phoneToPassword = (phone: string) => `GreenPlot-${cleanPhone(phone)}-v1`;
@@ -246,6 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // ── Supabase auth (phone/password, backed by a synthetic email) ─────────────
   const signInWithPhone = useCallback(async (phone: string, password: string): Promise<AuthResult> => {
     if (!supabase) return { success: false, error: 'Backend not configured' };
+    if (!isValidIndianMobileNumber(phone)) return { success: false, error: 'Enter a valid Indian mobile number.' };
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email: phoneToEmail(phone), password });
@@ -261,7 +263,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     async (phone: string, password: string, name: string, role: UserRole): Promise<AuthResult> => {
       if (!supabase) return { success: false, error: 'Backend not configured' };
       const digits = cleanPhone(phone);
-      if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
+      if (!isValidIndianMobileNumber(phone)) return { success: false, error: 'Enter a valid Indian mobile number.' };
       setIsLoading(true);
       try {
         const existingProfile = await findProfileByPhone(digits);
@@ -300,7 +302,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const onboard = useCallback(
     async (input: OnboardInput): Promise<AuthResult> => {
       const digits = cleanPhone(input.phone);
-      if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
+      if (!isValidIndianMobileNumber(input.phone)) return { success: false, error: 'Enter a valid Indian mobile number.' };
       if (!input.name.trim()) return { success: false, error: 'Please enter your name.' };
 
       const profileFields = {
@@ -405,7 +407,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const loginWithPhone = useCallback(
     async (phone: string): Promise<AuthResult> => {
       const digits = cleanPhone(phone);
-      if (digits.length < 10) return { success: false, error: 'Enter a valid 10-digit mobile number.' };
+      if (!isValidIndianMobileNumber(phone)) return { success: false, error: 'Enter a valid Indian mobile number.' };
 
       if (!supabase) {
         // Mock mode: only role is known by phone; treat missing as new user.
