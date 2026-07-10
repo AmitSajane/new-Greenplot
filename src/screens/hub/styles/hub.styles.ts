@@ -60,9 +60,11 @@ export const hubStyles = StyleSheet.create({
   compBtnGreen: { backgroundColor: '#E4F4EC' },
   compBtnRed: { backgroundColor: '#FDD0D0' },
   compBtnAmber: { backgroundColor: '#FDF5E0' },
+  compBtnPurple: { backgroundColor: '#EDE8FD' },
   compTextGreen: { color: '#1A6B3A' },
   compTextRed: { color: '#C02828' },
   compTextAmber: { color: '#B87214' },
+  compTextPurple: { color: '#4B2EA8' },
 
   // Avatar (shared)
   av: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
@@ -139,7 +141,9 @@ export const hubStyles = StyleSheet.create({
   roleFarmer: { backgroundColor: '#E4F4EC', color: '#0F4A28' },
   roleOwner: { backgroundColor: '#FDF5E0', color: '#8A5200' },
   pTag: { alignSelf: 'flex-start', marginHorizontal: 12, marginBottom: 8, fontSize: 10, fontWeight: '700', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20, overflow: 'hidden' },
-  pText: { fontSize: 12, color: '#1C2E18', lineHeight: 18, paddingHorizontal: 12, paddingBottom: 10 },
+  pText: { fontSize: 12, color: '#1C2E18', lineHeight: 18, paddingHorizontal: 12, paddingBottom: 4 },
+  pLink: { color: '#1A5299', fontWeight: '700', textDecorationLine: 'underline' },
+  pReadMore: { fontSize: 11, fontWeight: '800', color: '#1A6B3A', paddingHorizontal: 12, paddingBottom: 10 },
   pMedia: { height: 180, backgroundColor: '#E4F4EC' },
   pGrid: { height: 120, flexDirection: 'row', gap: 2 },
   pGridCell: { flex: 1, backgroundColor: '#E4F4EC' },
@@ -148,7 +152,18 @@ export const hubStyles = StyleSheet.create({
   playWrap: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
   playBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
   vidDur: { position: 'absolute', right: 8, bottom: 8, backgroundColor: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 9, fontWeight: '600', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
+  pVideoPlayerWrap: { height: 220, backgroundColor: '#000' },
+  pVideoCloseBtn: { position: 'absolute', right: 8, top: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   pBar: { flexDirection: 'row', alignItems: 'center', gap: 16, paddingHorizontal: 12, paddingVertical: 9, borderTopWidth: 1, borderTopColor: '#F4F8F5' },
+
+  // Audio (voice-note) post
+  audioCard: { flexDirection: 'row', alignItems: 'center', gap: 10, marginHorizontal: 12, marginBottom: 10, backgroundColor: '#F4F8F5', borderRadius: 12, padding: 10 },
+  audioPlayBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#4B2EA8', alignItems: 'center', justifyContent: 'center' },
+  audioBody: { flex: 1 },
+  audioWaveform: { flexDirection: 'row', alignItems: 'center', gap: 2, height: 26 },
+  audioWaveBar: { width: 3, borderRadius: 2, backgroundColor: '#4B2EA8' },
+  audioDuration: { fontSize: 10, color: TEXT2, marginTop: 4 },
+  audioInlinePlayer: { height: 40 },
   pAct: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   pActText: { fontSize: 11, fontWeight: '600', color: TEXT2 },
   pActTextLiked: { color: '#C02828' },
@@ -223,8 +238,77 @@ export const hubStyles = StyleSheet.create({
   composerMediaWrap: { marginTop: 14, borderRadius: 14, overflow: 'hidden' },
   composerMediaImg: { width: '100%', height: 220, backgroundColor: '#E4F4EC' },
   composerVideoCard: { width: '100%', height: 220, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  composerVoiceCard: { width: '100%', height: 220, backgroundColor: '#4B2EA8', alignItems: 'center', justifyContent: 'center', gap: 8 },
   composerMediaRemove: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
   composerAttachRow: { flexDirection: 'row', gap: 10, marginTop: 16, borderTopWidth: 1, borderTopColor: '#F4F8F5', paddingTop: 14 },
   composerAttachBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F4F8F5', borderRadius: 12, paddingVertical: 11 },
   composerAttachText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
+
+  // Post-type filter row (Community feed)
+  filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 2, marginBottom: 4, gap: 8 },
+  filterScrollContent: { gap: 7, paddingRight: 8 },
+  filterFunnelBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#E4F4EC', borderWidth: 1, borderColor: '#1A6B3A', alignItems: 'center', justifyContent: 'center' },
+  filterChip: { borderWidth: 1.5, borderColor: '#D4E8FC', backgroundColor: '#fff', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6 },
+  filterChipOn: { backgroundColor: '#1A5299', borderColor: '#1A5299' },
+  filterChipText: { fontSize: 11, fontWeight: '700', color: '#1A5299' },
+  filterChipTextOn: { color: '#fff' },
+  filterCaption: { fontSize: 10, color: TEXT2, paddingHorizontal: 14, marginBottom: 10, lineHeight: 14 },
+
+  // New post-type example cards
+  newTypeSection: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
+  newTypeSectionTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18', marginBottom: 9 },
+  newTypeCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 16, marginHorizontal: 14, marginBottom: 12, padding: 12 },
+  newTypeHead: { flexDirection: 'row', alignItems: 'flex-start' },
+  newTypeIconBadge: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  newTypeTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18' },
+  newTypeSubtitle: { fontSize: 10, color: TEXT2, marginTop: 2 },
+  newTypeBadge: { backgroundColor: '#1A5299', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
+  newTypeBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
+  newTypeCaption: { fontSize: 10.5, color: TEXT2, lineHeight: 15, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F4F8F5' },
+
+  // video example
+  ntVideoBox: { height: 130, borderRadius: 12, backgroundColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center', marginTop: 10, overflow: 'hidden' },
+  ntPlayCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  ntDurationTag: { position: 'absolute', right: 8, bottom: 8, color: '#fff', fontSize: 10, fontWeight: '700', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
+
+  // blog example
+  ntBlogCover: { height: 90, borderRadius: 12, backgroundColor: '#8A6D4A', marginTop: 10 },
+  ntBlogTitle: { fontSize: 12.5, fontWeight: '700', color: '#1C2E18', marginTop: 9, lineHeight: 17 },
+  ntBlogMeta: { fontSize: 10, color: TEXT2, marginTop: 3 },
+
+  // poll example
+  ntPollQuestion: { fontSize: 12, fontWeight: '700', color: '#1C2E18', marginTop: 10, marginBottom: 10 },
+  ntPollRow: { marginBottom: 9 },
+  ntPollLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  ntPollLabel: { fontSize: 11, color: '#1C2E18' },
+  ntPollPct: { fontSize: 11, color: TEXT2, fontWeight: '700' },
+  ntPollTrack: { height: 8, borderRadius: 4, backgroundColor: '#F4F8F5', overflow: 'hidden' },
+  ntPollFill: { height: 8, borderRadius: 4, backgroundColor: '#1A6B3A' },
+
+  // voice example
+  ntVoiceBox: { flexDirection: 'row', alignItems: 'center', height: 44, borderRadius: 10, backgroundColor: '#F4F8F5', marginTop: 10, paddingHorizontal: 10, gap: 2 },
+  ntVoiceBar: { width: 3, borderRadius: 2, backgroundColor: '#1A6B3A' },
+  ntVoiceDuration: { fontSize: 10, color: TEXT2, marginTop: 6, textAlign: 'right' },
+
+  // before/after example
+  ntBaRow: { flexDirection: 'row', height: 90, borderRadius: 12, overflow: 'hidden', marginTop: 10 },
+  ntBaHalf: { flex: 1 },
+  ntBaBefore: { backgroundColor: '#A89060' },
+  ntBaAfter: { backgroundColor: '#6B9E5A' },
+  ntBaTag: { position: 'absolute', top: 8, color: '#fff', fontSize: 8, fontWeight: '800', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
+  ntBaTagLeft: { left: 8 },
+  ntBaTagRight: { right: 8 },
+  ntBaDivider: { position: 'absolute', top: '50%', left: '50%', marginLeft: -14, marginTop: -14, width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+
+  // Voice recorder modal
+  voiceHiddenWebview: { width: 1, height: 1, opacity: 0 },
+  voiceStateBox: { alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 22 },
+  voiceStateText: { fontSize: 12.5, color: TEXT2, textAlign: 'center', lineHeight: 18, paddingHorizontal: 12 },
+  voiceMicPulse: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#C02828', alignItems: 'center', justifyContent: 'center' },
+  voiceTimer: { fontSize: 20, fontWeight: '800', color: '#0D1509' },
+  voiceStopBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#0D1509', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 9 },
+  voiceStopText: { color: '#fff', fontSize: 13, fontWeight: '800' },
+  voiceRetryBtn: { marginTop: 4, backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
+  voiceRetryText: { color: '#fff', fontSize: 12, fontWeight: '800' },
+  voicePreviewPlayer: { width: '100%', marginTop: 4 },
 });

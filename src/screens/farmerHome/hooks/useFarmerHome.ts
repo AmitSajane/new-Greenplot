@@ -115,6 +115,12 @@ export function useFarmerHome() {
     [navigation],
   );
 
+  // "More" on Schemes & news → full in-context list, not a tab jump to Hub.
+  const onNewsMore = useCallback(
+    () => navigation.navigate('SchemesNewsList', { items: news }),
+    [navigation, news],
+  );
+
   // Play an agriculture video in the in-app WebView (YouTube embed URL).
   const onOpenVideo = useCallback(
     (embedUrl: string, title: string) => navigation.navigate('Article', { url: embedUrl, title }),
@@ -163,6 +169,7 @@ export function useFarmerHome() {
     onListingPress,
     onOpenArticle,
     onOpenVideo,
+    onNewsMore,
   };
 }
 

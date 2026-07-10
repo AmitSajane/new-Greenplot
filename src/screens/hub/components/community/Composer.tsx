@@ -7,11 +7,13 @@ import { Avatar } from './Avatar';
 interface Props {
   onAddPhoto: () => void;
   onAddVideo: () => void;
+  onAddVoice: () => void;
   onWritePost: () => void;
 }
 
-/** Post composer — quick entry to share a photo, video, or written tip. */
-export const Composer = React.memo(({ onAddPhoto, onAddVideo, onWritePost }: Props) => (
+/** Post composer — quick entry to share a photo, video, voice note, or
+ * written tip. */
+export const Composer = React.memo(({ onAddPhoto, onAddVideo, onAddVoice, onWritePost }: Props) => (
   <View style={s.composer}>
     <TouchableOpacity style={s.compTop} activeOpacity={0.8} onPress={onWritePost}>
       <Avatar initials="YO" tone="green" />
@@ -27,6 +29,10 @@ export const Composer = React.memo(({ onAddPhoto, onAddVideo, onWritePost }: Pro
       <TouchableOpacity style={[s.compBtn, s.compBtnRed]} activeOpacity={0.8} onPress={onAddVideo}>
         <Ionicons name="videocam" size={15} color="#C02828" />
         <Text style={[s.compBtnText, s.compTextRed]}>Video</Text>
+      </TouchableOpacity>
+      <TouchableOpacity style={[s.compBtn, s.compBtnPurple]} activeOpacity={0.8} onPress={onAddVoice}>
+        <Ionicons name="mic" size={15} color="#4B2EA8" />
+        <Text style={[s.compBtnText, s.compTextPurple]}>Voice</Text>
       </TouchableOpacity>
       <TouchableOpacity style={[s.compBtn, s.compBtnAmber]} activeOpacity={0.8} onPress={onWritePost}>
         <Ionicons name="bulb" size={15} color="#B87214" />

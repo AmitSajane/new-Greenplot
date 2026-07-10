@@ -70,21 +70,29 @@ export const communityApi = {
     return !!supabase;
   },
 
-  /** Upload a picked photo/video to Supabase Storage. Returns the public URL
-   * and bucket-relative path (the latter needed later to delete the file),
-   * or the actual failure reason so it can be shown to the user. Uploads via
-   * base64 (not a blob/fetch(uri)) — that's the path that actually works
-   * reliably in React Native. */
+  /** Upload a picked photo/video or recorded voice note to Supabase Storage.
+   * Returns the public URL and bucket-relative path (the latter needed later
+   * to delete the file), or the actual failure reason so it can be shown to
+   * the user. Prefers base64 — the path that actually works reliably in React
+   * Native for photos/audio — but falls back to a URI/blob upload when it's
+   * missing, which is always the case for picked video assets (the picker
+   * library doesn't produce base64 for multi-MB video files). `mime` is
+   * required for audio since the recorder's output codec varies by platform
+   * (webm on Android, mp4/aac on iOS) and can't be assumed like it can for
+   * photo/video. */
   async uploadMedia(
     base64: string | undefined,
-    mediaType: 'image' | 'video',
+    mediaType: 'image' | 'video' | 'audio',
     userId: string,
     bucket: 'post-media' | 'stories',
+    mime?: string,
+    uri?: string,
   ): Promise<{ url: string; path: string } | { error: string }> {
     if (!supabase) return { error: 'Backend not configured' };
-    if (!base64) return { error: 'Could not read the selected file. Please try a different one.' };
-    const mime = mediaType === 'video' ? 'video/mp4' : 'image/jpeg';
-    return storageApi.uploadBase64Detailed(base64, mime, userId, bucket);
+    const resolvedMime = mime || (mediaType === 'video' ? 'video/mp4' : mediaType === 'audio' ? 'audio/m4a' : 'image/jpeg');
+    if (base64) return storageApi.uploadBase64Detailed(base64, resolvedMime, userId, bucket);
+    if (uri) return storageApi.uploadFromUriDetailed(uri, resolvedMime, userId, bucket);
+    return { error: 'Could not read the selected file. Please try a different one.' };
   },
 
   async fetchPosts(currentUserId?: string): Promise<FeedPost[]> {

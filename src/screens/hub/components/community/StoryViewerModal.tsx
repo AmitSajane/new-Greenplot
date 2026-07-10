@@ -3,6 +3,7 @@ import { Image, Modal, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { StoryItem } from '../../constants/communityData';
+import { InlineMediaPlayer } from './InlineMediaPlayer';
 
 interface Props {
   visible: boolean;
@@ -15,8 +16,9 @@ interface Props {
 const IMAGE_DURATION_MS = 5000;
 
 /** Full-screen story playback: one segment per story, auto-advances, tap the
- * left/right half to go back/forward. No in-app video player is wired up
- * yet, so videos show a placeholder card for their duration instead. */
+ * left/right half to go back/forward. Video segments autoplay muted-off with
+ * no on-screen controls — the tap zones (front-most in the stack) still
+ * handle prev/next/close, same as the image segments. */
 export const StoryViewerModal = React.memo(({ visible, stories, index, setIndex, onClose }: Props) => {
   const current = stories[index];
 
@@ -63,10 +65,7 @@ export const StoryViewerModal = React.memo(({ visible, stories, index, setIndex,
           {current.mediaType === 'image' ? (
             <Image source={{ uri: current.uri }} style={s.viewerImage} resizeMode="contain" />
           ) : (
-            <View style={s.viewerVideoWrap}>
-              <Ionicons name="videocam" size={40} color="#fff" />
-              <Text style={s.viewerVideoLabel}>Video · {current.durationSec ?? '—'}s</Text>
-            </View>
+            <InlineMediaPlayer key={current.id} uri={current.uri} kind="video" autoPlay showControls={false} />
           )}
           <View style={s.viewerTapZones}>
             <TouchableOpacity style={s.viewerTapZone} activeOpacity={1} onPress={goPrev} />

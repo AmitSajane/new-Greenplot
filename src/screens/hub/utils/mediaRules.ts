@@ -50,6 +50,23 @@ export const checkVideo = (asset: PickedAssetInfo): MediaCheck => {
   return { ok: true, sizeLabel: formatBytes(asset.fileSize) };
 };
 
+/** Voice notes are recorded in-app (not picked), so duration is always
+ * known; size is estimated from the base64 payload length. */
+export const checkVoice = (asset: PickedAssetInfo): MediaCheck => {
+  const { maxSec, maxBytes } = MEDIA_RULES.voice;
+  const duration = asset.duration != null ? Math.round(asset.duration) : undefined;
+  if (duration != null && duration > maxSec) {
+    return { ok: false, message: `Voice notes must be under ${maxSec} seconds.` };
+  }
+  if (asset.fileSize && asset.fileSize > maxBytes) {
+    return {
+      ok: false,
+      message: `This recording is ${formatBytes(asset.fileSize)}. Please keep it under ${formatBytes(maxBytes)}.`,
+    };
+  }
+  return { ok: true, sizeLabel: formatBytes(asset.fileSize) };
+};
+
 export const activeStories = (stories: readonly StoryItem[], now = Date.now()): StoryItem[] =>
   stories.filter(story => story.expiresAt > now);
 

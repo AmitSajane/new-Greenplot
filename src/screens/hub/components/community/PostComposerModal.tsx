@@ -74,6 +74,11 @@ export const PostComposerModal = React.memo(
               <View style={s.composerMediaWrap}>
                 {draft.media.mediaType === 'image' ? (
                   <Image source={{ uri: draft.media.uri }} style={s.composerMediaImg} resizeMode="cover" />
+                ) : draft.media.mediaType === 'audio' ? (
+                  <View style={s.composerVoiceCard}>
+                    <Ionicons name="mic" size={28} color="#fff" />
+                    <Text style={s.previewVideoText}>Voice note · {draft.media.durationSec ?? '—'}s</Text>
+                  </View>
                 ) : (
                   <View style={s.composerVideoCard}>
                     <Ionicons name="videocam" size={28} color="#fff" />
