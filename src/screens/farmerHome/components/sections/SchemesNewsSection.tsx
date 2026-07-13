@@ -12,8 +12,8 @@ interface RowProps {
   onOpenArticle: (url: string, title?: string) => void;
 }
 
-const NewsRow = React.memo(({ item, isLast, onAction, onOpenArticle }: RowProps) => {
-  // Live news items carry an external URL → open the in-app reader;
+export const NewsRow = React.memo(({ item, isLast, onAction, onOpenArticle }: RowProps) => {
+  // Live news items carry an external URL -> open the in-app reader;
   // mock items fall back to their in-app action.
   const handlePress = useCallback(() => {
     if (item.url) onOpenArticle(item.url, item.title);

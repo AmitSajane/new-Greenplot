@@ -1,46 +1,81 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, ListRenderItemInfo, Text, View } from 'react-native';
-import { useAuth } from '../../../context/AuthContext';
+import { FlatList, ListRenderItemInfo, Text, TouchableOpacity, View } from 'react-native';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CommunityHubViewModel } from '../hooks/useCommunityHub';
-import { FeedPost } from '../constants/communityData';
+import {
+  FeedPost,
+  NEW_POST_TYPE_EXAMPLES,
+  POST_TYPE_FILTERS,
+  PostTypeFilterKey,
+} from '../constants/communityData';
 import { hubStyles as s } from '../styles/hub.styles';
 import {
   BlogReaderModal,
   CategoryChips,
   CreatePostRow,
-  // Top contributors feature hidden for now — kept for future use.
-  // ContributorsStrip,
+  // ContributorsStrip, // Top contributors — temporarily hidden from the feed (see below), not deleted.
   HubHeader,
   LearnStrip,
+  NewPostTypeCard,
   PostCard,
   PostComposerModal,
+  PostTypeFilterRow,
   ReferEarnBanner,
   RewardsStrip,
   SectionHeader,
   SpotlightCard,
-  // Story feature hidden for now — kept for future use.
-  // StoriesTray,
-  // StoryComposerModal,
-  // StoryViewerModal,
+  // StoriesTray, // Stories tray — commented out, not deleted. Low usage pre-launch;
+  StoryComposerModal,
+  StoryViewerModal,
+  VoiceRecorderModal,
 } from './community';
+import { useAuth } from '../../../context/AuthContext';
+
+/** Post-type filter → which real FeedPost media types it should match. */
+function matchesPostType(post: FeedPost, filter: PostTypeFilterKey): boolean {
+  if (filter === 'all') return true;
+  if (filter === 'photo') return post.media.type === 'image' || post.media.type === 'grid';
+  if (filter === 'video') return post.media.type === 'video';
+  if (filter === 'voice') return post.media.type === 'audio';
+  // 'blog' / 'poll' have no real posts yet — only the example cards in the
+  // footer represent them for now.
+  return false;
+}
 
 export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   const { user } = useAuth();
   const [readingPost, setReadingPost] = useState<FeedPost | null>(null);
   const {
     stats, reward, referral, spotlight, guides, categories, posts, category,
-    // Top contributors feature hidden for now — kept for future use.
-    // contributors, onLeaderboard,
-    setCategory, onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost,
-    onWritePost, onOpenMyPosts, onReferEarn, onRewards,
-    onSpotlight, onGuidesAll, onGuidePress, onSearch,
+    setCategory, onToggleLike, onToggleSave, onSharePost, onComment,
+    onAddPhoto, onAddVideo, onAddVoice, onWritePost, onReferEarn, onRewards,
+    onSpotlight, onGuidesAll, onGuidePress, onSearch, onDeletePost, onOpenMyPosts,
     postComposerVisible, postComposerScreen, postDraft, postMediaBusy, postSubmitting, closePostComposer,
-    selectPostType, backToPostTypePicker, setPostTitle, setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
-    // Story feature hidden for now — kept for future use.
-    // stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
-    // onStoryTrayPress, openStoryComposer, closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
-    // closeStoryViewer,
+    selectPostType, backToPostTypePicker, setPostTitle,
+    setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
+    voiceRecorderVisible, closeVoiceRecorder, onVoiceRecorded,
+    stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
+    closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
+    closeStoryViewer,
   } = vm;
+
+  // Post-type filter (Photo/Video/Blog/Poll/Voice) — separate from the topic
+  // category chips above the feed. UI-only for now: narrows the real posts
+  // list and/or the "new formats" example cards below it.
+  const [postTypeFilter, setPostTypeFilter] = useState<PostTypeFilterKey>('all');
+
+  const filteredPosts = useMemo(
+    () => (postTypeFilter === 'all' ? posts : posts.filter(p => matchesPostType(p, postTypeFilter))),
+    [posts, postTypeFilter],
+  );
+
+  const visibleExamples = useMemo(
+    () =>
+      postTypeFilter === 'all'
+        ? NEW_POST_TYPE_EXAMPLES
+        : NEW_POST_TYPE_EXAMPLES.filter(e => e.filterKey === postTypeFilter),
+    [postTypeFilter],
+  );
 
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<FeedPost>) => (
@@ -63,27 +98,32 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     () => (
       <>
         <HubHeader stats={stats} onSearch={onSearch} onRewards={onRewards} />
-        {/* Story feature hidden for now — kept for future use. */}
-        {/* <StoriesTray stories={stories} onPress={onStoryTrayPress} onAdd={openStoryComposer} /> */}
+        {/*
+          Stories tray — commented out, not deleted. Low daily usage
+          pre-launch; swapped for the richer post formats below.
+          <StoriesTray stories={stories} onPress={onStoryTrayPress} onAdd={openStoryComposer} />
+        */}
         <RewardsStrip reward={reward} onPress={onRewards} />
         <CreatePostRow onPress={onWritePost} onPressMyPosts={onOpenMyPosts} />
         <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
         <SpotlightCard spotlight={spotlight} onPress={onSpotlight} />
-        {/* Top contributors feature hidden for now — kept for future use. */}
-        {/* <ContributorsStrip contributors={contributors} onSeeAll={onLeaderboard} /> */}
+        {/*
+          Top contributors — commented out, not deleted.
+          <ContributorsStrip contributors={contributors} onSeeAll={onLeaderboard} />
+        */}
         <ReferEarnBanner coinsPerInvite={referral.coinsPerInvite} onRefer={onReferEarn} />
         <LearnStrip guides={guides} onPress={onGuidePress} onSeeAll={onGuidesAll} />
         <View style={s.sectionFeed}>
           <SectionHeader icon="newspaper" title="Community feed" />
         </View>
+        <PostTypeFilterRow filters={POST_TYPE_FILTERS} selected={postTypeFilter} onSelect={setPostTypeFilter} />
       </>
     ),
     [
       stats, reward, referral, spotlight, guides, categories, category,
-      // stories, onStoryTrayPress, openStoryComposer,
-      // contributors, onLeaderboard,
-      setCategory, onSearch, onRewards, onWritePost, onOpenMyPosts,
+      setCategory, onSearch, onRewards, onAddPhoto, onAddVideo, onAddVoice, onWritePost,
       onSpotlight, onReferEarn, onGuidePress, onGuidesAll,
+      postTypeFilter,
     ],
   );
 
@@ -96,14 +136,27 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     [],
   );
 
+  const ListFooter = useMemo(() => {
+    if (!visibleExamples.length) return null;
+    return (
+      <View style={s.newTypeSection}>
+        <Text style={s.newTypeSectionTitle}>Try these new ways to post</Text>
+        {visibleExamples.map(example => (
+          <NewPostTypeCard key={example.id} item={example} />
+        ))}
+      </View>
+    );
+  }, [visibleExamples]);
+
   return (
     <View style={s.safeArea}>
       <FlatList
-        data={posts}
+        data={filteredPosts}
         renderItem={renderItem}
         keyExtractor={keyExtractor}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
+        ListFooterComponent={ListFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.listContent}
         initialNumToRender={4}
@@ -147,7 +200,12 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         onClearMedia={clearPostMedia}
         onSubmit={submitPost}
       />
-      <BlogReaderModal post={readingPost} onClose={() => setReadingPost(null)} />
+      <VoiceRecorderModal
+        visible={voiceRecorderVisible}
+        busy={false}
+        onClose={closeVoiceRecorder}
+        onConfirm={onVoiceRecorded}
+      />
     </View>
   );
 };

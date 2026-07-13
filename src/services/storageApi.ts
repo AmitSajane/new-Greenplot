@@ -38,6 +38,11 @@ const extFromMime = (mime?: string) => {
   if (mime.includes('png')) return 'png';
   if (mime.includes('mp4')) return 'mp4';
   if (mime.includes('quicktime') || mime.includes('mov')) return 'mov';
+  if (mime.includes('webm')) return 'webm';
+  if (mime.includes('m4a') || mime.includes('aac')) return 'm4a';
+  if (mime.includes('mpeg') || mime.includes('mp3')) return 'mp3';
+  if (mime.includes('ogg')) return 'ogg';
+  if (mime.includes('wav')) return 'wav';
   return 'jpg';
 };
 
@@ -79,6 +84,32 @@ export const storageApi = {
       return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
     } catch {
       return null;
+    }
+  },
+
+  /** Same as uploadFromUri but returns the failure reason and the storage
+   * path (needed to delete the file later, e.g. an expired story) instead of
+   * swallowing errors. Picked video assets have no base64 (impractical for
+   * multi-MB files), so this is the upload path video actually goes through. */
+  async uploadFromUriDetailed(
+    uri: string,
+    mime: string,
+    ownerId: string,
+    bucket = DEFAULT_BUCKET,
+  ): Promise<{ url: string; path: string } | { error: string }> {
+    if (!supabase) return { error: 'Backend not configured' };
+    if (!uri) return { error: 'No file to upload' };
+    try {
+      const blob = await (await fetch(uri)).blob();
+      const path = uniquePath(ownerId, extFromMime(mime));
+      const { error } = await supabase.storage
+        .from(bucket)
+        .upload(path, blob, { contentType: mime || blob.type || 'video/mp4', upsert: true });
+      if (error) return { error: error.message };
+      const url = supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
+      return { url, path };
+    } catch (e) {
+      return { error: e instanceof Error ? e.message : 'Upload failed' };
     }
   },
 

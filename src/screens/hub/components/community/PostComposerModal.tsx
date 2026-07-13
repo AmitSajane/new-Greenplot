@@ -8,6 +8,24 @@ import { MediaSource, PostDraft } from '../../hooks/useCommunityHub';
 import { Avatar } from './Avatar';
 import { CategoryChips } from './CategoryChips';
 
+const SUBMIT_BAR_STYLE = {
+  paddingHorizontal: 16,
+  paddingVertical: 12,
+  borderTopWidth: 1,
+  borderTopColor: '#E4F4EC',
+};
+
+const SUBMIT_BTN_STYLE = {
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  backgroundColor: '#0F4A28',
+  borderRadius: 14,
+  paddingVertical: 13,
+};
+
+const SUBMIT_BTN_DISABLED_STYLE = { opacity: 0.45 };
+const SUBMIT_BTN_TEXT_STYLE = { color: '#fff', fontSize: 14, fontWeight: '800' as const };
+
 interface Props {
   visible: boolean;
   screen: 'picker' | 'compose';
@@ -93,6 +111,11 @@ export const PostComposerModal = React.memo(
     const canSubmit = (isBlog ? !!draft.title.trim() || !!draft.text.trim() : !!draft.text.trim() || !!draft.media) && !submitting;
     const initials = useMemo(() => (user?.name || 'You').trim().slice(0, 2).toUpperCase(), [user?.name]);
     const mediaSource: MediaSource = draft.postType === 'video' ? 'gallery-video' : 'gallery-photo';
+    const attachLabel = isBlog
+      ? 'Add cover'
+      : draft.postType === 'video'
+        ? 'Add video'
+        : 'Add photo';
 
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -119,18 +142,12 @@ export const PostComposerModal = React.memo(
               <>
                 <View style={s.composerAuthorRow}>
                   <Avatar initials={initials} tone="green" />
-                  <View>
-                    <Text style={s.composerAuthorName}>{user?.name || 'You'}</Text>
-                    <View style={s.composerAudiencePill}>
-                      <Ionicons name="earth" size={12} color="#3A5040" />
-                      <Text style={s.composerAudiencePillText}>Public</Text>
-                    </View>
-                  </View>
+                  <Text style={s.composerAuthorName}>{user?.name || 'You'}</Text>
                 </View>
 
                 {isBlog && (
                   <TextInput
-                    style={s.composerTitleInput}
+                    style={[s.composerInput, { minHeight: 44, fontSize: 18, fontWeight: '800' }]}
                     placeholder="Add a title"
                     placeholderTextColor="#9EB8A8"
                     value={draft.title}
@@ -138,21 +155,15 @@ export const PostComposerModal = React.memo(
                   />
                 )}
 
-                {!isBlog && (
-                  <TextInput
-                    style={s.composerInput}
-                    placeholder="Share what's happening on your farm..."
-                    placeholderTextColor="#9EB8A8"
-                    multiline
-                    value={draft.text}
-                    onChangeText={onChangeText}
-                  />
-                )}
-
                 {draft.media ? (
                   <View style={s.composerMediaWrap}>
                     {draft.media.mediaType === 'image' ? (
                       <Image source={{ uri: draft.media.uri }} style={s.composerMediaImg} resizeMode="cover" />
+                    ) : draft.media.mediaType === 'audio' ? (
+                      <View style={s.composerVoiceCard}>
+                        <Ionicons name="mic" size={28} color="#fff" />
+                        <Text style={s.previewVideoText}>Voice note · {draft.media.durationSec ?? '—'}s</Text>
+                      </View>
                     ) : (
                       <View style={s.composerVideoCard}>
                         <Ionicons name="videocam" size={28} color="#fff" />
@@ -164,33 +175,35 @@ export const PostComposerModal = React.memo(
                     </TouchableOpacity>
                   </View>
                 ) : (
-                  <TouchableOpacity
-                    style={[s.composerBigAttachBox, isBlog && s.composerBigAttachBoxSmall, { marginTop: isBlog ? 0 : 14 }]}
-                    activeOpacity={0.8}
-                    disabled={busy}
-                    onPress={() => onPickMedia(mediaSource)}
-                  >
-                    <Ionicons
-                      name={draft.postType === 'video' ? 'videocam' : 'camera'}
-                      size={isBlog ? 20 : 26}
-                      color={draft.postType === 'video' ? '#C02828' : '#1A6B3A'}
-                    />
-                    <Text style={s.composerBigAttachText}>
-                      {isBlog ? 'Add a cover image (optional)' : draft.postType === 'video' ? 'Add a video' : 'Add a photo'}
-                    </Text>
-                  </TouchableOpacity>
+                  <View style={s.composerAttachRow}>
+                    <TouchableOpacity
+                      style={s.composerAttachBtn}
+                      activeOpacity={0.8}
+                      disabled={busy}
+                      onPress={() => onPickMedia(mediaSource)}
+                    >
+                      <Ionicons
+                        name={draft.postType === 'video' ? 'videocam' : 'camera'}
+                        size={18}
+                        color={draft.postType === 'video' ? '#C02828' : '#1A6B3A'}
+                      />
+                      <Text style={s.composerAttachText}>{busy ? 'Preparing…' : attachLabel}</Text>
+                    </TouchableOpacity>
+                  </View>
                 )}
 
-                {isBlog && (
-                  <TextInput
-                    style={[s.composerInput, { minHeight: 160, marginTop: 14 }]}
-                    placeholder="Write your story. Start a new paragraph for each section — it'll be laid out like an article automatically."
-                    placeholderTextColor="#9EB8A8"
-                    multiline
-                    value={draft.text}
-                    onChangeText={onChangeText}
-                  />
-                )}
+                <TextInput
+                  style={[s.composerInput, isBlog && { minHeight: 160, marginTop: 14 }]}
+                  placeholder={
+                    isBlog
+                      ? 'Write your story. Start a new paragraph for each section.'
+                      : "Share what's happening on your farm..."
+                  }
+                  placeholderTextColor="#9EB8A8"
+                  multiline
+                  value={draft.text}
+                  onChangeText={onChangeText}
+                />
 
                 <Text style={s.composerCategoryLabel}>Category</Text>
                 <CategoryChips categories={postable} selected={draft.category} onSelect={onChangeCategory} />
@@ -199,13 +212,13 @@ export const PostComposerModal = React.memo(
           </ScrollView>
 
           {screen === 'compose' && (
-            <View style={s.composerSubmitBar}>
+            <View style={SUBMIT_BAR_STYLE}>
               <TouchableOpacity
-                style={[s.composerSubmitBtn, !canSubmit && s.composerSubmitBtnDisabled]}
+                style={[SUBMIT_BTN_STYLE, !canSubmit && SUBMIT_BTN_DISABLED_STYLE]}
                 disabled={!canSubmit}
                 onPress={onSubmit}
               >
-                <Text style={s.composerSubmitBtnText}>{submitting ? 'Posting…' : 'Post'}</Text>
+                <Text style={SUBMIT_BTN_TEXT_STYLE}>{submitting ? 'Posting…' : 'Post'}</Text>
               </TouchableOpacity>
             </View>
           )}

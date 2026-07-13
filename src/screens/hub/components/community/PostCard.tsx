@@ -4,6 +4,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { FeedPost } from '../../constants/communityData';
 import { Avatar } from './Avatar';
+import { Linkify } from './Linkify';
+import { InlineMediaPlayer } from './InlineMediaPlayer';
 
 interface Props {
   post: FeedPost;
@@ -29,14 +31,20 @@ const categoryTint: Record<string, { bg: string; fg: string }> = {
   all: { bg: '#E4F4EC', fg: '#0F4A28' },
 };
 
+// Deterministic pseudo-random bar heights so a voice post's waveform doesn't
+// jitter on re-render (no real waveform analysis of the audio itself).
+const WAVEFORM_HEIGHTS = [8, 16, 11, 22, 14, 26, 18, 10, 20, 24, 12, 17, 22, 9, 26, 15, 11, 21, 24, 13];
+
+const TEXT_TRUNCATE_LENGTH = 220;
+
 function PostMediaView({ post }: { post: FeedPost }) {
   const { media } = post;
-  if (media.type === 'text') return null;
-  if (media.type === 'blog') {
-    // Blog cover image is optional — nothing to render without one.
-    if (!media.uris.length) return null;
-    return <ImageBackground source={{ uri: media.uris[0] }} style={s.pMedia} resizeMode="cover" />;
-  }
+  const [playing, setPlaying] = useState(false);
+  const play = useCallback(() => setPlaying(true), []);
+  const stop = useCallback(() => setPlaying(false), []);
+
+  if (media.type === 'text' || media.type === 'audio') return null;
+
   if (media.type === 'grid') {
     return (
       <View style={s.pGrid}>
@@ -46,8 +54,20 @@ function PostMediaView({ post }: { post: FeedPost }) {
       </View>
     );
   }
-  // image or video
-  return (
+
+  if (media.type === 'video' && playing) {
+    return (
+      <View style={s.pVideoPlayerWrap}>
+        <InlineMediaPlayer uri={media.uris[0]} kind="video" autoPlay />
+        <TouchableOpacity style={s.pVideoCloseBtn} activeOpacity={0.8} onPress={stop} hitSlop={8}>
+          <Ionicons name="close" size={16} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  // image, or video thumbnail before playback starts
+  const thumbnail = (
     <ImageBackground source={{ uri: media.uris[0] }} style={s.pMedia} resizeMode="cover">
       {!!media.earnedLabel && (
         <View style={s.earnBadge}>
@@ -67,6 +87,62 @@ function PostMediaView({ post }: { post: FeedPost }) {
       )}
     </ImageBackground>
   );
+
+  if (media.type !== 'video') return thumbnail;
+  return (
+    <TouchableOpacity activeOpacity={0.9} onPress={play}>
+      {thumbnail}
+    </TouchableOpacity>
+  );
+}
+
+function AudioPostView({ post }: { post: FeedPost }) {
+  const { media } = post;
+  const [playing, setPlaying] = useState(false);
+  if (media.type !== 'audio' || !media.uris[0]) return null;
+
+  return (
+    <View style={s.audioCard}>
+      <TouchableOpacity
+        style={s.audioPlayBtn}
+        activeOpacity={0.8}
+        onPress={() => setPlaying(p => !p)}
+        hitSlop={6}
+      >
+        <Ionicons name={playing ? 'pause' : 'play'} size={18} color="#fff" />
+      </TouchableOpacity>
+      <View style={s.audioBody}>
+        {playing ? (
+          <InlineMediaPlayer uri={media.uris[0]} kind="audio" autoPlay style={s.audioInlinePlayer} />
+        ) : (
+          <View style={s.audioWaveform}>
+            {WAVEFORM_HEIGHTS.map((h, i) => (
+              <View key={i} style={[s.audioWaveBar, { height: h }]} />
+            ))}
+          </View>
+        )}
+        {!!media.durationLabel && <Text style={s.audioDuration}>{media.durationLabel}</Text>}
+      </View>
+    </View>
+  );
+}
+
+function PostText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!text) return null;
+  const isLong = text.length > TEXT_TRUNCATE_LENGTH;
+  const shown = expanded || !isLong ? text : `${text.slice(0, TEXT_TRUNCATE_LENGTH).trimEnd()}…`;
+
+  return (
+    <View>
+      <Linkify text={shown} style={s.pText} linkStyle={s.pLink} />
+      {isLong && (
+        <TouchableOpacity onPress={() => setExpanded(e => !e)} hitSlop={4}>
+          <Text style={s.pReadMore}>{expanded ? 'Show less' : 'Read more'}</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
 }
 
 function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, onDelete, onReadStory }: Props) {
@@ -82,7 +158,7 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, on
   }, [onDelete, post.id]);
   const readStory = useCallback(() => onReadStory?.(post), [onReadStory, post]);
   const tint = categoryTint[post.category] ?? categoryTint.all;
-  const showReadStory = post.media.type === 'blog' && !!onReadStory;
+  const showReadStory = !!post.title && !!onReadStory;
 
   return (
     <View style={s.post}>
@@ -124,16 +200,12 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, on
         {post.categoryEmoji} {post.categoryLabel}
       </Text>
 
-      {/* blog title + text */}
-      {!!post.title && <Text style={s.pBlogTitle}>{post.title}</Text>}
-      {!!post.text && (
-        <Text style={s.pText} numberOfLines={post.media.type === 'blog' ? 4 : undefined}>
-          {post.text}
-        </Text>
-      )}
+      {/* text (links tappable, long posts collapsible) */}
+      <PostText text={post.text} />
 
       {/* media */}
       <PostMediaView post={post} />
+      <AudioPostView post={post} />
 
       {/* engagement bar */}
       <View style={s.pBar}>

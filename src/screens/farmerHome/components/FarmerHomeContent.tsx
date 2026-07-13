@@ -39,7 +39,6 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
   const onCrops = useCallback(() => onAction('crops'), [onAction]);
   const onAllLands = useCallback(() => onAction('allLands'), [onAction]);
-  const onNewsMore = useCallback(() => onAction('hub'), [onAction]);
   const onMic = useCallback(() => onAction('aiAssistant'), [onAction]);
 
   return (
@@ -83,7 +82,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           items={vm.news}
           onAction={onAction}
           onOpenArticle={vm.onOpenArticle}
-          onMore={onNewsMore}
+          onMore={vm.onNewsMore}
         />
         <VideosSection onOpenVideo={vm.onOpenVideo} />
         <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />

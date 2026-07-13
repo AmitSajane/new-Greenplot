@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Share } from 'react-native';
+import RNFS from 'react-native-fs';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { HubStackParamList } from '../../../navigation/HubStack';
@@ -18,14 +19,13 @@ import {
   type FeedPost,
   type PostType,
   // Story feature hidden for now — kept for future use.
-  // type StoryItem,
+  type StoryItem,
 } from '../constants/communityData';
-// import { activeStories, storiesInLast24h } from '../utils/mediaRules'; // Story feature hidden for now — kept for future use.
-import { checkPhoto, checkVideo } from '../utils/mediaRules';
+import { activeStories, checkPhoto, checkVideo, checkVoice, storiesInLast24h } from '../utils/mediaRules';
 import { communityApi } from '../utils/communityApi';
 
 type NavigationProp = NativeStackNavigationProp<HubStackParamList>;
-type MediaKind = 'image' | 'video';
+type MediaKind = 'image' | 'video' | 'audio';
 export type MediaSource = 'camera-photo' | 'camera-video' | 'gallery-photo' | 'gallery-video';
 
 export interface PickedMedia {
@@ -34,6 +34,15 @@ export interface PickedMedia {
   mediaType: MediaKind;
   durationSec?: number;
   sizeLabel?: string;
+  /** Audio only — the recorder's actual output codec (varies by platform),
+   * needed so the upload sets the right content-type. */
+  mime?: string;
+}
+
+export interface RecordedVoice {
+  base64: string;
+  mime: string;
+  durationSec: number;
 }
 
 export interface PostDraft {
@@ -83,14 +92,32 @@ async function pickAndValidateMedia(source: MediaSource): Promise<PickedMedia | 
     return null;
   }
 
+  // The picker never returns base64 for video (impractical for multi-MB
+  // files), and RN's global fetch() can't reliably read the picker's local
+  // content:// URI to build a blob for upload — so read the bytes directly
+  // via RNFS instead, the same reliable path photos already use.
+  let base64 = asset.base64;
+  if (!base64 && isVideo) {
+    try {
+      base64 = await RNFS.readFile(asset.uri, 'base64');
+    } catch {
+      // Leave base64 undefined — the upload step will surface a clear error.
+    }
+  }
+
   return {
     uri: asset.uri,
-    base64: asset.base64,
+    base64,
     mediaType: isVideo ? 'video' : 'image',
     durationSec: asset.duration != null ? Math.round(asset.duration) : undefined,
     sizeLabel: check.sizeLabel,
   };
 }
+
+const formatDuration = (sec: number) => {
+  const total = Math.max(0, Math.round(sec));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
+};
 
 const INVITE_MESSAGE =
   'Join me on GreenPlot — the community where farmers share tips, success stories & earn rewards. Download now! 🌱';
@@ -220,9 +247,9 @@ export function useCommunityHub() {
     }
   }, []);
 
-  const openPostComposer = useCallback(() => {
-    setPostDraft(EMPTY_DRAFT);
-    setPostComposerScreen('picker');
+  const openPostComposer = useCallback((type?: PostType) => {
+    setPostDraft(type ? { ...EMPTY_DRAFT, postType: type } : EMPTY_DRAFT);
+    setPostComposerScreen(type ? 'compose' : 'picker');
     setPostComposerVisible(true);
   }, []);
 
@@ -242,6 +269,34 @@ export function useCommunityHub() {
   const setPostCategory = useCallback((cat: CategoryKey) => setPostDraft(prev => ({ ...prev, category: cat })), []);
   const clearPostMedia = useCallback(() => setPostDraft(prev => ({ ...prev, media: null })), []);
 
+  // ── voice-note recording (separate flow: record first, then hand the
+  // result to the same composer/submit path photo & video already use) ──────
+  const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
+  const openVoiceRecorder = useCallback(() => setVoiceRecorderVisible(true), []);
+  const closeVoiceRecorder = useCallback(() => setVoiceRecorderVisible(false), []);
+
+  const onVoiceRecorded = useCallback((voice: RecordedVoice) => {
+    const approxBytes = Math.floor((voice.base64.length * 3) / 4);
+    const check = checkVoice({ fileSize: approxBytes, duration: voice.durationSec });
+    if (!check.ok) {
+      Alert.alert("Can't use this recording", check.message);
+      return;
+    }
+    setPostDraft(prev => ({
+      ...prev,
+      media: {
+        uri: `data:${voice.mime};base64,${voice.base64}`,
+        base64: voice.base64,
+        mediaType: 'audio',
+        durationSec: voice.durationSec,
+        mime: voice.mime,
+        sizeLabel: check.sizeLabel,
+      },
+    }));
+    setVoiceRecorderVisible(false);
+    setPostComposerVisible(true);
+  }, []);
+
   const submitPost = useCallback(async () => {
     const draftMedia = postDraft.media;
     const isBlog = postDraft.postType === 'blog';
@@ -258,13 +313,14 @@ export function useCommunityHub() {
     }
 
     const categoryDef = CATEGORIES.find(c => c.key === postDraft.category) ?? CATEGORIES[0];
-    const mediaType: FeedPost['media']['type'] = isBlog ? 'blog' : draftMedia ? draftMedia.mediaType : 'text';
+    const mediaType: FeedPost['media']['type'] = draftMedia ? draftMedia.mediaType : 'text';
+    const durationLabel = draftMedia?.durationSec != null ? formatDuration(draftMedia.durationSec) : undefined;
 
     setPostSubmitting(true);
     try {
       let mediaUrl: string | undefined;
       if (communityApi.enabled && draftMedia) {
-        const uploaded = await communityApi.uploadMedia(draftMedia.base64, draftMedia.mediaType, user.id, 'post-media');
+        const uploaded = await communityApi.uploadMedia(draftMedia.base64, draftMedia.mediaType, user.id, 'post-media', draftMedia.mime, draftMedia.uri);
         if ('error' in uploaded) {
           Alert.alert("Couldn't upload", uploaded.error);
           return;
@@ -305,7 +361,9 @@ export function useCommunityHub() {
           categoryEmoji: categoryDef.emoji,
           title: isBlog ? postDraft.title.trim() : undefined,
           text: postDraft.text.trim(),
-          media: draftMedia ? { type: mediaType, uris: [mediaUrl || draftMedia.uri] } : { type: mediaType, uris: [] },
+          media: draftMedia
+            ? { type: mediaType, uris: [mediaUrl || draftMedia.uri], durationLabel }
+            : { type: 'text', uris: [] },
           likes: 0,
           comments: 0,
           liked: false,
@@ -319,130 +377,135 @@ export function useCommunityHub() {
     }
   }, [postDraft, user]);
 
+  const onAddPhoto = useCallback(() => openPostComposer('photo'), [openPostComposer]);
+  const onAddVideo = useCallback(() => openPostComposer('video'), [openPostComposer]);
+  const onAddVoice = useCallback(() => openVoiceRecorder(), [openVoiceRecorder]);
   const onWritePost = useCallback(() => openPostComposer(), [openPostComposer]);
 
   // ── stories (24h ephemeral, persisted + auto-purged once Supabase is on) ────
-  // Story feature hidden for now — kept for future use.
-  // const [stories, setStories] = useState<StoryItem[]>([]);
-  // const [storyComposerVisible, setStoryComposerVisible] = useState(false);
-  // const [pendingStory, setPendingStory] = useState<PickedMedia | null>(null);
-  // const [storyMediaBusy, setStoryMediaBusy] = useState(false);
-  // const [storySubmitting, setStorySubmitting] = useState(false);
-  // const [viewerOpen, setViewerOpen] = useState(false);
-  // const [viewerIndex, setViewerIndex] = useState(0);
-  //
-  // const visibleStories = useMemo(() => activeStories(stories), [stories]);
-  //
-  // const loadStories = useCallback(async () => {
-  //   if (!communityApi.enabled || !user?.id) return;
-  //   await communityApi.purgeExpiredStories(user.id); // deletes the row + storage file, not just hides it
-  //   setStories(await communityApi.fetchMyStories(user.id));
-  // }, [user?.id]);
-  //
-  // useEffect(() => {
-  //   loadStories();
-  // }, [loadStories]);
-  //
-  // // Hide expired stories instantly client-side, and re-sync with the server
-  // // periodically so the underlying files actually get deleted while the app
-  // // stays open (not just on the next cold start).
-  // useEffect(() => {
-  //   const id = setInterval(() => {
-  //     setStories(prev => activeStories(prev));
-  //     loadStories();
-  //   }, 60_000);
-  //   return () => clearInterval(id);
-  // }, [loadStories]);
-  //
-  // const openStoryComposer = useCallback(() => {
-  //   setPendingStory(null);
-  //   setStoryComposerVisible(true);
-  // }, []);
-  // const closeStoryComposer = useCallback(() => {
-  //   setStoryComposerVisible(false);
-  //   setPendingStory(null);
-  // }, []);
-  //
-  // const pickStoryMedia = useCallback(async (source: MediaSource) => {
-  //   setStoryMediaBusy(true);
-  //   try {
-  //     const media = await pickAndValidateMedia(source);
-  //     if (media) setPendingStory(media);
-  //   } finally {
-  //     setStoryMediaBusy(false);
-  //   }
-  // }, []);
-  //
-  // const discardPendingStory = useCallback(() => setPendingStory(null), []);
-  //
-  // const confirmStory = useCallback(async () => {
-  //   if (!pendingStory) return;
-  //   if (storiesInLast24h(stories) >= MEDIA_RULES.story.maxPerDay) {
-  //     Alert.alert(
-  //       'Daily limit reached',
-  //       `You can share up to ${MEDIA_RULES.story.maxPerDay} stories a day. Try again tomorrow!`,
-  //     );
-  //     return;
-  //   }
-  //   if (!user?.id) {
-  //     Alert.alert('Not signed in', 'Please sign in again and retry.');
-  //     return;
-  //   }
-  //
-  //   setStorySubmitting(true);
-  //   try {
-  //     if (communityApi.enabled) {
-  //       const uploaded = await communityApi.uploadMedia(pendingStory.base64, pendingStory.mediaType, user.id, 'stories');
-  //       if ('error' in uploaded) {
-  //         Alert.alert("Couldn't upload", uploaded.error);
-  //         return;
-  //       }
-  //       const created = await communityApi.createStory({
-  //         authorId: user.id,
-  //         mediaType: pendingStory.mediaType,
-  //         mediaUrl: uploaded.url,
-  //         mediaPath: uploaded.path,
-  //         durationSec: pendingStory.durationSec,
-  //       });
-  //       if ('error' in created) {
-  //         Alert.alert("Couldn't post", created.error);
-  //         return;
-  //       }
-  //       setStories(prev => [...prev, created]);
-  //     } else {
-  //       const now = Date.now();
-  //       setStories(prev => [
-  //         ...prev,
-  //         {
-  //           id: `story-${now}`,
-  //           mediaType: pendingStory.mediaType,
-  //           uri: pendingStory.uri,
-  //           durationSec: pendingStory.durationSec,
-  //           createdAt: now,
-  //           expiresAt: now + MEDIA_RULES.story.expiryHours * 60 * 60 * 1000,
-  //         },
-  //       ]);
-  //     }
-  //
-  //     setPendingStory(null);
-  //     setStoryComposerVisible(false);
-  //   } finally {
-  //     setStorySubmitting(false);
-  //   }
-  // }, [pendingStory, stories, user]);
-  //
-  // const openStoryViewer = useCallback(() => {
-  //   if (!visibleStories.length) return;
-  //   setViewerIndex(0);
-  //   setViewerOpen(true);
-  // }, [visibleStories.length]);
-  //
-  // const closeStoryViewer = useCallback(() => setViewerOpen(false), []);
-  //
-  // const onStoryTrayPress = useCallback(() => {
-  //   if (visibleStories.length) openStoryViewer();
-  //   else openStoryComposer();
-  // }, [visibleStories.length, openStoryViewer, openStoryComposer]);
+  const [stories, setStories] = useState<StoryItem[]>([]);
+  const [storyComposerVisible, setStoryComposerVisible] = useState(false);
+  const [pendingStory, setPendingStory] = useState<PickedMedia | null>(null);
+  const [storyMediaBusy, setStoryMediaBusy] = useState(false);
+  const [storySubmitting, setStorySubmitting] = useState(false);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState(0);
+
+  const visibleStories = useMemo(() => activeStories(stories), [stories]);
+
+  const loadStories = useCallback(async () => {
+    if (!communityApi.enabled || !user?.id) return;
+    await communityApi.purgeExpiredStories(user.id); // deletes the row + storage file, not just hides it
+    setStories(await communityApi.fetchMyStories(user.id));
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadStories();
+  }, [loadStories]);
+
+  // Hide expired stories instantly client-side, and re-sync with the server
+  // periodically so the underlying files actually get deleted while the app
+  // stays open (not just on the next cold start).
+  useEffect(() => {
+    const id = setInterval(() => {
+      setStories(prev => activeStories(prev));
+      loadStories();
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [loadStories]);
+
+  const openStoryComposer = useCallback(() => {
+    setPendingStory(null);
+    setStoryComposerVisible(true);
+  }, []);
+  const closeStoryComposer = useCallback(() => {
+    setStoryComposerVisible(false);
+    setPendingStory(null);
+  }, []);
+
+  const pickStoryMedia = useCallback(async (source: MediaSource) => {
+    setStoryMediaBusy(true);
+    try {
+      const media = await pickAndValidateMedia(source);
+      if (media) setPendingStory(media);
+    } finally {
+      setStoryMediaBusy(false);
+    }
+  }, []);
+
+  const discardPendingStory = useCallback(() => setPendingStory(null), []);
+
+  const confirmStory = useCallback(async () => {
+    if (!pendingStory) return;
+    if (storiesInLast24h(stories) >= MEDIA_RULES.story.maxPerDay) {
+      Alert.alert(
+        'Daily limit reached',
+        `You can share up to ${MEDIA_RULES.story.maxPerDay} stories a day. Try again tomorrow!`,
+      );
+      return;
+    }
+    if (!user?.id) {
+      Alert.alert('Not signed in', 'Please sign in again and retry.');
+      return;
+    }
+
+    setStorySubmitting(true);
+    try {
+      if (communityApi.enabled) {
+        const uploaded = await communityApi.uploadMedia(pendingStory.base64, pendingStory.mediaType, user.id, 'stories', undefined, pendingStory.uri);
+        if ('error' in uploaded) {
+          Alert.alert("Couldn't upload", uploaded.error);
+          return;
+        }
+        const created = await communityApi.createStory({
+          authorId: user.id,
+          // Stories only ever come from pickStoryMedia (photo/video sources) —
+          // voice notes go through the separate post-composer flow — so this
+          // is never actually 'audio' despite PickedMedia's wider type.
+          mediaType: pendingStory.mediaType as 'image' | 'video',
+          mediaUrl: uploaded.url,
+          mediaPath: uploaded.path,
+          durationSec: pendingStory.durationSec,
+        });
+        if ('error' in created) {
+          Alert.alert("Couldn't post", created.error);
+          return;
+        }
+        setStories(prev => [...prev, created]);
+      } else {
+        const now = Date.now();
+        setStories(prev => [
+          ...prev,
+          {
+            id: `story-${now}`,
+            mediaType: pendingStory.mediaType as 'image' | 'video',
+            uri: pendingStory.uri,
+            durationSec: pendingStory.durationSec,
+            createdAt: now,
+            expiresAt: now + MEDIA_RULES.story.expiryHours * 60 * 60 * 1000,
+          },
+        ]);
+      }
+
+      setPendingStory(null);
+      setStoryComposerVisible(false);
+    } finally {
+      setStorySubmitting(false);
+    }
+  }, [pendingStory, stories, user]);
+
+  const openStoryViewer = useCallback(() => {
+    if (!visibleStories.length) return;
+    setViewerIndex(0);
+    setViewerOpen(true);
+  }, [visibleStories.length]);
+
+  const closeStoryViewer = useCallback(() => setViewerOpen(false), []);
+
+  const onStoryTrayPress = useCallback(() => {
+    if (visibleStories.length) openStoryViewer();
+    else openStoryComposer();
+  }, [visibleStories.length, openStoryViewer, openStoryComposer]);
 
   // ── growth features ────────────────────────────────────────────────────────
   const onReferEarn = useCallback(async () => {
@@ -494,6 +557,9 @@ export function useCommunityHub() {
     onSharePost,
     onComment,
     onDeletePost,
+    onAddPhoto,
+    onAddVideo,
+    onAddVoice,
     onWritePost,
     onOpenMyPosts,
     onReferEarn,
@@ -520,22 +586,28 @@ export function useCommunityHub() {
     clearPostMedia,
     submitPost,
 
-    // stories — hidden for now, kept for future use.
-    // stories: visibleStories,
-    // storyComposerVisible,
-    // pendingStory,
-    // storyMediaBusy,
-    // storySubmitting,
-    // viewerOpen,
-    // viewerIndex,
-    // setViewerIndex,
-    // onStoryTrayPress,
-    // openStoryComposer,
-    // closeStoryComposer,
-    // pickStoryMedia,
-    // discardPendingStory,
-    // confirmStory,
-    // closeStoryViewer,
+    // voice-note recorder
+    voiceRecorderVisible,
+    openVoiceRecorder,
+    closeVoiceRecorder,
+    onVoiceRecorded,
+
+    // stories
+    stories: visibleStories,
+    storyComposerVisible,
+    pendingStory,
+    storyMediaBusy,
+    storySubmitting,
+    viewerOpen,
+    viewerIndex,
+    setViewerIndex,
+    onStoryTrayPress,
+    openStoryComposer,
+    closeStoryComposer,
+    pickStoryMedia,
+    discardPendingStory,
+    confirmStory,
+    closeStoryViewer,
   };
 }
 

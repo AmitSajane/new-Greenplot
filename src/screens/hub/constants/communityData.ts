@@ -18,11 +18,7 @@ export type CategoryKey =
 
 export type Role = 'farmer' | 'owner';
 export type AvatarTone = 'green' | 'amber' | 'blue' | 'red' | 'purple';
-export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'blog';
-
-/** The post type chosen up front in the composer's type picker — decides
- * which fields the composer shows and what `media.type` the post ends up
- * with (photo → image, video → video, blog → blog). */
+export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'audio';
 export type PostType = 'photo' | 'video' | 'blog';
 
 export interface CategoryDef {
@@ -34,7 +30,7 @@ export interface CategoryDef {
 export interface PostMedia {
   type: MediaType;
   uris: string[];
-  durationLabel?: string; // for video
+  durationLabel?: string; // for video/audio
   earnedLabel?: string; // optional "₹ earned" badge
 }
 
@@ -77,6 +73,7 @@ export interface StoryItem {
 export const MEDIA_RULES = {
   photo: { maxBytes: 1024 * 1024 },
   video: { minSec: 10, maxSec: 15, maxBytes: 5 * 1024 * 1024 },
+  voice: { maxSec: 60, maxBytes: 3 * 1024 * 1024 },
   story: { expiryHours: 24, maxPerDay: 3 },
 } as const;
 
@@ -169,4 +166,108 @@ export const GUIDES: readonly Guide[] = [
   { id: 'g1', title: 'Vermicompost at home', tag: '🪱 Guide', image: 'https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=300', readMins: 5 },
   { id: 'g2', title: 'Drip irrigation basics', tag: '💧 Guide', image: 'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=300', readMins: 4 },
   { id: 'g3', title: 'Organic pest control', tag: '🌿 Guide', image: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=300', readMins: 6 },
+];
+
+/**
+ * Post-type filter (Community feed) — separate dimension from `CategoryKey`
+ * (topic). Lets a user narrow the feed to a specific post format. 'blog',
+ * 'poll' and 'voice' have no real posts yet (see NEW_POST_TYPE_EXAMPLES
+ * below); selecting them surfaces the matching example card instead.
+ */
+export type PostTypeFilterKey = 'all' | 'photo' | 'video' | 'blog' | 'poll' | 'voice';
+
+export interface PostTypeFilterDef {
+  key: PostTypeFilterKey;
+  label: string;
+}
+
+export const POST_TYPE_FILTERS: readonly PostTypeFilterDef[] = [
+  { key: 'all', label: 'All' },
+  { key: 'photo', label: 'Photo' },
+  { key: 'video', label: 'Video' },
+  { key: 'blog', label: 'Blog' },
+  { key: 'poll', label: 'Poll' },
+  { key: 'voice', label: 'Voice' },
+];
+
+export type NewPostTypeKind = 'video' | 'blog' | 'poll' | 'voice' | 'beforeAfter';
+
+export interface PollOption {
+  label: string;
+  pct: number;
+}
+
+/** A preview card for a post format that isn't wired to real data/backend
+ * yet — shown in the feed footer to signal what's coming, filterable by the
+ * post-type chips above the feed. */
+export interface NewPostTypeExample {
+  id: string;
+  kind: NewPostTypeKind;
+  filterKey: PostTypeFilterKey;
+  title: string;
+  subtitle: string;
+  caption: string;
+  durationLabel?: string;
+  blogTitle?: string;
+  blogReadLabel?: string;
+  pollQuestion?: string;
+  pollOptions?: readonly PollOption[];
+}
+
+export const NEW_POST_TYPE_EXAMPLES: readonly NewPostTypeExample[] = [
+  {
+    id: 'ex-video',
+    kind: 'video',
+    filterKey: 'video',
+    title: 'Short video post',
+    subtitle: 'Reels-style, 10-15 sec demo clips',
+    caption:
+      'Great for showing technique (pruning, spraying, machinery). Short-form video drives far more watch-time and shares than photos.',
+    durationLabel: '0:12',
+  },
+  {
+    id: 'ex-blog',
+    kind: 'blog',
+    filterKey: 'blog',
+    title: 'Blog / article post',
+    subtitle: 'Long-form write-up with cover image',
+    caption:
+      'Lets experienced farmers & agronomists publish detailed how-tos. Keeps power users engaged and builds a searchable knowledge base.',
+    blogTitle: 'How I cut fertilizer cost by 30% with soil testing',
+    blogReadLabel: '8 min read · long-form',
+  },
+  {
+    id: 'ex-poll',
+    kind: 'poll',
+    filterKey: 'poll',
+    title: 'Poll post',
+    subtitle: 'One-tap question with live vote bars',
+    caption:
+      'Lowest-effort way to participate — great for daily check-ins and surfacing what the community actually needs.',
+    pollQuestion: 'Which fertilizer are you using this season?',
+    pollOptions: [
+      { label: 'Organic compost', pct: 58 },
+      { label: 'Chemical NPK', pct: 27 },
+      { label: 'Vermicompost', pct: 15 },
+    ],
+  },
+  {
+    id: 'ex-voice',
+    kind: 'voice',
+    filterKey: 'voice',
+    title: 'Voice note post',
+    subtitle: 'Record & share a spoken tip in your language',
+    caption:
+      'Removes the literacy/typing barrier — many farmers can speak a tip far faster than typing one. Wider reach into regional languages.',
+    durationLabel: '1:04',
+  },
+  {
+    id: 'ex-beforeafter',
+    kind: 'beforeAfter',
+    filterKey: 'photo',
+    title: 'Before / after post',
+    subtitle: 'Split-image progress comparison',
+    caption:
+      'Strongest visual proof of results — pairs naturally with earning badges and drives aspiration the same way Spotlight does.',
+  },
 ];
