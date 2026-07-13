@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useState } from 'react';
 import { ImageBackground, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
@@ -11,6 +11,12 @@ interface Props {
   onToggleSave: (id: string) => void;
   onShare: (id: string) => void;
   onComment: (id: string) => void;
+  /** Only passed by the caller for the viewer's own posts — when present,
+   * the "…" button opens a menu with a delete option. */
+  onDelete?: (id: string) => void;
+  /** Only meaningful for blog posts — shows a "Read story" button that opens
+   * the full, untruncated post. */
+  onReadStory?: (post: FeedPost) => void;
 }
 
 const categoryTint: Record<string, { bg: string; fg: string }> = {
@@ -26,6 +32,11 @@ const categoryTint: Record<string, { bg: string; fg: string }> = {
 function PostMediaView({ post }: { post: FeedPost }) {
   const { media } = post;
   if (media.type === 'text') return null;
+  if (media.type === 'blog') {
+    // Blog cover image is optional — nothing to render without one.
+    if (!media.uris.length) return null;
+    return <ImageBackground source={{ uri: media.uris[0] }} style={s.pMedia} resizeMode="cover" />;
+  }
   if (media.type === 'grid') {
     return (
       <View style={s.pGrid}>
@@ -58,12 +69,20 @@ function PostMediaView({ post }: { post: FeedPost }) {
   );
 }
 
-function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment }: Props) {
+function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, onDelete, onReadStory }: Props) {
+  const [menuOpen, setMenuOpen] = useState(false);
   const like = useCallback(() => onToggleLike(post.id), [onToggleLike, post.id]);
   const save = useCallback(() => onToggleSave(post.id), [onToggleSave, post.id]);
   const share = useCallback(() => onShare(post.id), [onShare, post.id]);
   const comment = useCallback(() => onComment(post.id), [onComment, post.id]);
+  const toggleMenu = useCallback(() => setMenuOpen(open => !open), []);
+  const deletePost = useCallback(() => {
+    setMenuOpen(false);
+    onDelete?.(post.id);
+  }, [onDelete, post.id]);
+  const readStory = useCallback(() => onReadStory?.(post), [onReadStory, post]);
   const tint = categoryTint[post.category] ?? categoryTint.all;
+  const showReadStory = post.media.type === 'blog' && !!onReadStory;
 
   return (
     <View style={s.post}>
@@ -82,16 +101,36 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment }: 
             {post.location} · {post.time}
           </Text>
         </View>
-        <Ionicons name="ellipsis-horizontal" size={18} color="#9EB8A8" />
+        {onDelete ? (
+          <TouchableOpacity onPress={toggleMenu} hitSlop={8}>
+            <Ionicons name="ellipsis-horizontal" size={18} color="#9EB8A8" />
+          </TouchableOpacity>
+        ) : (
+          <Ionicons name="ellipsis-horizontal" size={18} color="#9EB8A8" />
+        )}
       </View>
+
+      {menuOpen && onDelete && (
+        <View style={s.postMenu}>
+          <TouchableOpacity style={s.postMenuItem} activeOpacity={0.7} onPress={deletePost}>
+            <Ionicons name="trash-outline" size={15} color="#C02828" />
+            <Text style={s.postMenuItemDangerText}>Delete post</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* category tag */}
       <Text style={[s.pTag, { backgroundColor: tint.bg, color: tint.fg }]}>
         {post.categoryEmoji} {post.categoryLabel}
       </Text>
 
-      {/* text */}
-      {!!post.text && <Text style={s.pText}>{post.text}</Text>}
+      {/* blog title + text */}
+      {!!post.title && <Text style={s.pBlogTitle}>{post.title}</Text>}
+      {!!post.text && (
+        <Text style={s.pText} numberOfLines={post.media.type === 'blog' ? 4 : undefined}>
+          {post.text}
+        </Text>
+      )}
 
       {/* media */}
       <PostMediaView post={post} />
@@ -110,9 +149,15 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment }: 
           <Ionicons name="share-social-outline" size={17} color="#6B8074" />
           <Text style={s.pActText}>Share</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.pSave} activeOpacity={0.7} onPress={save} hitSlop={6}>
+        <TouchableOpacity style={showReadStory ? undefined : s.pSave} activeOpacity={0.7} onPress={save} hitSlop={6}>
           <Ionicons name={post.saved ? 'bookmark' : 'bookmark-outline'} size={18} color={post.saved ? '#1A6B3A' : '#6B8074'} />
         </TouchableOpacity>
+        {showReadStory && (
+          <TouchableOpacity style={s.pReadStory} activeOpacity={0.7} onPress={readStory} hitSlop={6}>
+            <Text style={s.pReadStoryText}>Read story</Text>
+            <Ionicons name="arrow-forward" size={14} color="#1A6B3A" />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );

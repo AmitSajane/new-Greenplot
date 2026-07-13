@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { colors } from '../theme/tokens';
 import HubScreen from '../screens/hub';
+import MyPostsScreen from '../screens/hub/MyPostsScreen';
 import FilterByCropScreen from '../screens/FilterByCropScreen';
 import LatestNewsScreen from '../screens/LatestNewsScreen';
 import ModernFarmingTechScreen from '../screens/ModernFarmingTechScreen';
@@ -12,6 +13,7 @@ import QuestionDetailScreen from '../screens/QuestionDetailScreen';
 
 export type HubStackParamList = {
   Hub: undefined;
+  MyPosts: undefined;
   FilterByCrop: undefined;
   LatestNews: undefined;
   NewsDetail: { id: string; title: string };
@@ -37,6 +39,11 @@ export default function HubStack() {
       <Stack.Screen
         name="Hub"
         component={HubScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="MyPosts"
+        component={MyPostsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen

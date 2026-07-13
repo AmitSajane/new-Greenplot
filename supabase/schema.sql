@@ -11,7 +11,7 @@ do $$ begin
   create type lease_status       as enum ('pending', 'active', 'expired', 'cancelled');
   create type request_status     as enum ('pending', 'accepted', 'rejected');
   create type post_category      as enum ('success', 'vermicompost', 'organic', 'tips', 'pest', 'questions');
-  create type post_media_type    as enum ('image', 'video', 'grid', 'text');
+  create type post_media_type    as enum ('image', 'video', 'grid', 'text', 'blog');
   create type job_status         as enum ('open', 'in_progress', 'completed', 'cancelled');
 exception when duplicate_object then null; end $$;
 
@@ -95,6 +95,7 @@ create table if not exists posts (
   id            uuid primary key default gen_random_uuid(),
   author_id     uuid not null references profiles(id) on delete cascade,
   category      post_category not null default 'tips',
+  title         text, -- blog posts only
   text          text,
   media_type    post_media_type not null default 'text',
   media_urls    text[] not null default '{}',

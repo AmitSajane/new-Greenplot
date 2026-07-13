@@ -12,12 +12,16 @@ import {
   MEDIA_RULES,
   REFERRAL,
   SPOTLIGHT,
-  TOP_CONTRIBUTORS,
+  // Top contributors feature hidden for now — kept for future use.
+  // TOP_CONTRIBUTORS,
   type CategoryKey,
   type FeedPost,
-  type StoryItem,
+  type PostType,
+  // Story feature hidden for now — kept for future use.
+  // type StoryItem,
 } from '../constants/communityData';
-import { activeStories, checkPhoto, checkVideo, storiesInLast24h } from '../utils/mediaRules';
+// import { activeStories, storiesInLast24h } from '../utils/mediaRules'; // Story feature hidden for now — kept for future use.
+import { checkPhoto, checkVideo } from '../utils/mediaRules';
 import { communityApi } from '../utils/communityApi';
 
 type NavigationProp = NativeStackNavigationProp<HubStackParamList>;
@@ -33,12 +37,14 @@ export interface PickedMedia {
 }
 
 export interface PostDraft {
+  postType: PostType;
+  title: string;
   text: string;
   category: CategoryKey;
   media: PickedMedia | null;
 }
 
-const EMPTY_DRAFT: PostDraft = { text: '', category: 'tips', media: null };
+const EMPTY_DRAFT: PostDraft = { postType: 'photo', title: '', text: '', category: 'tips', media: null };
 
 // Defensive optional require — matches the pattern used in AIAssistantScreen.
 type PickerFn = (options: Record<string, unknown>) => Promise<{
@@ -167,12 +173,42 @@ export function useCommunityHub() {
 
   const onComment = useCallback(() => navigation.navigate('CommunityQuestions'), [navigation]);
 
+  // Only ever called for the viewer's own posts (PostCard only wires this up
+  // when post.authorId matches the logged-in user) — the delete query is
+  // also author-scoped server-side as a second guard.
+  const onDeletePost = useCallback(
+    (id: string) => {
+      if (!user?.id) return;
+      Alert.alert('Delete post', "This can't be undone.", [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            const previous = posts;
+            setPosts(prev => prev.filter(p => p.id !== id));
+            if (!communityApi.enabled) return;
+            const ok = await communityApi.deletePost(id, user.id);
+            if (!ok) {
+              setPosts(previous);
+              Alert.alert("Couldn't delete", 'Please try again.');
+            }
+          },
+        },
+      ]);
+    },
+    [posts, user?.id],
+  );
+
+  const onOpenMyPosts = useCallback(() => navigation.navigate('MyPosts'), [navigation]);
+
   // ── post composer ────────────────────────────────────────────────────────
+  // 'picker' = choose Photo/Video/Blog first; 'compose' = fields for that type.
   const [postComposerVisible, setPostComposerVisible] = useState(false);
+  const [postComposerScreen, setPostComposerScreen] = useState<'picker' | 'compose'>('picker');
   const [postDraft, setPostDraft] = useState<PostDraft>(EMPTY_DRAFT);
   const [postMediaBusy, setPostMediaBusy] = useState(false);
   const [postSubmitting, setPostSubmitting] = useState(false);
-  const [pendingAutoPick, setPendingAutoPick] = useState<'photo' | 'video' | null>(null);
 
   const pickPostMedia = useCallback(async (source: MediaSource) => {
     setPostMediaBusy(true);
@@ -184,30 +220,36 @@ export function useCommunityHub() {
     }
   }, []);
 
-  const openPostComposer = useCallback((autoPick?: 'photo' | 'video') => {
+  const openPostComposer = useCallback(() => {
     setPostDraft(EMPTY_DRAFT);
+    setPostComposerScreen('picker');
     setPostComposerVisible(true);
-    // Don't launch the native picker yet — the modal's slide-in animation is
-    // still playing, and presenting a second full-screen picker mid-transition
-    // makes it silently fail or stall on iOS/Android. Wait for onShow instead.
-    setPendingAutoPick(autoPick ?? null);
   }, []);
 
-  const onPostComposerShown = useCallback(() => {
-    if (!pendingAutoPick) return;
-    pickPostMedia(pendingAutoPick === 'photo' ? 'gallery-photo' : 'gallery-video');
-    setPendingAutoPick(null);
-  }, [pendingAutoPick, pickPostMedia]);
+  const selectPostType = useCallback((type: PostType) => {
+    setPostDraft(prev => ({ ...prev, postType: type }));
+    setPostComposerScreen('compose');
+  }, []);
+
+  const backToPostTypePicker = useCallback(() => {
+    setPostDraft(EMPTY_DRAFT);
+    setPostComposerScreen('picker');
+  }, []);
 
   const closePostComposer = useCallback(() => setPostComposerVisible(false), []);
+  const setPostTitle = useCallback((title: string) => setPostDraft(prev => ({ ...prev, title })), []);
   const setPostText = useCallback((text: string) => setPostDraft(prev => ({ ...prev, text })), []);
   const setPostCategory = useCallback((cat: CategoryKey) => setPostDraft(prev => ({ ...prev, category: cat })), []);
   const clearPostMedia = useCallback(() => setPostDraft(prev => ({ ...prev, media: null })), []);
 
   const submitPost = useCallback(async () => {
     const draftMedia = postDraft.media;
-    if (!postDraft.text.trim() && !draftMedia) {
-      Alert.alert('Nothing to post', 'Add a photo/video or write something first.');
+    const isBlog = postDraft.postType === 'blog';
+    const hasContent = isBlog
+      ? !!postDraft.title.trim() || !!postDraft.text.trim()
+      : !!postDraft.text.trim() || !!draftMedia;
+    if (!hasContent) {
+      Alert.alert('Nothing to post', isBlog ? 'Add a title or write something first.' : 'Add a photo/video or write something first.');
       return;
     }
     if (!user?.id) {
@@ -216,7 +258,7 @@ export function useCommunityHub() {
     }
 
     const categoryDef = CATEGORIES.find(c => c.key === postDraft.category) ?? CATEGORIES[0];
-    const mediaType: FeedPost['media']['type'] = draftMedia ? draftMedia.mediaType : 'text';
+    const mediaType: FeedPost['media']['type'] = isBlog ? 'blog' : draftMedia ? draftMedia.mediaType : 'text';
 
     setPostSubmitting(true);
     try {
@@ -235,6 +277,7 @@ export function useCommunityHub() {
         const created = await communityApi.createPost({
           authorId: user.id,
           category: postDraft.category,
+          title: isBlog ? postDraft.title.trim() : undefined,
           text: postDraft.text.trim(),
           mediaType,
           mediaUrl,
@@ -249,6 +292,7 @@ export function useCommunityHub() {
       setPosts(prev => [
         {
           id: postId,
+          authorId: user.id,
           authorName: user.name || 'You',
           authorInitials: (user.name || 'You').slice(0, 2).toUpperCase(),
           avatarTone: 'green',
@@ -259,8 +303,9 @@ export function useCommunityHub() {
           category: postDraft.category,
           categoryLabel: categoryDef.label,
           categoryEmoji: categoryDef.emoji,
+          title: isBlog ? postDraft.title.trim() : undefined,
           text: postDraft.text.trim(),
-          media: draftMedia ? { type: mediaType, uris: [mediaUrl || draftMedia.uri] } : { type: 'text', uris: [] },
+          media: draftMedia ? { type: mediaType, uris: [mediaUrl || draftMedia.uri] } : { type: mediaType, uris: [] },
           likes: 0,
           comments: 0,
           liked: false,
@@ -274,131 +319,130 @@ export function useCommunityHub() {
     }
   }, [postDraft, user]);
 
-  const onAddPhoto = useCallback(() => openPostComposer('photo'), [openPostComposer]);
-  const onAddVideo = useCallback(() => openPostComposer('video'), [openPostComposer]);
   const onWritePost = useCallback(() => openPostComposer(), [openPostComposer]);
 
   // ── stories (24h ephemeral, persisted + auto-purged once Supabase is on) ────
-  const [stories, setStories] = useState<StoryItem[]>([]);
-  const [storyComposerVisible, setStoryComposerVisible] = useState(false);
-  const [pendingStory, setPendingStory] = useState<PickedMedia | null>(null);
-  const [storyMediaBusy, setStoryMediaBusy] = useState(false);
-  const [storySubmitting, setStorySubmitting] = useState(false);
-  const [viewerOpen, setViewerOpen] = useState(false);
-  const [viewerIndex, setViewerIndex] = useState(0);
-
-  const visibleStories = useMemo(() => activeStories(stories), [stories]);
-
-  const loadStories = useCallback(async () => {
-    if (!communityApi.enabled || !user?.id) return;
-    await communityApi.purgeExpiredStories(user.id); // deletes the row + storage file, not just hides it
-    setStories(await communityApi.fetchMyStories(user.id));
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadStories();
-  }, [loadStories]);
-
-  // Hide expired stories instantly client-side, and re-sync with the server
-  // periodically so the underlying files actually get deleted while the app
-  // stays open (not just on the next cold start).
-  useEffect(() => {
-    const id = setInterval(() => {
-      setStories(prev => activeStories(prev));
-      loadStories();
-    }, 60_000);
-    return () => clearInterval(id);
-  }, [loadStories]);
-
-  const openStoryComposer = useCallback(() => {
-    setPendingStory(null);
-    setStoryComposerVisible(true);
-  }, []);
-  const closeStoryComposer = useCallback(() => {
-    setStoryComposerVisible(false);
-    setPendingStory(null);
-  }, []);
-
-  const pickStoryMedia = useCallback(async (source: MediaSource) => {
-    setStoryMediaBusy(true);
-    try {
-      const media = await pickAndValidateMedia(source);
-      if (media) setPendingStory(media);
-    } finally {
-      setStoryMediaBusy(false);
-    }
-  }, []);
-
-  const discardPendingStory = useCallback(() => setPendingStory(null), []);
-
-  const confirmStory = useCallback(async () => {
-    if (!pendingStory) return;
-    if (storiesInLast24h(stories) >= MEDIA_RULES.story.maxPerDay) {
-      Alert.alert(
-        'Daily limit reached',
-        `You can share up to ${MEDIA_RULES.story.maxPerDay} stories a day. Try again tomorrow!`,
-      );
-      return;
-    }
-    if (!user?.id) {
-      Alert.alert('Not signed in', 'Please sign in again and retry.');
-      return;
-    }
-
-    setStorySubmitting(true);
-    try {
-      if (communityApi.enabled) {
-        const uploaded = await communityApi.uploadMedia(pendingStory.base64, pendingStory.mediaType, user.id, 'stories');
-        if ('error' in uploaded) {
-          Alert.alert("Couldn't upload", uploaded.error);
-          return;
-        }
-        const created = await communityApi.createStory({
-          authorId: user.id,
-          mediaType: pendingStory.mediaType,
-          mediaUrl: uploaded.url,
-          mediaPath: uploaded.path,
-          durationSec: pendingStory.durationSec,
-        });
-        if ('error' in created) {
-          Alert.alert("Couldn't post", created.error);
-          return;
-        }
-        setStories(prev => [...prev, created]);
-      } else {
-        const now = Date.now();
-        setStories(prev => [
-          ...prev,
-          {
-            id: `story-${now}`,
-            mediaType: pendingStory.mediaType,
-            uri: pendingStory.uri,
-            durationSec: pendingStory.durationSec,
-            createdAt: now,
-            expiresAt: now + MEDIA_RULES.story.expiryHours * 60 * 60 * 1000,
-          },
-        ]);
-      }
-
-      setPendingStory(null);
-      setStoryComposerVisible(false);
-    } finally {
-      setStorySubmitting(false);
-    }
-  }, [pendingStory, stories, user]);
-
-  const openStoryViewer = useCallback(() => {
-    if (!visibleStories.length) return;
-    setViewerIndex(0);
-    setViewerOpen(true);
-  }, [visibleStories.length]);
-
-  const closeStoryViewer = useCallback(() => setViewerOpen(false), []);
-
-  const onStoryTrayPress = useCallback(() => {
-    if (visibleStories.length) openStoryViewer();
-    else openStoryComposer();
-  }, [visibleStories.length, openStoryViewer, openStoryComposer]);
+  // Story feature hidden for now — kept for future use.
+  // const [stories, setStories] = useState<StoryItem[]>([]);
+  // const [storyComposerVisible, setStoryComposerVisible] = useState(false);
+  // const [pendingStory, setPendingStory] = useState<PickedMedia | null>(null);
+  // const [storyMediaBusy, setStoryMediaBusy] = useState(false);
+  // const [storySubmitting, setStorySubmitting] = useState(false);
+  // const [viewerOpen, setViewerOpen] = useState(false);
+  // const [viewerIndex, setViewerIndex] = useState(0);
+  //
+  // const visibleStories = useMemo(() => activeStories(stories), [stories]);
+  //
+  // const loadStories = useCallback(async () => {
+  //   if (!communityApi.enabled || !user?.id) return;
+  //   await communityApi.purgeExpiredStories(user.id); // deletes the row + storage file, not just hides it
+  //   setStories(await communityApi.fetchMyStories(user.id));
+  // }, [user?.id]);
+  //
+  // useEffect(() => {
+  //   loadStories();
+  // }, [loadStories]);
+  //
+  // // Hide expired stories instantly client-side, and re-sync with the server
+  // // periodically so the underlying files actually get deleted while the app
+  // // stays open (not just on the next cold start).
+  // useEffect(() => {
+  //   const id = setInterval(() => {
+  //     setStories(prev => activeStories(prev));
+  //     loadStories();
+  //   }, 60_000);
+  //   return () => clearInterval(id);
+  // }, [loadStories]);
+  //
+  // const openStoryComposer = useCallback(() => {
+  //   setPendingStory(null);
+  //   setStoryComposerVisible(true);
+  // }, []);
+  // const closeStoryComposer = useCallback(() => {
+  //   setStoryComposerVisible(false);
+  //   setPendingStory(null);
+  // }, []);
+  //
+  // const pickStoryMedia = useCallback(async (source: MediaSource) => {
+  //   setStoryMediaBusy(true);
+  //   try {
+  //     const media = await pickAndValidateMedia(source);
+  //     if (media) setPendingStory(media);
+  //   } finally {
+  //     setStoryMediaBusy(false);
+  //   }
+  // }, []);
+  //
+  // const discardPendingStory = useCallback(() => setPendingStory(null), []);
+  //
+  // const confirmStory = useCallback(async () => {
+  //   if (!pendingStory) return;
+  //   if (storiesInLast24h(stories) >= MEDIA_RULES.story.maxPerDay) {
+  //     Alert.alert(
+  //       'Daily limit reached',
+  //       `You can share up to ${MEDIA_RULES.story.maxPerDay} stories a day. Try again tomorrow!`,
+  //     );
+  //     return;
+  //   }
+  //   if (!user?.id) {
+  //     Alert.alert('Not signed in', 'Please sign in again and retry.');
+  //     return;
+  //   }
+  //
+  //   setStorySubmitting(true);
+  //   try {
+  //     if (communityApi.enabled) {
+  //       const uploaded = await communityApi.uploadMedia(pendingStory.base64, pendingStory.mediaType, user.id, 'stories');
+  //       if ('error' in uploaded) {
+  //         Alert.alert("Couldn't upload", uploaded.error);
+  //         return;
+  //       }
+  //       const created = await communityApi.createStory({
+  //         authorId: user.id,
+  //         mediaType: pendingStory.mediaType,
+  //         mediaUrl: uploaded.url,
+  //         mediaPath: uploaded.path,
+  //         durationSec: pendingStory.durationSec,
+  //       });
+  //       if ('error' in created) {
+  //         Alert.alert("Couldn't post", created.error);
+  //         return;
+  //       }
+  //       setStories(prev => [...prev, created]);
+  //     } else {
+  //       const now = Date.now();
+  //       setStories(prev => [
+  //         ...prev,
+  //         {
+  //           id: `story-${now}`,
+  //           mediaType: pendingStory.mediaType,
+  //           uri: pendingStory.uri,
+  //           durationSec: pendingStory.durationSec,
+  //           createdAt: now,
+  //           expiresAt: now + MEDIA_RULES.story.expiryHours * 60 * 60 * 1000,
+  //         },
+  //       ]);
+  //     }
+  //
+  //     setPendingStory(null);
+  //     setStoryComposerVisible(false);
+  //   } finally {
+  //     setStorySubmitting(false);
+  //   }
+  // }, [pendingStory, stories, user]);
+  //
+  // const openStoryViewer = useCallback(() => {
+  //   if (!visibleStories.length) return;
+  //   setViewerIndex(0);
+  //   setViewerOpen(true);
+  // }, [visibleStories.length]);
+  //
+  // const closeStoryViewer = useCallback(() => setViewerOpen(false), []);
+  //
+  // const onStoryTrayPress = useCallback(() => {
+  //   if (visibleStories.length) openStoryViewer();
+  //   else openStoryComposer();
+  // }, [visibleStories.length, openStoryViewer, openStoryComposer]);
 
   // ── growth features ────────────────────────────────────────────────────────
   const onReferEarn = useCallback(async () => {
@@ -418,7 +462,8 @@ export function useCommunityHub() {
     [],
   );
 
-  const onLeaderboard = useCallback(() => navigation.navigate('CommunityQuestions'), [navigation]);
+  // Top contributors feature hidden for now — kept for future use.
+  // const onLeaderboard = useCallback(() => navigation.navigate('CommunityQuestions'), [navigation]);
   const onSpotlight = useCallback(
     () => navigation.navigate('NewsDetail', { id: 'spotlight', title: 'Story of the Week' }),
     [navigation],
@@ -435,7 +480,7 @@ export function useCommunityHub() {
     stats: COMMUNITY_STATS,
     reward: KISAN_REWARD,
     referral: REFERRAL,
-    contributors: TOP_CONTRIBUTORS,
+    // contributors: TOP_CONTRIBUTORS, // Top contributors feature hidden for now — kept for future use.
     spotlight: SPOTLIGHT,
     guides: GUIDES,
     categories: CATEGORIES,
@@ -448,12 +493,12 @@ export function useCommunityHub() {
     onToggleSave,
     onSharePost,
     onComment,
-    onAddPhoto,
-    onAddVideo,
+    onDeletePost,
     onWritePost,
+    onOpenMyPosts,
     onReferEarn,
     onRewards,
-    onLeaderboard,
+    // onLeaderboard, // Top contributors feature hidden for now — kept for future use.
     onSpotlight,
     onGuidesAll,
     onGuidePress,
@@ -461,33 +506,36 @@ export function useCommunityHub() {
 
     // post composer
     postComposerVisible,
+    postComposerScreen,
     postDraft,
     postMediaBusy,
     postSubmitting,
     closePostComposer,
-    onPostComposerShown,
+    selectPostType,
+    backToPostTypePicker,
+    setPostTitle,
     setPostText,
     setPostCategory,
     pickPostMedia,
     clearPostMedia,
     submitPost,
 
-    // stories
-    stories: visibleStories,
-    storyComposerVisible,
-    pendingStory,
-    storyMediaBusy,
-    storySubmitting,
-    viewerOpen,
-    viewerIndex,
-    setViewerIndex,
-    onStoryTrayPress,
-    openStoryComposer,
-    closeStoryComposer,
-    pickStoryMedia,
-    discardPendingStory,
-    confirmStory,
-    closeStoryViewer,
+    // stories — hidden for now, kept for future use.
+    // stories: visibleStories,
+    // storyComposerVisible,
+    // pendingStory,
+    // storyMediaBusy,
+    // storySubmitting,
+    // viewerOpen,
+    // viewerIndex,
+    // setViewerIndex,
+    // onStoryTrayPress,
+    // openStoryComposer,
+    // closeStoryComposer,
+    // pickStoryMedia,
+    // discardPendingStory,
+    // confirmStory,
+    // closeStoryViewer,
   };
 }
 

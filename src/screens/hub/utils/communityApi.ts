@@ -25,6 +25,7 @@ interface PostRow {
   id: string;
   author_id: string;
   category: CategoryKey;
+  title: string | null;
   text: string | null;
   media_type: FeedPost['media']['type'];
   media_urls: string[] | null;
@@ -46,6 +47,7 @@ function mapPostRow(row: PostRow, author: ProfileRow | undefined, liked: boolean
   const name = author?.name?.trim() || 'GreenPlot Farmer';
   return {
     id: row.id,
+    authorId: row.author_id,
     authorName: name,
     authorInitials: name.slice(0, 2).toUpperCase(),
     avatarTone: toneForId(row.author_id),
@@ -56,6 +58,7 @@ function mapPostRow(row: PostRow, author: ProfileRow | undefined, liked: boolean
     category: row.category,
     categoryLabel: categoryDef.label,
     categoryEmoji: categoryDef.emoji,
+    title: row.title || undefined,
     text: row.text || '',
     media: { type: row.media_type, uris: row.media_urls || [], earnedLabel: row.earned_label || undefined },
     likes: row.likes_count ?? 0,
@@ -91,7 +94,7 @@ export const communityApi = {
     if (!supabase) return [];
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, category, text, media_type, media_urls, earned_label, likes_count, comments_count, created_at')
+      .select('id, author_id, category, title, text, media_type, media_urls, earned_label, likes_count, comments_count, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error || !data?.length) return [];
@@ -145,6 +148,7 @@ export const communityApi = {
   async createPost(input: {
     authorId: string;
     category: CategoryKey;
+    title?: string;
     text: string;
     mediaType: FeedPost['media']['type'];
     mediaUrl?: string;
@@ -155,6 +159,7 @@ export const communityApi = {
       .insert({
         author_id: input.authorId,
         category: input.category,
+        title: input.title || null,
         text: input.text,
         media_type: input.mediaType,
         media_urls: input.mediaUrl ? [input.mediaUrl] : [],
@@ -163,6 +168,15 @@ export const communityApi = {
       .single();
     if (error || !data) return { error: error?.message || 'Insert failed' };
     return { id: data.id, createdAt: data.created_at };
+  },
+
+  /** Delete a post — scoped to the author via the query itself (belt and
+   * braces alongside the RLS policy), so a stray id can't delete someone
+   * else's post. */
+  async deletePost(postId: string, authorId: string): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from('posts').delete().eq('id', postId).eq('author_id', authorId);
+    return !error;
   },
 
   async fetchMyStories(userId: string): Promise<StoryItem[]> {

@@ -18,7 +18,12 @@ export type CategoryKey =
 
 export type Role = 'farmer' | 'owner';
 export type AvatarTone = 'green' | 'amber' | 'blue' | 'red' | 'purple';
-export type MediaType = 'image' | 'video' | 'grid' | 'text';
+export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'blog';
+
+/** The post type chosen up front in the composer's type picker — decides
+ * which fields the composer shows and what `media.type` the post ends up
+ * with (photo → image, video → video, blog → blog). */
+export type PostType = 'photo' | 'video' | 'blog';
 
 export interface CategoryDef {
   key: CategoryKey;
@@ -35,6 +40,7 @@ export interface PostMedia {
 
 export interface FeedPost {
   id: string;
+  authorId: string;
   authorName: string;
   authorInitials: string;
   avatarTone: AvatarTone;
@@ -45,6 +51,8 @@ export interface FeedPost {
   category: CategoryKey;
   categoryLabel: string;
   categoryEmoji: string;
+  /** Blog title — only set when media.type === 'blog'. */
+  title?: string;
   text: string;
   media: PostMedia;
   likes: number;

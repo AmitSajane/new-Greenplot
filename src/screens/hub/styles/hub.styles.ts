@@ -49,20 +49,19 @@ export const hubStyles = StyleSheet.create({
   levelTrack: { height: 7, backgroundColor: '#E8F0EC', borderRadius: 4, overflow: 'hidden' },
   levelFill: { height: 7, borderRadius: 4, backgroundColor: '#E09830' },
 
-  // Composer
-  composer: { marginHorizontal: 14, marginTop: 12, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 11 },
-  compTop: { flexDirection: 'row', alignItems: 'center', gap: 9 },
-  compInput: { flex: 1, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 9 },
-  compInputText: { fontSize: 11, color: '#9EB8A8' },
-  compActions: { flexDirection: 'row', gap: 6, marginTop: 9, borderTopWidth: 1, borderTopColor: '#F4F8F5', paddingTop: 9 },
-  compBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, borderRadius: 9, paddingVertical: 8 },
-  compBtnText: { fontSize: 11, fontWeight: '700' },
-  compBtnGreen: { backgroundColor: '#E4F4EC' },
-  compBtnRed: { backgroundColor: '#FDD0D0' },
-  compBtnAmber: { backgroundColor: '#FDF5E0' },
-  compTextGreen: { color: '#1A6B3A' },
-  compTextRed: { color: '#C02828' },
-  compTextAmber: { color: '#B87214' },
+  // Create post row (single entry point into the post composer)
+  createPostRow: { flexDirection: 'row', gap: 10, marginHorizontal: 14, marginTop: 12 },
+  createPostCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 12 },
+  createPostBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#1A6B3A', alignItems: 'center', justifyContent: 'center' },
+  createPostText: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
+  myPostsCard: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14, padding: 12 },
+  myPostsIconWrap: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#E4F4EC', alignItems: 'center', justifyContent: 'center' },
+  myPostsBtnText: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
+
+  // My posts screen
+  myPostsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: '#fff' },
+  myPostsTitle: { fontSize: 15, fontWeight: '800', color: '#1C2E18' },
+  myPostsLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
 
   // Avatar (shared)
   av: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
@@ -132,6 +131,9 @@ export const hubStyles = StyleSheet.create({
   // Post
   post: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 16, overflow: 'hidden', marginHorizontal: 14, marginBottom: 12 },
   pHead: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingTop: 11, paddingBottom: 8 },
+  postMenu: { position: 'absolute', top: 38, right: 10, zIndex: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 2, shadowColor: '#0F4A28', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 6 },
+  postMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
+  postMenuItemDangerText: { fontSize: 12.5, fontWeight: '700', color: '#C02828' },
   pNameRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   pName: { fontSize: 12, fontWeight: '700', color: '#1C2E18' },
   pMeta: { fontSize: 10, color: TEXT2, marginTop: 1 },
@@ -140,6 +142,7 @@ export const hubStyles = StyleSheet.create({
   roleOwner: { backgroundColor: '#FDF5E0', color: '#8A5200' },
   pTag: { alignSelf: 'flex-start', marginHorizontal: 12, marginBottom: 8, fontSize: 10, fontWeight: '700', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20, overflow: 'hidden' },
   pText: { fontSize: 12, color: '#1C2E18', lineHeight: 18, paddingHorizontal: 12, paddingBottom: 10 },
+  pBlogTitle: { fontSize: 14, fontWeight: '800', color: '#1C2E18', lineHeight: 19, paddingHorizontal: 12, paddingBottom: 4 },
   pMedia: { height: 180, backgroundColor: '#E4F4EC' },
   pGrid: { height: 120, flexDirection: 'row', gap: 2 },
   pGridCell: { flex: 1, backgroundColor: '#E4F4EC' },
@@ -153,9 +156,17 @@ export const hubStyles = StyleSheet.create({
   pActText: { fontSize: 11, fontWeight: '600', color: TEXT2 },
   pActTextLiked: { color: '#C02828' },
   pSave: { marginLeft: 'auto' },
+  pReadStory: { flexDirection: 'row', alignItems: 'center', gap: 4, marginLeft: 'auto' },
+  pReadStoryText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
 
-  // FAB
-  fab: { position: 'absolute', right: 18, bottom: 24, width: 54, height: 54, borderRadius: 27, backgroundColor: '#1A6B3A', alignItems: 'center', justifyContent: 'center', shadowColor: '#0F4A28', shadowOpacity: 0.45, shadowOffset: { width: 0, height: 6 }, shadowRadius: 14, elevation: 8 },
+  // Blog reader (full story view)
+  readerHeader: { flexDirection: 'row', alignItems: 'center', padding: 16 },
+  readerCover: { width: '100%', height: 220, backgroundColor: '#E4F4EC' },
+  readerTitle: { fontSize: 20, fontWeight: '800', color: '#1C2E18', paddingHorizontal: 16, marginTop: 14, lineHeight: 27 },
+  readerMetaRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, marginTop: 14 },
+  readerMetaName: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
+  readerMetaSub: { fontSize: 11.5, color: TEXT2, marginTop: 1 },
+  readerParagraph: { fontSize: 14, color: '#1C2E18', lineHeight: 21, paddingHorizontal: 16, marginTop: 16 },
 
   // Stories tray
   storyTray: { flexDirection: 'row', paddingHorizontal: 14, paddingTop: 14, paddingBottom: 4, gap: 14 },
@@ -209,22 +220,33 @@ export const hubStyles = StyleSheet.create({
   viewerTapZone: { flex: 1 },
 
   // Post composer (full-screen)
-  composerHeader: { flexDirection: 'row',justifyContent:'space-between' , alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER,},
-  composerHeaderTitle: { fontSize: 15, fontWeight: '800', color: '#0D1509' },
+  composerHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
   composerCancelText: { fontSize: 13, fontWeight: '700', color: TEXT2 },
-  composerPostBtn: {  backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
-  composerPostBtnDisabled: { backgroundColor: '#C8D8CC' },
-  composerPostBtnText: { fontSize: 13, fontWeight: '800', color: '#fff' },
+  composerBackTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18' },
   composerBody: { flex: 1, padding: 16 },
+
+  // Post type picker (first screen of the composer)
+  composerPickerTitle: { fontSize: 16, fontWeight: '800', color: '#1C2E18', marginBottom: 14 },
+  composerTypeCard: { flexDirection: 'row', alignItems: 'center', gap: 14, borderWidth: 1.5, borderColor: '#E4F4EC', backgroundColor: '#F4F8F5', borderRadius: 16, padding: 16, marginBottom: 12 },
+  composerTypeIconWrap: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  composerTypeCardTitle: { fontSize: 13.5, fontWeight: '700', color: '#1C2E18' },
+  composerTypeCardDesc: { fontSize: 11.5, color: TEXT2, marginTop: 2 },
   composerAuthorRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 },
   composerAuthorName: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
-  composerInput: { fontSize: 14, color: '#1C2E18', minHeight: 90, textAlignVertical: 'top', lineHeight: 20 },
-  composerCategoryLabel: { fontSize: 11, fontWeight: '700', color: TEXT2, marginTop: 8, marginBottom: 6 },
+  composerAudiencePill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F4F8F5', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3, marginTop: 3, alignSelf: 'flex-start' },
+  composerAudiencePillText: { fontSize: 11, color: '#3A5040' },
+  composerInput: { fontSize: 14, color: '#1C2E18', minHeight: 70, textAlignVertical: 'top', lineHeight: 20 },
+  composerCategoryLabel: { fontSize: 11, fontWeight: '700', color: TEXT2, marginTop: 16, marginBottom: 6 },
   composerMediaWrap: { marginTop: 14, borderRadius: 14, overflow: 'hidden' },
-  composerMediaImg: { width: '100%', height: 220, backgroundColor: '#E4F4EC' },
-  composerVideoCard: { width: '100%', height: 220, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  composerMediaImg: { width: '100%', height: 190, backgroundColor: '#E4F4EC' },
+  composerVideoCard: { width: '100%', height: 190, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
   composerMediaRemove: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  composerAttachRow: { flexDirection: 'row', gap: 10, marginTop: 16, borderTopWidth: 1, borderTopColor: '#F4F8F5', paddingTop: 14 },
-  composerAttachBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F4F8F5', borderRadius: 12, paddingVertical: 11 },
-  composerAttachText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
+  composerTitleInput: { fontSize: 17, fontWeight: '700', color: '#1C2E18', borderBottomWidth: 1.5, borderBottomColor: BORDER, paddingBottom: 8, marginBottom: 14 },
+  composerBigAttachBox: { borderWidth: 1.5, borderColor: '#C7DBCE', borderStyle: 'dashed', borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 28 },
+  composerBigAttachBoxSmall: { paddingVertical: 18 },
+  composerBigAttachText: { fontSize: 12, color: '#3A5040' },
+  composerSubmitBar: { padding: 16, borderTopWidth: 1, borderTopColor: BORDER },
+  composerSubmitBtn: { backgroundColor: '#1A6B3A', borderRadius: 14, paddingVertical: 14, alignItems: 'center' },
+  composerSubmitBtnDisabled: { backgroundColor: '#C8D8CC' },
+  composerSubmitBtnText: { fontSize: 14, fontWeight: '800', color: '#fff' },
 });

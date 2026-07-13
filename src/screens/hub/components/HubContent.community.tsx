@@ -1,13 +1,15 @@
-import React, { useCallback, useMemo } from 'react';
-import { FlatList, ListRenderItemInfo, Text, TouchableOpacity, View } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import React, { useCallback, useMemo, useState } from 'react';
+import { FlatList, ListRenderItemInfo, Text, View } from 'react-native';
+import { useAuth } from '../../../context/AuthContext';
 import { CommunityHubViewModel } from '../hooks/useCommunityHub';
 import { FeedPost } from '../constants/communityData';
 import { hubStyles as s } from '../styles/hub.styles';
 import {
+  BlogReaderModal,
   CategoryChips,
-  Composer,
-  ContributorsStrip,
+  CreatePostRow,
+  // Top contributors feature hidden for now — kept for future use.
+  // ContributorsStrip,
   HubHeader,
   LearnStrip,
   PostCard,
@@ -16,22 +18,28 @@ import {
   RewardsStrip,
   SectionHeader,
   SpotlightCard,
-  StoriesTray,
-  StoryComposerModal,
-  StoryViewerModal,
+  // Story feature hidden for now — kept for future use.
+  // StoriesTray,
+  // StoryComposerModal,
+  // StoryViewerModal,
 } from './community';
 
 export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
+  const { user } = useAuth();
+  const [readingPost, setReadingPost] = useState<FeedPost | null>(null);
   const {
-    stats, reward, referral, contributors, spotlight, guides, categories, posts, category,
-    setCategory, onToggleLike, onToggleSave, onSharePost, onComment,
-    onAddPhoto, onAddVideo, onWritePost, onReferEarn, onRewards, onLeaderboard,
+    stats, reward, referral, spotlight, guides, categories, posts, category,
+    // Top contributors feature hidden for now — kept for future use.
+    // contributors, onLeaderboard,
+    setCategory, onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost,
+    onWritePost, onOpenMyPosts, onReferEarn, onRewards,
     onSpotlight, onGuidesAll, onGuidePress, onSearch,
-    postComposerVisible, postDraft, postMediaBusy, postSubmitting, closePostComposer, onPostComposerShown,
-    setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
-    stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
-    onStoryTrayPress, openStoryComposer, closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
-    closeStoryViewer,
+    postComposerVisible, postComposerScreen, postDraft, postMediaBusy, postSubmitting, closePostComposer,
+    selectPostType, backToPostTypePicker, setPostTitle, setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
+    // Story feature hidden for now — kept for future use.
+    // stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
+    // onStoryTrayPress, openStoryComposer, closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
+    // closeStoryViewer,
   } = vm;
 
   const renderItem = useCallback(
@@ -42,9 +50,11 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         onToggleSave={onToggleSave}
         onShare={onSharePost}
         onComment={onComment}
+        onDelete={item.authorId === user?.id ? onDeletePost : undefined}
+        onReadStory={setReadingPost}
       />
     ),
-    [onToggleLike, onToggleSave, onSharePost, onComment],
+    [onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost, user?.id],
   );
 
   const keyExtractor = useCallback((item: FeedPost) => item.id, []);
@@ -53,12 +63,14 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     () => (
       <>
         <HubHeader stats={stats} onSearch={onSearch} onRewards={onRewards} />
-        <StoriesTray stories={stories} onPress={onStoryTrayPress} onAdd={openStoryComposer} />
+        {/* Story feature hidden for now — kept for future use. */}
+        {/* <StoriesTray stories={stories} onPress={onStoryTrayPress} onAdd={openStoryComposer} /> */}
         <RewardsStrip reward={reward} onPress={onRewards} />
-        <Composer onAddPhoto={onAddPhoto} onAddVideo={onAddVideo} onWritePost={onWritePost} />
+        <CreatePostRow onPress={onWritePost} onPressMyPosts={onOpenMyPosts} />
         <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
         <SpotlightCard spotlight={spotlight} onPress={onSpotlight} />
-        <ContributorsStrip contributors={contributors} onSeeAll={onLeaderboard} />
+        {/* Top contributors feature hidden for now — kept for future use. */}
+        {/* <ContributorsStrip contributors={contributors} onSeeAll={onLeaderboard} /> */}
         <ReferEarnBanner coinsPerInvite={referral.coinsPerInvite} onRefer={onReferEarn} />
         <LearnStrip guides={guides} onPress={onGuidePress} onSeeAll={onGuidesAll} />
         <View style={s.sectionFeed}>
@@ -67,10 +79,11 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
       </>
     ),
     [
-      stats, reward, referral, contributors, spotlight, guides, categories, category,
-      stories, onStoryTrayPress, openStoryComposer,
-      setCategory, onSearch, onRewards, onAddPhoto, onAddVideo, onWritePost,
-      onSpotlight, onLeaderboard, onReferEarn, onGuidePress, onGuidesAll,
+      stats, reward, referral, spotlight, guides, categories, category,
+      // stories, onStoryTrayPress, openStoryComposer,
+      // contributors, onLeaderboard,
+      setCategory, onSearch, onRewards, onWritePost, onOpenMyPosts,
+      onSpotlight, onReferEarn, onGuidePress, onGuidesAll,
     ],
   );
 
@@ -98,11 +111,9 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         windowSize={9}
         removeClippedSubviews
       />
-      <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onWritePost}>
-        <Ionicons name="add" size={26} color="#fff" />
-      </TouchableOpacity>
 
-      <StoryComposerModal
+      {/* Story feature hidden for now — kept for future use. */}
+      {/* <StoryComposerModal
         visible={storyComposerVisible}
         pendingStory={pendingStory}
         busy={storyMediaBusy}
@@ -118,21 +129,25 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         index={viewerIndex}
         setIndex={setViewerIndex}
         onClose={closeStoryViewer}
-      />
+      /> */}
       <PostComposerModal
         visible={postComposerVisible}
+        screen={postComposerScreen}
         draft={postDraft}
         categories={categories}
         busy={postMediaBusy}
         submitting={postSubmitting}
         onClose={closePostComposer}
-        onShown={onPostComposerShown}
+        onSelectType={selectPostType}
+        onBackToPicker={backToPostTypePicker}
+        onChangeTitle={setPostTitle}
         onChangeText={setPostText}
         onChangeCategory={setPostCategory}
         onPickMedia={pickPostMedia}
         onClearMedia={clearPostMedia}
         onSubmit={submitPost}
       />
+      <BlogReaderModal post={readingPost} onClose={() => setReadingPost(null)} />
     </View>
   );
 };
