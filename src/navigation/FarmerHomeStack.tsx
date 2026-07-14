@@ -23,6 +23,7 @@ import MandiPricesScreen from '../screens/MandiPricesScreen';
 import SoilAdvisoryScreen from '../screens/SoilAdvisoryScreen';
 import SchemesNewsListScreen from '../screens/farmerHome/SchemesNewsListScreen';
 import type { NewsItem } from '../screens/farmerHome/constants/farmerDashboardData';
+import type { SchemeCategory } from '../screens/farmerHome/constants/schemeCatalog';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
@@ -47,7 +48,9 @@ export type FarmerHomeStackParamList = {
   Article: { url: string; title?: string };
   MandiPrices: undefined;
   SoilAdvisory: undefined;
-  SchemesNewsList: { items: readonly NewsItem[] } | undefined;
+  SchemesNewsList:
+    | { items?: readonly NewsItem[]; initialTab?: 'schemes' | 'news'; initialCategory?: SchemeCategory | 'all' }
+    | undefined;
 };
 
 const Stack = createNativeStackNavigator<FarmerHomeStackParamList>();
@@ -149,7 +152,7 @@ export default function FarmerHomeStack() {
       <Stack.Screen
         name="SchemesNewsList"
         component={SchemesNewsListScreen}
-        options={{ title: 'Schemes & News' }}
+        options={{ title: 'Schemes & Subsidies' }}
       />
     </Stack.Navigator>
   );

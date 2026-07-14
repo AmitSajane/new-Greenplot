@@ -82,7 +82,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           items={vm.news}
           onAction={onAction}
           onOpenArticle={vm.onOpenArticle}
-          onMore={vm.onNewsMore}
+          onMore={vm.onSchemesMore}
         />
         <VideosSection onOpenVideo={vm.onOpenVideo} />
         <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />

@@ -5,6 +5,7 @@ import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useAgriNews } from './useAgriNews';
+import type { SchemeCategory } from '../constants/schemeCatalog';
 import {
   FARMER_AI_ADVISORY,
   FARMER_BROWSE_CROPS,
@@ -115,9 +116,11 @@ export function useFarmerHome() {
     [navigation],
   );
 
-  // "More" on Schemes & news → full in-context list, not a tab jump to Hub.
-  const onNewsMore = useCallback(
-    () => navigation.navigate('SchemesNewsList', { items: news }),
+  // Tapping a category tile (or "More") on Schemes & news → the combined
+  // Schemes & Subsidies screen, deep-linked to the right tab/category.
+  const onSchemesMore = useCallback(
+    (tab: 'schemes' | 'news', category?: SchemeCategory) =>
+      navigation.navigate('SchemesNewsList', { items: news, initialTab: tab, initialCategory: category ?? 'all' }),
     [navigation, news],
   );
 
@@ -169,7 +172,7 @@ export function useFarmerHome() {
     onListingPress,
     onOpenArticle,
     onOpenVideo,
-    onNewsMore,
+    onSchemesMore,
   };
 }
 
