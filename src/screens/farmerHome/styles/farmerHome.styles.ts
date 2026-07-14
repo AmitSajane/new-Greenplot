@@ -165,6 +165,54 @@ export const farmerHomeStyles = StyleSheet.create({
   newsTitle: { fontSize: 11, fontWeight: '700', color: '#1C2E18' },
   newsSub: { fontSize: 10, color: TEXT_SECONDARY },
 
+  // Schemes & news — home category tiles
+  tileGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  tile: {
+    width: '48.5%', backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14,
+    padding: 12, gap: 8,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, elevation: 1,
+  },
+  tileIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  tileTitle: { fontSize: 11.5, fontWeight: '700', color: '#1C2E18', lineHeight: 15 },
+  tileCount: { fontSize: 9.5, color: TEXT_SECONDARY, fontWeight: '600' },
+  teaserCard: { marginTop: 9 },
+  teaserRow: { flexDirection: 'row', alignItems: 'center', gap: 9, paddingHorizontal: 12, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F4F8F5' },
+  teaserIcon: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  teaserTitle: { fontSize: 10.5, fontWeight: '600', color: '#3A5040', lineHeight: 14 },
+
+  // Schemes & Subsidies screen — segmented tabs
+  tabsWrap: { flexDirection: 'row', gap: 4, backgroundColor: BORDER, borderRadius: 12, padding: 4, marginHorizontal: 14, marginTop: 12 },
+  tabBtn: { flex: 1, paddingVertical: 8, borderRadius: 9, alignItems: 'center' },
+  tabBtnActive: { backgroundColor: '#fff', shadowColor: '#000', shadowOpacity: 0.08, shadowOffset: { width: 0, height: 1 }, shadowRadius: 3, elevation: 1 },
+  tabBtnText: { fontSize: 12, fontWeight: '700', color: '#3A5040' },
+  tabBtnTextActive: { color: '#0F4A28' },
+
+  // Category chips (Schemes tab) + state dropdown trigger
+  catChipsRow: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 12 },
+  catChip: { paddingHorizontal: 13, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#C8D8CC', backgroundColor: '#fff' },
+  catChipActive: { backgroundColor: '#0F4A28', borderColor: '#0F4A28' },
+  catChipText: { fontSize: 11, fontWeight: '700', color: '#3A5040' },
+  catChipTextActive: { color: '#fff' },
+  groupLabel: { fontSize: 10.5, fontWeight: '800', color: TEXT_SECONDARY, letterSpacing: 0.4, textTransform: 'uppercase', paddingHorizontal: 2, paddingTop: 14, paddingBottom: 6 },
+  stateTrigger: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    borderWidth: 1.5, borderColor: '#A8D8B8', borderRadius: 11, paddingHorizontal: 12, paddingVertical: 10, marginBottom: 9,
+  },
+  stateTriggerText: { fontSize: 12, fontWeight: '700', color: '#0F4A28' },
+
+  // Scheme link row (opens external URL after a confirm)
+  slink: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 11, borderBottomWidth: 1, borderBottomColor: '#F4F8F5' },
+  slinkIcon: { width: 32, height: 32, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  slinkTitle: { fontSize: 12, fontWeight: '700', color: '#1C2E18', lineHeight: 16 },
+  slinkDesc: { fontSize: 9.5, color: TEXT_SECONDARY, marginTop: 2 },
+
+  liveBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start',
+    backgroundColor: '#E4F4EC', borderWidth: 1, borderColor: '#A8D8B8', borderRadius: 8,
+    paddingHorizontal: 10, paddingVertical: 6, marginHorizontal: 14, marginTop: 12,
+  },
+  liveBadgeText: { fontSize: 9.5, color: '#1A6B3A', fontWeight: '600' },
+
   // Browse chips
   browseSection: { paddingBottom: 16 },
   browseWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

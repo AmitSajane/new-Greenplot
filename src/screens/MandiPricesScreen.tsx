@@ -10,6 +10,7 @@ import {
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -34,6 +35,7 @@ export default function MandiPricesScreen() {
   const [commodities, setCommodities] = useState<string[]>(POPULAR);
   const [loading, setLoading] = useState(true);
   const [picker, setPicker] = useState<null | 'state' | 'commodity'>(null);
+  const [search, setSearch] = useState('');
 
   // Load available commodities for the chosen state.
   useEffect(() => {
@@ -65,14 +67,24 @@ export default function MandiPricesScreen() {
 
   const best = rows[0];
   const pickerData = picker === 'state' ? STATES : commodities;
+  const filteredPickerData = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return pickerData;
+    return pickerData.filter(item => item.toLowerCase().includes(q));
+  }, [pickerData, search]);
   const onPick = useCallback(
     (val: string) => {
       if (picker === 'state') setState(val);
       else setCommodity(val);
       setPicker(null);
+      setSearch('');
     },
     [picker],
   );
+  const closePicker = useCallback(() => {
+    setPicker(null);
+    setSearch('');
+  }, []);
 
   const renderRow = useCallback(
     ({ item, index }: { item: MandiPrice; index: number }) => {
@@ -170,20 +182,44 @@ export default function MandiPricesScreen() {
       )}
 
       {/* Picker modal */}
-      <Modal visible={picker !== null} transparent animationType="slide" onRequestClose={() => setPicker(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setPicker(null)} />
+      <Modal visible={picker !== null} transparent animationType="slide" onRequestClose={closePicker}>
+        <Pressable style={styles.backdrop} onPress={closePicker} />
         <View style={styles.sheet}>
           <Text style={styles.sheetTitle}>Select {picker === 'state' ? 'state' : 'crop'}</Text>
-          <FlatList
-            data={pickerData}
-            keyExtractor={(it) => it}
-            renderItem={({ item }) => (
-              <TouchableOpacity style={styles.option} onPress={() => onPick(item)}>
-                <Text style={styles.optionText}>{item}</Text>
+          <View style={styles.searchBox}>
+            <Ionicons name="search" size={18} color="#6B8074" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder={`Search ${picker === 'state' ? 'state' : 'crop'}…`}
+              placeholderTextColor="#9EB8A8"
+              value={search}
+              onChangeText={setSearch}
+              autoFocus
+              autoCorrect={false}
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')} hitSlop={8}>
+                <Ionicons name="close-circle" size={18} color="#9EB8A8" />
               </TouchableOpacity>
             )}
-            style={{ maxHeight: 380 }}
-          />
+          </View>
+          {filteredPickerData.length === 0 ? (
+            <View style={styles.noResults}>
+              <Text style={styles.noResultsText}>No {picker === 'state' ? 'state' : 'crop'} matches "{search}"</Text>
+            </View>
+          ) : (
+            <FlatList
+              data={filteredPickerData}
+              keyExtractor={(it) => it}
+              renderItem={({ item }) => (
+                <TouchableOpacity style={styles.option} onPress={() => onPick(item)}>
+                  <Text style={styles.optionText}>{item}</Text>
+                </TouchableOpacity>
+              )}
+              keyboardShouldPersistTaps="handled"
+              style={{ maxHeight: 340 }}
+            />
+          )}
         </View>
       </Modal>
     </SafeAreaView>
@@ -228,6 +264,10 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)' },
   sheet: { backgroundColor: '#fff', borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 18, paddingBottom: 30 },
   sheetTitle: { fontSize: 18, fontWeight: '800', color: '#0D1509', marginBottom: 12 },
+  searchBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: '#E6EFE9', borderRadius: 12, paddingHorizontal: 12, marginBottom: 10 },
+  searchInput: { flex: 1, fontSize: 15, color: '#0D1509', paddingVertical: 10 },
+  noResults: { paddingVertical: 24, alignItems: 'center' },
+  noResultsText: { fontSize: 14, color: '#6B8074', fontWeight: '600' },
   option: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F1F6F3' },
   optionText: { fontSize: 16, color: '#1C2E18', fontWeight: '600' },
 });
