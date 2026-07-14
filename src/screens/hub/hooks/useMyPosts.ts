@@ -6,6 +6,7 @@ import { HubStackParamList } from '../../../navigation/HubStack';
 import { useAuth } from '../../../context/AuthContext';
 import { FeedPost } from '../constants/communityData';
 import { communityApi } from '../utils/communityApi';
+import { useComments } from './useComments';
 
 type NavigationProp = NativeStackNavigationProp<HubStackParamList>;
 
@@ -17,6 +18,7 @@ export function useMyPosts() {
   const { user } = useAuth();
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -32,6 +34,14 @@ export function useMyPosts() {
     return () => {
       cancelled = true;
     };
+  }, [user?.id]);
+
+  const onRefresh = useCallback(async () => {
+    if (!communityApi.enabled || !user?.id) return;
+    setRefreshing(true);
+    const all = await communityApi.fetchPosts(user.id);
+    setPosts(all.filter(p => p.authorId === user.id));
+    setRefreshing(false);
   }, [user?.id]);
 
   const onToggleLike = useCallback(
@@ -88,7 +98,8 @@ export function useMyPosts() {
     [posts],
   );
 
-  const onComment = useCallback(() => navigation.navigate('CommunityQuestions'), [navigation]);
+  const commentsController = useComments(setPosts);
+  const onComment = commentsController.openComments;
 
   const onDeletePost = useCallback(
     (id: string) => {
@@ -119,6 +130,8 @@ export function useMyPosts() {
   return {
     posts,
     loading,
+    refreshing,
+    onRefresh,
     userId: user?.id,
     onBack,
     onToggleLike,
@@ -126,6 +139,21 @@ export function useMyPosts() {
     onSharePost,
     onComment,
     onDeletePost,
+
+    // comments
+    commentsVisible: commentsController.commentsVisible,
+    comments: commentsController.comments,
+    commentsLoading: commentsController.commentsLoading,
+    commentInput: commentsController.commentInput,
+    setCommentInput: commentsController.setCommentInput,
+    commentSubmitting: commentsController.commentSubmitting,
+    editingCommentId: commentsController.editingCommentId,
+    commentsCurrentUserId: commentsController.currentUserId,
+    closeComments: commentsController.closeComments,
+    submitComment: commentsController.submitComment,
+    startEditComment: commentsController.startEditComment,
+    cancelEditComment: commentsController.cancelEditComment,
+    deleteComment: commentsController.deleteComment,
   };
 }
 

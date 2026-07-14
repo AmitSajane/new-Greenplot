@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
-import { FlatList, ListRenderItemInfo, Text, TouchableOpacity, View } from 'react-native';
+import { FlatList, ListRenderItemInfo, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CommunityHubViewModel } from '../hooks/useCommunityHub';
 import {
@@ -12,6 +13,7 @@ import { hubStyles as s } from '../styles/hub.styles';
 import {
   BlogReaderModal,
   CategoryChips,
+  CommentsModal,
   CreatePostRow,
   // ContributorsStrip, // Top contributors — temporarily hidden from the feed (see below), not deleted.
   HubHeader,
@@ -46,7 +48,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   const { user } = useAuth();
   const [readingPost, setReadingPost] = useState<FeedPost | null>(null);
   const {
-    stats, reward, referral, spotlight, guides, categories, posts, category,
+    stats, reward, referral, spotlight, guides, categories, posts, category, refreshing, onRefresh,
     setCategory, onToggleLike, onToggleSave, onSharePost, onComment,
     onAddPhoto, onAddVideo, onAddVoice, onWritePost, onReferEarn, onRewards,
     onSpotlight, onGuidesAll, onGuidePress, onSearch, onDeletePost, onOpenMyPosts,
@@ -57,6 +59,9 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
     closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
     closeStoryViewer,
+    commentsVisible, comments, commentsLoading, commentInput, setCommentInput, commentSubmitting,
+    editingCommentId, commentsCurrentUserId, closeComments, submitComment, startEditComment,
+    cancelEditComment, deleteComment,
   } = vm;
 
   // Post-type filter (Photo/Video/Blog/Poll/Voice) — separate from the topic
@@ -149,7 +154,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   }, [visibleExamples]);
 
   return (
-    <View style={s.safeArea}>
+    <SafeAreaView style={s.safeArea} edges={['top']}>
       <FlatList
         data={filteredPosts}
         renderItem={renderItem}
@@ -163,6 +168,9 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         maxToRenderPerBatch={6}
         windowSize={9}
         removeClippedSubviews
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1A6B3A']} tintColor="#1A6B3A" />
+        }
       />
 
       {/* Story feature hidden for now — kept for future use. */}
@@ -206,6 +214,22 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         onClose={closeVoiceRecorder}
         onConfirm={onVoiceRecorded}
       />
-    </View>
+      <BlogReaderModal post={readingPost} onClose={() => setReadingPost(null)} />
+      <CommentsModal
+        visible={commentsVisible}
+        comments={comments}
+        loading={commentsLoading}
+        currentUserId={commentsCurrentUserId}
+        input={commentInput}
+        submitting={commentSubmitting}
+        editingCommentId={editingCommentId}
+        onChangeInput={setCommentInput}
+        onClose={closeComments}
+        onSubmit={submitComment}
+        onEdit={startEditComment}
+        onCancelEdit={cancelEditComment}
+        onDelete={deleteComment}
+      />
+    </SafeAreaView>
   );
 };

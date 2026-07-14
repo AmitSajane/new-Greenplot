@@ -11,7 +11,7 @@ do $$ begin
   create type lease_status       as enum ('pending', 'active', 'expired', 'cancelled');
   create type request_status     as enum ('pending', 'accepted', 'rejected');
   create type post_category      as enum ('success', 'vermicompost', 'organic', 'tips', 'pest', 'questions');
-  create type post_media_type    as enum ('image', 'video', 'grid', 'text', 'blog');
+  create type post_media_type    as enum ('image', 'video', 'grid', 'text', 'blog', 'audio');
   create type job_status         as enum ('open', 'in_progress', 'completed', 'cancelled');
 exception when duplicate_object then null; end $$;
 
@@ -359,6 +359,16 @@ create policy "saves write" on post_saves for all using (auth.uid() = user_id) w
 create policy "comments read"   on comments for select using (true);
 create policy "comments insert" on comments for insert with check (auth.uid() = author_id);
 
+-- Wrapped (unlike the two policies above) because these were added after the
+-- initial rollout — re-running this file against a database that already has
+-- them would otherwise error on "policy already exists" and abort the script
+-- before reaching anything further down, same reason the stories/offers
+-- policies further down are wrapped.
+do $$ begin
+  create policy "comments update" on comments for update using (auth.uid() = author_id) with check (auth.uid() = author_id);
+  create policy "comments delete" on comments for delete using (auth.uid() = author_id);
+exception when duplicate_object then null; end $$;
+
 -- Labor jobs: public read; farmer manages own.
 create policy "jobs read"   on labor_jobs for select using (true);
 create policy "jobs write"  on labor_jobs for all using (auth.uid() = farmer_id) with check (auth.uid() = farmer_id);
@@ -562,3 +572,43 @@ end;
 $$;
 
 grant execute on function public.toggle_post_like(uuid) to authenticated;
+
+-- ============================================================================
+-- Comments: keep posts.comments_count in sync on plain insert/delete (no RPC
+-- needed here since — unlike likes — comments aren't toggled, just added or
+-- removed once each).
+-- ============================================================================
+create or replace function public.handle_comment_count()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if TG_OP = 'INSERT' then
+    update posts set comments_count = comments_count + 1 where id = new.post_id;
+    return new;
+  elsif TG_OP = 'DELETE' then
+    update posts set comments_count = greatest(comments_count - 1, 0) where id = old.post_id;
+    return old;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists on_comment_insert on comments;
+create trigger on_comment_insert after insert on comments
+  for each row execute function handle_comment_count();
+
+drop trigger if exists on_comment_delete on comments;
+create trigger on_comment_delete after delete on comments
+  for each row execute function handle_comment_count();
+
+-- One-time backfill: recompute comments_count for every post from the actual
+-- comments table, so posts that got comments before this trigger existed
+-- (comment inserts were already possible; only the counter update was
+-- missing) show the correct number immediately, not just going forward.
+-- Safe to re-run — it's a pure recompute, not additive.
+update posts p
+set comments_count = coalesce((select count(*) from comments c where c.post_id = p.id), 0)
+where p.comments_count is distinct from coalesce((select count(*) from comments c where c.post_id = p.id), 0);

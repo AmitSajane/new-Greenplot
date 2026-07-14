@@ -1,15 +1,21 @@
 import React, { useCallback, useState } from 'react';
-import { ActivityIndicator, FlatList, ListRenderItemInfo, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, FlatList, ListRenderItemInfo, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../styles/hub.styles';
 import { FeedPost } from '../constants/communityData';
 import { BlogReaderModal } from './community/BlogReaderModal';
+import { CommentsModal } from './community/CommentsModal';
 import { PostCard } from './community/PostCard';
 import { MyPostsViewModel } from '../hooks/useMyPosts';
 
 export const MyPostsContent: React.FC<MyPostsViewModel> = vm => {
-  const { posts, loading, userId, onBack, onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost } = vm;
+  const {
+    posts, loading, refreshing, onRefresh, userId, onBack, onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost,
+    commentsVisible, comments, commentsLoading, commentInput, setCommentInput, commentSubmitting,
+    editingCommentId, commentsCurrentUserId, closeComments, submitComment, startEditComment,
+    cancelEditComment, deleteComment,
+  } = vm;
   const [readingPost, setReadingPost] = useState<FeedPost | null>(null);
 
   const renderItem = useCallback(
@@ -54,9 +60,27 @@ export const MyPostsContent: React.FC<MyPostsViewModel> = vm => {
               <Text style={s.pMeta}>You haven't posted anything yet.</Text>
             </View>
           }
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={['#1A6B3A']} tintColor="#1A6B3A" />
+          }
         />
       )}
       <BlogReaderModal post={readingPost} onClose={() => setReadingPost(null)} />
+      <CommentsModal
+        visible={commentsVisible}
+        comments={comments}
+        loading={commentsLoading}
+        currentUserId={commentsCurrentUserId}
+        input={commentInput}
+        submitting={commentSubmitting}
+        editingCommentId={editingCommentId}
+        onChangeInput={setCommentInput}
+        onClose={closeComments}
+        onSubmit={submitComment}
+        onEdit={startEditComment}
+        onCancelEdit={cancelEditComment}
+        onDelete={deleteComment}
+      />
     </SafeAreaView>
   );
 };

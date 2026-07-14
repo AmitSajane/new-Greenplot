@@ -1,11 +1,13 @@
 import { supabase } from '../../../services/supabase';
 import { storageApi } from '../../../services/storageApi';
-import { CATEGORIES, AvatarTone, CategoryKey, FeedPost, MEDIA_RULES, StoryItem } from '../constants/communityData';
+import { CATEGORIES, AvatarTone, CategoryKey, FeedPost, MEDIA_RULES, PostComment, StoryItem } from '../constants/communityData';
 
 const AVATAR_TONES: readonly AvatarTone[] = ['green', 'amber', 'blue', 'red', 'purple'];
 
-/** Deterministic, decorative avatar tone per author — no DB column for it. */
-function toneForId(id: string): AvatarTone {
+/** Deterministic, decorative avatar tone per author — no DB column for it.
+ * Exported so callers building an optimistic row locally (e.g. a just-added
+ * comment) can match the same tone the feed would render after a refetch. */
+export function toneForId(id: string): AvatarTone {
   let hash = 0;
   for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
   return AVATAR_TONES[hash % AVATAR_TONES.length];
@@ -65,6 +67,28 @@ function mapPostRow(row: PostRow, author: ProfileRow | undefined, liked: boolean
     comments: row.comments_count ?? 0,
     liked,
     saved,
+  };
+}
+
+interface CommentRow {
+  id: string;
+  post_id: string;
+  author_id: string;
+  text: string;
+  created_at: string;
+}
+
+function mapCommentRow(row: CommentRow, author: ProfileRow | undefined): PostComment {
+  const name = author?.name?.trim() || 'GreenPlot Farmer';
+  return {
+    id: row.id,
+    postId: row.post_id,
+    authorId: row.author_id,
+    authorName: name,
+    authorInitials: name.slice(0, 2).toUpperCase(),
+    avatarTone: toneForId(row.author_id),
+    text: row.text,
+    time: relativeTime(row.created_at),
   };
 }
 
@@ -184,6 +208,47 @@ export const communityApi = {
   async deletePost(postId: string, authorId: string): Promise<boolean> {
     if (!supabase) return false;
     const { error } = await supabase.from('posts').delete().eq('id', postId).eq('author_id', authorId);
+    return !error;
+  },
+
+  async fetchComments(postId: string): Promise<PostComment[]> {
+    if (!supabase) return [];
+    const { data, error } = await supabase
+      .from('comments')
+      .select('id, post_id, author_id, text, created_at')
+      .eq('post_id', postId)
+      .order('created_at', { ascending: true });
+    if (error || !data) return [];
+
+    const authorIds = [...new Set(data.map(row => row.author_id))];
+    const { data: profileRows } = await supabase.from('profiles').select('id, name, role, location').in('id', authorIds);
+    const profileById = new Map((profileRows as ProfileRow[] | null || []).map(p => [p.id, p]));
+
+    return (data as CommentRow[]).map(row => mapCommentRow(row, profileById.get(row.author_id)));
+  },
+
+  async addComment(postId: string, authorId: string, text: string): Promise<{ id: string; createdAt: string } | { error: string }> {
+    if (!supabase) return { error: 'Backend not configured' };
+    const { data, error } = await supabase
+      .from('comments')
+      .insert({ post_id: postId, author_id: authorId, text })
+      .select('id, created_at')
+      .single();
+    if (error || !data) return { error: error?.message || 'Insert failed' };
+    return { id: data.id, createdAt: data.created_at };
+  },
+
+  /** Edit/delete are both scoped to the author via the query itself (belt and
+   * braces alongside the RLS policy), matching the deletePost pattern. */
+  async updateComment(commentId: string, authorId: string, text: string): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from('comments').update({ text }).eq('id', commentId).eq('author_id', authorId);
+    return !error;
+  },
+
+  async deleteComment(commentId: string, authorId: string): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.from('comments').delete().eq('id', commentId).eq('author_id', authorId);
     return !error;
   },
 

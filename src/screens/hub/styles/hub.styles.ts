@@ -73,6 +73,11 @@ export const hubStyles = StyleSheet.create({
   myPostsIconWrap: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   myPostsBtnText: { fontSize: 12, fontWeight: '800', color: '#1A6B3A' },
 
+  // My posts screen
+  myPostsHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: '#fff' },
+  myPostsTitle: { fontSize: 15, fontWeight: '800', color: '#1C2E18' },
+  myPostsLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+
   // Avatar (shared)
   av: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   avText: { fontSize: 13, fontWeight: '700' },
@@ -244,7 +249,6 @@ export const hubStyles = StyleSheet.create({
   // Post composer (full-screen)
   composerHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
   composerCancelText: { fontSize: 13, fontWeight: '700', color: TEXT2 },
-  composerBackTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18' },
   composerBody: { flex: 1, padding: 16 },
 
   // Post type picker (first screen of the composer)
@@ -257,6 +261,7 @@ export const hubStyles = StyleSheet.create({
   composerAuthorName: { fontSize: 13, fontWeight: '700', color: '#1C2E18' },
   composerAudiencePill: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F4F8F5', borderRadius: 12, paddingHorizontal: 9, paddingVertical: 3, marginTop: 3, alignSelf: 'flex-start' },
   composerAudiencePillText: { fontSize: 11, color: '#3A5040' },
+  composerTitleInput: { fontSize: 17, fontWeight: '700', color: '#1C2E18', borderBottomWidth: 1.5, borderBottomColor: BORDER, paddingBottom: 8, marginBottom: 14 },
   composerInput: { fontSize: 14, color: '#1C2E18', minHeight: 70, textAlignVertical: 'top', lineHeight: 20 },
   composerCategoryLabel: { fontSize: 11, fontWeight: '700', color: TEXT2, marginTop: 16, marginBottom: 6 },
   composerMediaWrap: { marginTop: 14, borderRadius: 14, overflow: 'hidden' },
@@ -264,9 +269,9 @@ export const hubStyles = StyleSheet.create({
   composerVideoCard: { width: '100%', height: 220, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center', gap: 8 },
   composerVoiceCard: { width: '100%', height: 220, backgroundColor: '#4B2EA8', alignItems: 'center', justifyContent: 'center', gap: 8 },
   composerMediaRemove: { position: 'absolute', top: 8, right: 8, width: 28, height: 28, borderRadius: 14, backgroundColor: 'rgba(0,0,0,0.55)', alignItems: 'center', justifyContent: 'center' },
-  composerAttachRow: { flexDirection: 'row', gap: 10, marginTop: 16, borderTopWidth: 1, borderTopColor: '#F4F8F5', paddingTop: 14 },
-  composerAttachBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#F4F8F5', borderRadius: 12, paddingVertical: 11 },
-  composerAttachText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
+  composerBigAttachBox: { marginTop: 14, borderWidth: 1.5, borderColor: '#C7DBCE', borderStyle: 'dashed', borderRadius: 14, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 28 },
+  composerBigAttachBoxSmall: { paddingVertical: 18 },
+  composerBigAttachText: { fontSize: 12, color: '#3A5040' },
 
   // Post-type filter row (Community feed)
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 2, marginBottom: 4, gap: 8 },
@@ -335,4 +340,31 @@ export const hubStyles = StyleSheet.create({
   voiceRetryBtn: { marginTop: 4, backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
   voiceRetryText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   voicePreviewPlayer: { width: '100%', marginTop: 4 },
+
+  // Comments modal
+  commentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
+  commentsTitle: { fontSize: 15, fontWeight: '800', color: '#1C2E18' },
+  commentsList: { flex: 1 },
+  commentsListContent: { padding: 16, paddingBottom: 8 },
+  commentsLoading: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 },
+  commentsEmpty: { alignItems: 'center', paddingTop: 60, paddingHorizontal: 24 },
+  commentsEmptyText: { fontSize: 12.5, color: TEXT2, textAlign: 'center', marginTop: 8, lineHeight: 18 },
+  commentRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  commentBody: { flex: 1, backgroundColor: '#F4F8F5', borderRadius: 14, borderTopLeftRadius: 4, padding: 10 },
+  commentNameRow: { flexDirection: 'row', alignItems: 'center' },
+  commentName: { fontSize: 12, fontWeight: '700', color: '#1C2E18' },
+  commentMenuBtn: { marginLeft: 'auto', padding: 2 },
+  commentText: { fontSize: 12.5, color: '#1C2E18', lineHeight: 18, marginTop: 2 },
+  commentTime: { fontSize: 10, color: TEXT2, marginTop: 5, marginLeft: 2 },
+  commentMenu: { position: 'absolute', top: 20, right: 0, zIndex: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingVertical: 2, shadowColor: '#0F4A28', shadowOpacity: 0.15, shadowOffset: { width: 0, height: 4 }, shadowRadius: 10, elevation: 6 },
+  commentMenuItem: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 14, paddingVertical: 10 },
+  commentMenuItemText: { fontSize: 12.5, fontWeight: '700', color: '#1C2E18' },
+  commentMenuItemDangerText: { fontSize: 12.5, fontWeight: '700', color: '#C02828' },
+  commentEditingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FDF5E0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginHorizontal: 16, marginBottom: 8 },
+  commentEditingText: { fontSize: 11, fontWeight: '700', color: '#8A5200' },
+  commentEditingCancel: { fontSize: 11, fontWeight: '800', color: '#8A5200' },
+  commentInputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: '#fff' },
+  commentInput: { flex: 1, maxHeight: 90, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9, fontSize: 13, color: '#1C2E18', textAlign: 'left', writingDirection: 'ltr' },
+  commentSendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center' },
+  commentSendBtnDisabled: { opacity: 0.4 },
 });

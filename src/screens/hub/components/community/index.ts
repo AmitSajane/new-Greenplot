@@ -10,6 +10,7 @@ export { ReferEarnBanner } from './ReferEarnBanner';
 export { LearnStrip } from './LearnStrip';
 export { PostCard } from './PostCard';
 export { BlogReaderModal } from './BlogReaderModal';
+export { CommentsModal } from './CommentsModal';
 export { StoriesTray } from './StoriesTray';
 export { StoryComposerModal } from './StoryComposerModal';
 export { StoryViewerModal } from './StoryViewerModal';

@@ -66,8 +66,32 @@ function PostMediaView({ post }: { post: FeedPost }) {
     );
   }
 
-  // image, or video thumbnail before playback starts
-  const thumbnail = (
+  if (media.type === 'video') {
+    // Paused (not autoPlay) so it just renders the video's own first frame as
+    // the "thumbnail" — a real frame, not a fake ImageBackground pointed at a
+    // video file (which can't decode as an image and used to show as a blank
+    // placeholder box). Tapping swaps in the controls + autoplay above.
+    return (
+      <TouchableOpacity activeOpacity={0.9} onPress={play} style={s.pMedia}>
+        <InlineMediaPlayer uri={media.uris[0]} kind="video" autoPlay={false} showControls={false} />
+        {!!media.earnedLabel && (
+          <View style={s.earnBadge}>
+            <Ionicons name="cash" size={12} color="#fff" />
+            <Text style={s.earnText}>{media.earnedLabel}</Text>
+          </View>
+        )}
+        <View style={s.playWrap}>
+          <View style={s.playBtn}>
+            <Ionicons name="play" size={24} color="#0F4A28" />
+          </View>
+        </View>
+        {!!media.durationLabel && <Text style={s.vidDur}>{media.durationLabel}</Text>}
+      </TouchableOpacity>
+    );
+  }
+
+  // image
+  return (
     <ImageBackground source={{ uri: media.uris[0] }} style={s.pMedia} resizeMode="cover">
       {!!media.earnedLabel && (
         <View style={s.earnBadge}>
@@ -75,24 +99,7 @@ function PostMediaView({ post }: { post: FeedPost }) {
           <Text style={s.earnText}>{media.earnedLabel}</Text>
         </View>
       )}
-      {media.type === 'video' && (
-        <>
-          <View style={s.playWrap}>
-            <View style={s.playBtn}>
-              <Ionicons name="play" size={24} color="#0F4A28" />
-            </View>
-          </View>
-          {!!media.durationLabel && <Text style={s.vidDur}>{media.durationLabel}</Text>}
-        </>
-      )}
     </ImageBackground>
-  );
-
-  if (media.type !== 'video') return thumbnail;
-  return (
-    <TouchableOpacity activeOpacity={0.9} onPress={play}>
-      {thumbnail}
-    </TouchableOpacity>
   );
 }
 
@@ -127,9 +134,17 @@ function AudioPostView({ post }: { post: FeedPost }) {
   );
 }
 
-function PostText({ text }: { text: string }) {
+function PostText({ text, isBlog }: { text: string; isBlog?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   if (!text) return null;
+
+  // Blog posts only ever show a short 2-line teaser in the feed — the full
+  // title + body is reserved for the Read Story view, so there's no inline
+  // expand here (unlike regular posts, which expand in place).
+  if (isBlog) {
+    return <Linkify text={text} style={s.pText} linkStyle={s.pLink} numberOfLines={2} />;
+  }
+
   const isLong = text.length > TEXT_TRUNCATE_LENGTH;
   const shown = expanded || !isLong ? text : `${text.slice(0, TEXT_TRUNCATE_LENGTH).trimEnd()}…`;
 
@@ -201,7 +216,7 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, on
       </Text>
 
       {/* text (links tappable, long posts collapsible) */}
-      <PostText text={post.text} />
+      <PostText text={post.text} isBlog={post.media.type === 'blog'} />
 
       {/* media */}
       <PostMediaView post={post} />

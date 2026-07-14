@@ -18,7 +18,7 @@ export type CategoryKey =
 
 export type Role = 'farmer' | 'owner';
 export type AvatarTone = 'green' | 'amber' | 'blue' | 'red' | 'purple';
-export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'audio';
+export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'audio' | 'blog';
 export type PostType = 'photo' | 'video' | 'blog';
 
 export interface CategoryDef {
@@ -55,6 +55,18 @@ export interface FeedPost {
   comments: number;
   liked: boolean;
   saved: boolean;
+}
+
+/** A single comment on a post — flat (no replies/threading). */
+export interface PostComment {
+  id: string;
+  postId: string;
+  authorId: string;
+  authorName: string;
+  authorInitials: string;
+  avatarTone: AvatarTone;
+  text: string;
+  time: string;
 }
 
 /** A single 24h-ephemeral story. Only the current user's own stories exist

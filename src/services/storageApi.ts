@@ -89,8 +89,12 @@ export const storageApi = {
 
   /** Same as uploadFromUri but returns the failure reason and the storage
    * path (needed to delete the file later, e.g. an expired story) instead of
-   * swallowing errors. Picked video assets have no base64 (impractical for
-   * multi-MB files), so this is the upload path video actually goes through. */
+   * swallowing errors. Only used as a last-resort fallback when no base64 is
+   * available — RN's global fetch() can't reliably read a local content://
+   * URI into a Blob and will often silently return an empty (0-byte) one
+   * rather than throwing, so this guards against uploading that empty blob
+   * (which Supabase would otherwise reject with a confusing "No content
+   * provided" instead of a message that points at the real problem). */
   async uploadFromUriDetailed(
     uri: string,
     mime: string,
@@ -101,6 +105,7 @@ export const storageApi = {
     if (!uri) return { error: 'No file to upload' };
     try {
       const blob = await (await fetch(uri)).blob();
+      if (!blob.size) return { error: 'Could not read the selected file. Please try a different one.' };
       const path = uniquePath(ownerId, extFromMime(mime));
       const { error } = await supabase.storage
         .from(bucket)

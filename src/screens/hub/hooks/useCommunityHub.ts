@@ -23,6 +23,7 @@ import {
 } from '../constants/communityData';
 import { activeStories, checkPhoto, checkVideo, checkVoice, storiesInLast24h } from '../utils/mediaRules';
 import { communityApi } from '../utils/communityApi';
+import { useComments } from './useComments';
 
 type NavigationProp = NativeStackNavigationProp<HubStackParamList>;
 type MediaKind = 'image' | 'video' | 'audio';
@@ -94,14 +95,19 @@ async function pickAndValidateMedia(source: MediaSource): Promise<PickedMedia | 
 
   // The picker never returns base64 for video (impractical for multi-MB
   // files), and RN's global fetch() can't reliably read the picker's local
-  // content:// URI to build a blob for upload — so read the bytes directly
-  // via RNFS instead, the same reliable path photos already use.
+  // content:// URI to build a blob for upload (it silently returns an empty
+  // blob rather than throwing, which Supabase Storage then rejects with a
+  // confusing "No content provided") — so read the bytes directly via RNFS
+  // instead, the same reliable path photos already use. If that read fails
+  // too, fail here with a clear message rather than letting a video with no
+  // actual data reach the upload step.
   let base64 = asset.base64;
   if (!base64 && isVideo) {
     try {
       base64 = await RNFS.readFile(asset.uri, 'base64');
     } catch {
-      // Leave base64 undefined — the upload step will surface a clear error.
+      Alert.alert("Can't use this file", 'Could not read the selected video. Please try a different one.');
+      return null;
     }
   }
 
@@ -128,14 +134,25 @@ export function useCommunityHub() {
 
   const [posts, setPosts] = useState<FeedPost[]>([]);
   const [category, setCategory] = useState<CategoryKey>('all');
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadPosts = useCallback(async () => {
+    if (!communityApi.enabled) return;
+    setPosts(await communityApi.fetchPosts(user?.id));
+  }, [user?.id]);
 
   // Load the real feed once the user is known (falls back to an empty feed in
   // mock mode). Refetches on user change so liked/saved flags match whoever
   // is actually logged in.
   useEffect(() => {
-    if (!communityApi.enabled) return;
-    communityApi.fetchPosts(user?.id).then(setPosts);
-  }, [user?.id]);
+    loadPosts();
+  }, [loadPosts]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadPosts();
+    setRefreshing(false);
+  }, [loadPosts]);
 
   const visiblePosts = useMemo(
     () => (category === 'all' ? posts : posts.filter(p => p.category === category)),
@@ -198,7 +215,8 @@ export function useCommunityHub() {
     }
   }, [posts]);
 
-  const onComment = useCallback(() => navigation.navigate('CommunityQuestions'), [navigation]);
+  const commentsController = useComments(setPosts);
+  const onComment = commentsController.openComments;
 
   // Only ever called for the viewer's own posts (PostCard only wires this up
   // when post.authorId matches the logged-in user) — the delete query is
@@ -549,6 +567,8 @@ export function useCommunityHub() {
     categories: CATEGORIES,
     posts: visiblePosts,
     category,
+    refreshing,
+    onRefresh,
 
     // engagement handlers
     setCategory,
@@ -608,6 +628,21 @@ export function useCommunityHub() {
     discardPendingStory,
     confirmStory,
     closeStoryViewer,
+
+    // comments
+    commentsVisible: commentsController.commentsVisible,
+    comments: commentsController.comments,
+    commentsLoading: commentsController.commentsLoading,
+    commentInput: commentsController.commentInput,
+    setCommentInput: commentsController.setCommentInput,
+    commentSubmitting: commentsController.commentSubmitting,
+    editingCommentId: commentsController.editingCommentId,
+    commentsCurrentUserId: commentsController.currentUserId,
+    closeComments: commentsController.closeComments,
+    submitComment: commentsController.submitComment,
+    startEditComment: commentsController.startEditComment,
+    cancelEditComment: commentsController.cancelEditComment,
+    deleteComment: commentsController.deleteComment,
   };
 }
 
