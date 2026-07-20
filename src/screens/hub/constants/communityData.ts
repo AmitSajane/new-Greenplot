@@ -18,8 +18,8 @@ export type CategoryKey =
 
 export type Role = 'farmer' | 'owner';
 export type AvatarTone = 'green' | 'amber' | 'blue' | 'red' | 'purple';
-export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'audio' | 'blog';
-export type PostType = 'photo' | 'video' | 'blog';
+export type MediaType = 'image' | 'video' | 'grid' | 'text' | 'audio' | 'blog' | 'poll';
+export type PostType = 'photo' | 'video' | 'blog' | 'poll' | 'voice';
 
 export interface CategoryDef {
   key: CategoryKey;
@@ -32,6 +32,21 @@ export interface PostMedia {
   uris: string[];
   durationLabel?: string; // for video/audio
   earnedLabel?: string; // optional "₹ earned" badge
+}
+
+/** One poll option with its live vote tally, as rendered in the feed. */
+export interface PollOptionResult {
+  label: string;
+  votes: number;
+  pct: number;
+}
+
+/** Live poll state for a post — only set when media.type === 'poll'. */
+export interface PollResult {
+  options: PollOptionResult[];
+  totalVotes: number;
+  /** Index of the option the current user voted for, or null if they haven't voted. */
+  myVote: number | null;
 }
 
 export interface FeedPost {
@@ -47,7 +62,7 @@ export interface FeedPost {
   category: CategoryKey;
   categoryLabel: string;
   categoryEmoji: string;
-  /** Blog title — only set when media.type === 'blog'. */
+  /** Blog headline or poll question — set when media.type is 'blog' or 'poll'. */
   title?: string;
   text: string;
   media: PostMedia;
@@ -55,6 +70,8 @@ export interface FeedPost {
   comments: number;
   liked: boolean;
   saved: boolean;
+  /** Only set when media.type === 'poll'. */
+  poll?: PollResult;
 }
 
 /** A single comment on a post — flat (no replies/threading). */
@@ -182,9 +199,7 @@ export const GUIDES: readonly Guide[] = [
 
 /**
  * Post-type filter (Community feed) — separate dimension from `CategoryKey`
- * (topic). Lets a user narrow the feed to a specific post format. 'blog',
- * 'poll' and 'voice' have no real posts yet (see NEW_POST_TYPE_EXAMPLES
- * below); selecting them surfaces the matching example card instead.
+ * (topic). Lets a user narrow the feed to a specific post format.
  */
 export type PostTypeFilterKey = 'all' | 'photo' | 'video' | 'blog' | 'poll' | 'voice';
 
@@ -202,84 +217,3 @@ export const POST_TYPE_FILTERS: readonly PostTypeFilterDef[] = [
   { key: 'voice', label: 'Voice' },
 ];
 
-export type NewPostTypeKind = 'video' | 'blog' | 'poll' | 'voice' | 'beforeAfter';
-
-export interface PollOption {
-  label: string;
-  pct: number;
-}
-
-/** A preview card for a post format that isn't wired to real data/backend
- * yet — shown in the feed footer to signal what's coming, filterable by the
- * post-type chips above the feed. */
-export interface NewPostTypeExample {
-  id: string;
-  kind: NewPostTypeKind;
-  filterKey: PostTypeFilterKey;
-  title: string;
-  subtitle: string;
-  caption: string;
-  durationLabel?: string;
-  blogTitle?: string;
-  blogReadLabel?: string;
-  pollQuestion?: string;
-  pollOptions?: readonly PollOption[];
-}
-
-export const NEW_POST_TYPE_EXAMPLES: readonly NewPostTypeExample[] = [
-  {
-    id: 'ex-video',
-    kind: 'video',
-    filterKey: 'video',
-    title: 'Short video post',
-    subtitle: 'Reels-style, 10-15 sec demo clips',
-    caption:
-      'Great for showing technique (pruning, spraying, machinery). Short-form video drives far more watch-time and shares than photos.',
-    durationLabel: '0:12',
-  },
-  {
-    id: 'ex-blog',
-    kind: 'blog',
-    filterKey: 'blog',
-    title: 'Blog / article post',
-    subtitle: 'Long-form write-up with cover image',
-    caption:
-      'Lets experienced farmers & agronomists publish detailed how-tos. Keeps power users engaged and builds a searchable knowledge base.',
-    blogTitle: 'How I cut fertilizer cost by 30% with soil testing',
-    blogReadLabel: '8 min read · long-form',
-  },
-  {
-    id: 'ex-poll',
-    kind: 'poll',
-    filterKey: 'poll',
-    title: 'Poll post',
-    subtitle: 'One-tap question with live vote bars',
-    caption:
-      'Lowest-effort way to participate — great for daily check-ins and surfacing what the community actually needs.',
-    pollQuestion: 'Which fertilizer are you using this season?',
-    pollOptions: [
-      { label: 'Organic compost', pct: 58 },
-      { label: 'Chemical NPK', pct: 27 },
-      { label: 'Vermicompost', pct: 15 },
-    ],
-  },
-  {
-    id: 'ex-voice',
-    kind: 'voice',
-    filterKey: 'voice',
-    title: 'Voice note post',
-    subtitle: 'Record & share a spoken tip in your language',
-    caption:
-      'Removes the literacy/typing barrier — many farmers can speak a tip far faster than typing one. Wider reach into regional languages.',
-    durationLabel: '1:04',
-  },
-  {
-    id: 'ex-beforeafter',
-    kind: 'beforeAfter',
-    filterKey: 'photo',
-    title: 'Before / after post',
-    subtitle: 'Split-image progress comparison',
-    caption:
-      'Strongest visual proof of results — pairs naturally with earning badges and drives aspiration the same way Spotlight does.',
-  },
-];

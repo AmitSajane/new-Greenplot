@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from 'react';
-import { ImageBackground, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, ImageBackground, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { FeedPost } from '../../constants/communityData';
@@ -19,6 +19,8 @@ interface Props {
   /** Only meaningful for blog posts — shows a "Read story" button that opens
    * the full, untruncated post. */
   onReadStory?: (post: FeedPost) => void;
+  /** Only meaningful for poll posts — casts/changes the viewer's vote. */
+  onVotePoll?: (postId: string, optionIndex: number) => void;
 }
 
 const categoryTint: Record<string, { bg: string; fg: string }> = {
@@ -43,7 +45,7 @@ function PostMediaView({ post }: { post: FeedPost }) {
   const play = useCallback(() => setPlaying(true), []);
   const stop = useCallback(() => setPlaying(false), []);
 
-  if (media.type === 'text' || media.type === 'audio') return null;
+  if (media.type === 'text' || media.type === 'audio' || media.type === 'poll') return null;
 
   if (media.type === 'grid') {
     return (
@@ -134,6 +136,61 @@ function AudioPostView({ post }: { post: FeedPost }) {
   );
 }
 
+function PollPostView({ post, onVotePoll }: { post: FeedPost; onVotePoll?: (postId: string, optionIndex: number) => void }) {
+  if (post.media.type !== 'poll' || !post.poll) return null;
+  const { options, totalVotes, myVote } = post.poll;
+
+  const viewVotes = useCallback(() => {
+    Alert.alert(
+      'Votes',
+      options.map(o => `${o.label} — ${o.votes} vote${o.votes === 1 ? '' : 's'}`).join('\n'),
+    );
+  }, [options]);
+
+  return (
+    <View style={s.pollCard}>
+      {!!post.title && <Text style={s.pollQuestion}>{post.title}</Text>}
+      <View style={s.pollSubtitleRow}>
+        <Ionicons name="checkmark-circle-outline" size={13} color="#6B8074" />
+        <Text style={s.pollSubtitleText}>Select one</Text>
+      </View>
+
+      {options.map((opt, i) => {
+        const voted = myVote === i;
+        return (
+          <TouchableOpacity
+            key={`${opt.label}-${i}`}
+            style={s.pollOptionRow}
+            activeOpacity={0.7}
+            disabled={!onVotePoll}
+            onPress={() => onVotePoll?.(post.id, i)}
+          >
+            <View style={s.pollOptionTopRow}>
+              <Ionicons
+                name={voted ? 'checkmark-circle' : 'ellipse-outline'}
+                size={20}
+                color={voted ? '#1A6B3A' : '#9EB8A8'}
+              />
+              <Text style={[s.pollOptionLabel, voted && s.pollOptionLabelVoted]}>{opt.label}</Text>
+              <Text style={s.pollOptionCount}>{opt.votes}</Text>
+            </View>
+            <View style={s.pollOptionTrack}>
+              <View style={[s.pollOptionFill, { width: `${opt.pct}%` }]} />
+            </View>
+          </TouchableOpacity>
+        );
+      })}
+
+      <View style={s.pollFooterRow}>
+        <Text style={s.pollFooterTime}>{post.time}</Text>
+        <TouchableOpacity onPress={viewVotes} hitSlop={8} disabled={!totalVotes}>
+          <Text style={s.pollFooterViewVotes}>{totalVotes ? 'View votes' : 'No votes yet'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 function PostText({ text, isBlog }: { text: string; isBlog?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   if (!text) return null;
@@ -160,7 +217,7 @@ function PostText({ text, isBlog }: { text: string; isBlog?: boolean }) {
   );
 }
 
-function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, onDelete, onReadStory }: Props) {
+function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, onDelete, onReadStory, onVotePoll }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const like = useCallback(() => onToggleLike(post.id), [onToggleLike, post.id]);
   const save = useCallback(() => onToggleSave(post.id), [onToggleSave, post.id]);
@@ -173,7 +230,7 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, on
   }, [onDelete, post.id]);
   const readStory = useCallback(() => onReadStory?.(post), [onReadStory, post]);
   const tint = categoryTint[post.category] ?? categoryTint.all;
-  const showReadStory = !!post.title && !!onReadStory;
+  const showReadStory = post.media.type === 'blog' && !!post.title && !!onReadStory;
 
   return (
     <View style={s.post}>
@@ -221,6 +278,7 @@ function PostCardBase({ post, onToggleLike, onToggleSave, onShare, onComment, on
       {/* media */}
       <PostMediaView post={post} />
       <AudioPostView post={post} />
+      <PollPostView post={post} onVotePoll={onVotePoll} />
 
       {/* engagement bar */}
       <View style={s.pBar}>

@@ -43,7 +43,8 @@ export interface PickedMedia {
 export interface RecordedVoice {
   base64: string;
   mime: string;
-  durationSec: number;
+  /** Unknown for files picked from the device — only live recordings measure this. */
+  durationSec?: number;
 }
 
 export interface PostDraft {
@@ -52,9 +53,13 @@ export interface PostDraft {
   text: string;
   category: CategoryKey;
   media: PickedMedia | null;
+  /** Poll answer choices — only meaningful when postType === 'poll'. */
+  pollOptions: string[];
 }
 
-const EMPTY_DRAFT: PostDraft = { postType: 'photo', title: '', text: '', category: 'tips', media: null };
+const EMPTY_DRAFT: PostDraft = { postType: 'photo', title: '', text: '', category: 'tips', media: null, pollOptions: ['', ''] };
+const MAX_POLL_OPTIONS = 4;
+const MIN_POLL_OPTIONS = 2;
 
 // Defensive optional require — matches the pattern used in AIAssistantScreen.
 type PickerFn = (options: Record<string, unknown>) => Promise<{
@@ -287,6 +292,20 @@ export function useCommunityHub() {
   const setPostCategory = useCallback((cat: CategoryKey) => setPostDraft(prev => ({ ...prev, category: cat })), []);
   const clearPostMedia = useCallback(() => setPostDraft(prev => ({ ...prev, media: null })), []);
 
+  const setPollOption = useCallback((index: number, value: string) => {
+    setPostDraft(prev => ({ ...prev, pollOptions: prev.pollOptions.map((o, i) => (i === index ? value : o)) }));
+  }, []);
+  const addPollOption = useCallback(() => {
+    setPostDraft(prev =>
+      prev.pollOptions.length >= MAX_POLL_OPTIONS ? prev : { ...prev, pollOptions: [...prev.pollOptions, ''] },
+    );
+  }, []);
+  const removePollOption = useCallback((index: number) => {
+    setPostDraft(prev =>
+      prev.pollOptions.length <= MIN_POLL_OPTIONS ? prev : { ...prev, pollOptions: prev.pollOptions.filter((_, i) => i !== index) },
+    );
+  }, []);
+
   // ── voice-note recording (separate flow: record first, then hand the
   // result to the same composer/submit path photo & video already use) ──────
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
@@ -318,11 +337,22 @@ export function useCommunityHub() {
   const submitPost = useCallback(async () => {
     const draftMedia = postDraft.media;
     const isBlog = postDraft.postType === 'blog';
+    const isPoll = postDraft.postType === 'poll';
+    const pollOptions = postDraft.pollOptions.map(o => o.trim()).filter(Boolean);
     const hasContent = isBlog
       ? !!postDraft.title.trim() || !!postDraft.text.trim()
-      : !!postDraft.text.trim() || !!draftMedia;
+      : isPoll
+        ? !!postDraft.title.trim() && pollOptions.length >= MIN_POLL_OPTIONS
+        : !!postDraft.text.trim() || !!draftMedia;
     if (!hasContent) {
-      Alert.alert('Nothing to post', isBlog ? 'Add a title or write something first.' : 'Add a photo/video or write something first.');
+      Alert.alert(
+        'Nothing to post',
+        isBlog
+          ? 'Add a title or write something first.'
+          : isPoll
+            ? `Add a question and at least ${MIN_POLL_OPTIONS} options.`
+            : 'Add a photo/video or write something first.',
+      );
       return;
     }
     if (!user?.id) {
@@ -331,7 +361,7 @@ export function useCommunityHub() {
     }
 
     const categoryDef = CATEGORIES.find(c => c.key === postDraft.category) ?? CATEGORIES[0];
-    const mediaType: FeedPost['media']['type'] = draftMedia ? draftMedia.mediaType : 'text';
+    const mediaType: FeedPost['media']['type'] = isPoll ? 'poll' : draftMedia ? draftMedia.mediaType : 'text';
     const durationLabel = draftMedia?.durationSec != null ? formatDuration(draftMedia.durationSec) : undefined;
 
     setPostSubmitting(true);
@@ -351,10 +381,11 @@ export function useCommunityHub() {
         const created = await communityApi.createPost({
           authorId: user.id,
           category: postDraft.category,
-          title: isBlog ? postDraft.title.trim() : undefined,
+          title: isBlog || isPoll ? postDraft.title.trim() : undefined,
           text: postDraft.text.trim(),
           mediaType,
           mediaUrl,
+          pollOptions: isPoll ? pollOptions : undefined,
         });
         if ('error' in created) {
           Alert.alert("Couldn't post", created.error);
@@ -377,11 +408,16 @@ export function useCommunityHub() {
           category: postDraft.category,
           categoryLabel: categoryDef.label,
           categoryEmoji: categoryDef.emoji,
-          title: isBlog ? postDraft.title.trim() : undefined,
+          title: isBlog || isPoll ? postDraft.title.trim() : undefined,
           text: postDraft.text.trim(),
-          media: draftMedia
-            ? { type: mediaType, uris: [mediaUrl || draftMedia.uri], durationLabel }
-            : { type: 'text', uris: [] },
+          media: isPoll
+            ? { type: 'poll', uris: [] }
+            : draftMedia
+              ? { type: mediaType, uris: [mediaUrl || draftMedia.uri], durationLabel }
+              : { type: 'text', uris: [] },
+          poll: isPoll
+            ? { options: pollOptions.map(label => ({ label, votes: 0, pct: 0 })), totalVotes: 0, myVote: null }
+            : undefined,
           likes: 0,
           comments: 0,
           liked: false,
@@ -390,14 +426,67 @@ export function useCommunityHub() {
         ...prev,
       ]);
       setPostComposerVisible(false);
+      Alert.alert('Uploaded successfully', 'Your post is now live in the community.');
     } finally {
       setPostSubmitting(false);
     }
   }, [postDraft, user]);
 
+  // Optimistic vote (switching an existing vote moves the count from the old
+  // option to the new one); reverted if the write fails, same pattern as
+  // onToggleLike above.
+  const onVotePoll = useCallback(
+    (postId: string, optionIndex: number) => {
+      if (!user?.id) return;
+      let previous: FeedPost | undefined;
+      let changed = false;
+      setPosts(prev =>
+        prev.map(p => {
+          if (p.id !== postId || !p.poll) return p;
+          const prevVote = p.poll.myVote;
+          if (prevVote === optionIndex) return p;
+          previous = p;
+          changed = true;
+          const options = p.poll.options.map((o, i) => {
+            let votes = o.votes;
+            if (prevVote === i) votes = Math.max(0, votes - 1);
+            if (i === optionIndex) votes += 1;
+            return { ...o, votes };
+          });
+          const totalVotes = options.reduce((sum, o) => sum + o.votes, 0);
+          return {
+            ...p,
+            poll: {
+              options: options.map(o => ({ ...o, pct: totalVotes ? Math.round((o.votes / totalVotes) * 100) : 0 })),
+              totalVotes,
+              myVote: optionIndex,
+            },
+          };
+        }),
+      );
+      if (!changed || !communityApi.enabled) return;
+      communityApi.castPollVote(postId, optionIndex).then(ok => {
+        if (!ok && previous) {
+          setPosts(prev => prev.map(p => (p.id === postId ? previous! : p)));
+          Alert.alert("Couldn't vote", 'Please try again in a moment.');
+        }
+      });
+    },
+    [user?.id],
+  );
+
   const onAddPhoto = useCallback(() => openPostComposer('photo'), [openPostComposer]);
   const onAddVideo = useCallback(() => openPostComposer('video'), [openPostComposer]);
-  const onAddVoice = useCallback(() => openVoiceRecorder(), [openVoiceRecorder]);
+  // Voice skips the picker's text-compose screen and goes straight to
+  // recording; onVoiceRecorded re-opens the composer (already primed with
+  // postType 'voice' + 'compose' screen) once a clip is captured, matching
+  // how Photo/Video land back on the compose screen with their media set.
+  const onAddVoice = useCallback(() => {
+    setPostDraft({ ...EMPTY_DRAFT, postType: 'voice' });
+    setPostComposerScreen('compose');
+    setPostComposerVisible(false);
+    openVoiceRecorder();
+  }, [openVoiceRecorder]);
   const onWritePost = useCallback(() => openPostComposer(), [openPostComposer]);
 
   // ── stories (24h ephemeral, persisted + auto-purged once Supabase is on) ────
@@ -589,6 +678,7 @@ export function useCommunityHub() {
     onGuidesAll,
     onGuidePress,
     onSearch,
+    onVotePoll,
 
     // post composer
     postComposerVisible,
@@ -604,6 +694,9 @@ export function useCommunityHub() {
     setPostCategory,
     pickPostMedia,
     clearPostMedia,
+    setPollOption,
+    addPollOption,
+    removePollOption,
     submitPost,
 
     // voice-note recorder

@@ -16,7 +16,6 @@ export { StoryComposerModal } from './StoryComposerModal';
 export { StoryViewerModal } from './StoryViewerModal';
 export { PostComposerModal } from './PostComposerModal';
 export { PostTypeFilterRow } from './PostTypeFilterRow';
-export { NewPostTypeCard } from './NewPostTypeCard';
 export { Linkify } from './Linkify';
 export { InlineMediaPlayer } from './InlineMediaPlayer';
 export { VoiceRecorderModal } from './VoiceRecorderModal';

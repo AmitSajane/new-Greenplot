@@ -31,6 +31,7 @@ interface PostRow {
   text: string | null;
   media_type: FeedPost['media']['type'];
   media_urls: string[] | null;
+  poll_options: string[] | null;
   earned_label: string | null;
   likes_count: number | null;
   comments_count: number | null;
@@ -44,7 +45,36 @@ interface ProfileRow {
   location: string | null;
 }
 
-function mapPostRow(row: PostRow, author: ProfileRow | undefined, liked: boolean, saved: boolean): FeedPost {
+/** Tallies raw poll_votes rows into per-option counts/percentages plus the
+ * current viewer's own vote, so the feed can render live bars and a "you
+ * voted" state without a second round trip. */
+function buildPollResult(
+  options: string[],
+  votes: { optionIndex: number; userId: string }[],
+  currentUserId: string | undefined,
+): FeedPost['poll'] {
+  const counts = options.map(() => 0);
+  let myVote: number | null = null;
+  for (const v of votes) {
+    if (v.optionIndex >= 0 && v.optionIndex < counts.length) counts[v.optionIndex] += 1;
+    if (currentUserId && v.userId === currentUserId) myVote = v.optionIndex;
+  }
+  const totalVotes = counts.reduce((a, b) => a + b, 0);
+  return {
+    options: options.map((label, i) => ({ label, votes: counts[i], pct: totalVotes ? Math.round((counts[i] / totalVotes) * 100) : 0 })),
+    totalVotes,
+    myVote,
+  };
+}
+
+function mapPostRow(
+  row: PostRow,
+  author: ProfileRow | undefined,
+  liked: boolean,
+  saved: boolean,
+  pollVotes: { optionIndex: number; userId: string }[] | undefined,
+  currentUserId: string | undefined,
+): FeedPost {
   const categoryDef = CATEGORIES.find(c => c.key === row.category) ?? CATEGORIES[0];
   const name = author?.name?.trim() || 'GreenPlot Farmer';
   return {
@@ -67,6 +97,7 @@ function mapPostRow(row: PostRow, author: ProfileRow | undefined, liked: boolean
     comments: row.comments_count ?? 0,
     liked,
     saved,
+    poll: row.media_type === 'poll' && row.poll_options ? buildPollResult(row.poll_options, pollVotes || [], currentUserId) : undefined,
   };
 }
 
@@ -126,7 +157,7 @@ export const communityApi = {
     if (!supabase) return [];
     const { data, error } = await supabase
       .from('posts')
-      .select('id, author_id, category, title, text, media_type, media_urls, earned_label, likes_count, comments_count, created_at')
+      .select('id, author_id, category, title, text, media_type, media_urls, poll_options, earned_label, likes_count, comments_count, created_at')
       .order('created_at', { ascending: false })
       .limit(50);
     if (error || !data?.length) return [];
@@ -150,8 +181,21 @@ export const communityApi = {
       savedIds = new Set((saves || []).map(s => s.post_id));
     }
 
+    // Poll vote tallies — fetched once for every poll post on this page and
+    // grouped client-side, same batching approach as likes/saves above.
+    const pollPostIds = (data as PostRow[]).filter(row => row.media_type === 'poll').map(row => row.id);
+    const votesByPost = new Map<string, { optionIndex: number; userId: string }[]>();
+    if (pollPostIds.length) {
+      const { data: voteRows } = await supabase.from('poll_votes').select('post_id, user_id, option_index').in('post_id', pollPostIds);
+      for (const v of voteRows || []) {
+        const arr = votesByPost.get(v.post_id) || [];
+        arr.push({ optionIndex: v.option_index, userId: v.user_id });
+        votesByPost.set(v.post_id, arr);
+      }
+    }
+
     return (data as PostRow[]).map(row =>
-      mapPostRow(row, profileById.get(row.author_id), likedIds.has(row.id), savedIds.has(row.id)),
+      mapPostRow(row, profileById.get(row.author_id), likedIds.has(row.id), savedIds.has(row.id), votesByPost.get(row.id), currentUserId),
     );
   },
 
@@ -184,6 +228,7 @@ export const communityApi = {
     text: string;
     mediaType: FeedPost['media']['type'];
     mediaUrl?: string;
+    pollOptions?: string[];
   }): Promise<{ id: string; createdAt: string } | { error: string }> {
     if (!supabase) return { error: 'Backend not configured' };
     const { data, error } = await supabase
@@ -195,11 +240,20 @@ export const communityApi = {
         text: input.text,
         media_type: input.mediaType,
         media_urls: input.mediaUrl ? [input.mediaUrl] : [],
+        poll_options: input.pollOptions?.length ? input.pollOptions : null,
       })
       .select('id, created_at')
       .single();
     if (error || !data) return { error: error?.message || 'Insert failed' };
     return { id: data.id, createdAt: data.created_at };
+  },
+
+  /** Cast/change this user's vote on a poll post — one vote per user,
+   * upserted server-side (see cast_poll_vote in supabase/add_poll_posts.sql). */
+  async castPollVote(postId: string, optionIndex: number): Promise<boolean> {
+    if (!supabase) return false;
+    const { error } = await supabase.rpc('cast_poll_vote', { p_post_id: postId, p_option_index: optionIndex });
+    return !error;
   },
 
   /** Delete a post — scoped to the author via the query itself (belt and
