@@ -1605,6 +1605,16 @@
   resolved "https://registry.npmjs.org/@react-native-community/geolocation/-/geolocation-3.4.0.tgz"
   integrity sha512-bzZH89/cwmpkPMKKveoC72C4JH0yF4St5Ceg/ZM9pA1SqX9MlRIrIrrOGZ/+yi++xAvFDiYfihtn9TvXWU9/rA==
 
+"@react-native-community/slider@^5.2.0":
+  version "5.2.0"
+  resolved "https://registry.yarnpkg.com/@react-native-community/slider/-/slider-5.2.0.tgz#c154ac4ec10537160462d7a9f3e2e43098257302"
+  integrity sha512-484sH8aWEaSjxaZ7HT3YZ8CKDcNes2synko1vdEz5DFEdvKAduxKJTj22L/qBMD7rtIkfbX69DMzWDAGbOAV6w==
+
+"@react-native-documents/picker@^12.0.1":
+  version "12.0.1"
+  resolved "https://registry.yarnpkg.com/@react-native-documents/picker/-/picker-12.0.1.tgz#ea59796175308be9818dd9e8f14a41145c35042b"
+  integrity sha512-vpJKb4t/5bnxe9+gQl+plJfKrrIsmYwANGhNH2B9E1dS1+6FDBzg4Dwmcq4ueaGfkRKEPJ606mJttVEH1ZKZaA==
+
 "@react-native-voice/voice@^3.2.4":
   version "3.2.4"
   resolved "https://registry.npmjs.org/@react-native-voice/voice/-/voice-3.2.4.tgz"
@@ -2699,6 +2709,11 @@ balanced-match@^1.0.0:
   version "1.0.2"
   resolved "https://registry.npmjs.org/balanced-match/-/balanced-match-1.0.2.tgz"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
+
+base-64@^0.1.0:
+  version "0.1.0"
+  resolved "https://registry.yarnpkg.com/base-64/-/base-64-0.1.0.tgz#780a99c84e7d600260361511c4877613bf24f6bb"
+  integrity sha512-Y5gU45svrR5tI2Vt/X9GPd3L0HNIKzGu202EjxrXMpuc2V2CiKgemAbUUsqYmZJvPtCXoUKjNZwBJzsNScUbXA==
 
 base64-js@^1.2.3, base64-js@^1.3.1, base64-js@^1.5.1:
   version "1.5.1"
@@ -6105,6 +6120,14 @@ react-native-dotenv@^3.4.11:
   dependencies:
     dotenv "^16.4.5"
 
+react-native-fs@^2.20.0:
+  version "2.20.0"
+  resolved "https://registry.yarnpkg.com/react-native-fs/-/react-native-fs-2.20.0.tgz#05a9362b473bfc0910772c0acbb73a78dbc810f6"
+  integrity sha512-VkTBzs7fIDUiy/XajOSNk0XazFE9l+QlMAce7lGuebZcag5CnjszB+u4BdqzwaQOdcYb5wsJIsqq4kxInIRpJQ==
+  dependencies:
+    base-64 "^0.1.0"
+    utf8 "^3.0.0"
+
 react-native-image-picker@^8.2.1:
   version "8.2.1"
   resolved "https://registry.npmjs.org/react-native-image-picker/-/react-native-image-picker-8.2.1.tgz"
@@ -6114,6 +6137,18 @@ react-native-linear-gradient@^2.8.3:
   version "2.8.3"
   resolved "https://registry.npmjs.org/react-native-linear-gradient/-/react-native-linear-gradient-2.8.3.tgz"
   integrity sha512-KflAXZcEg54PXkLyflaSZQ3PJp4uC4whM7nT/Uot9m0e/qxFV3p6uor1983D1YOBJbJN7rrWdqIjq0T42jOJyA==
+
+react-native-nitro-modules@^0.36.1:
+  version "0.36.1"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-modules/-/react-native-nitro-modules-0.36.1.tgz#f697d96f772ce17930f15b81ad4b1e42550569ef"
+  integrity sha512-kBv/VvKqAmkXAvP1DxJMC9b/fRhh7JdSO4EUnPP46hJjrIFeFR8AwKm8mYaKZEuF014M/TVdv2vomVUW0umsQQ==
+
+react-native-nitro-sound@^0.2.15:
+  version "0.2.15"
+  resolved "https://registry.yarnpkg.com/react-native-nitro-sound/-/react-native-nitro-sound-0.2.15.tgz#593c7e255f3a7a4595fdff99fca42c6d8811b3f5"
+  integrity sha512-l2EGPSPB/BJUaq8tEmvIUh8VkfEIl23ol/5zAZmseTRRkVMfDQSuTw2Wu/9+RmcTlJLUjARN5gHR7P5OwdHSDA==
+  dependencies:
+    "@react-native-community/slider" "^5.2.0"
 
 react-native-safe-area-context@^5.5.2:
   version "5.6.1"
@@ -6156,6 +6191,11 @@ react-native-vector-icons@^10.3.0:
   dependencies:
     prop-types "^15.7.2"
     yargs "^16.1.1"
+
+react-native-video@^6.19.2:
+  version "6.19.2"
+  resolved "https://registry.yarnpkg.com/react-native-video/-/react-native-video-6.19.2.tgz#91065e087f90bc653b312ff2347903345c4f2411"
+  integrity sha512-gh5dBMGSHywKr8+p4azRXrFQgT+QTmS1tI4sz6kVRjSENORfsrGGLQzmyo/7S9m+ZOTLWQJ3h8ONaXxR4F2Fcw==
 
 react-native-webview@^13.16.1:
   version "13.16.1"
@@ -7106,6 +7146,11 @@ use-sync-external-store@^1.4.0, use-sync-external-store@^1.5.0, use-sync-externa
   version "1.6.0"
   resolved "https://registry.npmjs.org/use-sync-external-store/-/use-sync-external-store-1.6.0.tgz"
   integrity sha512-Pp6GSwGP/NrPIrxVFAIkOQeyw8lFenOHijQWkUTrDvrF4ALqylP2C/KCkeS9dpUM3KvYRQhna5vt7IL95+ZQ9w==
+
+utf8@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/utf8/-/utf8-3.0.0.tgz#f052eed1364d696e769ef058b183df88c87f69d1"
+  integrity sha512-E8VjFIQ/TyQgp+TZfS6l8yp/xWppSAHzidGiRrqe4bK4XP9pTRyKFgGJpO3SN7zdX4DeomTrwaseCHovfpFcqQ==
 
 util-deprecate@^1.0.1:
   version "1.0.2"
