@@ -7,6 +7,7 @@ import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useLeases } from '../../../context/LeaseContext';
 import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
 import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
+import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
 import {
   OWNER_METRICS,
   OWNER_PORTFOLIO,
@@ -63,7 +64,13 @@ export function useOwnerHome() {
     (embedUrl: string, title: string) => navigation.navigate('Article', { url: embedUrl, title }),
     [navigation],
   );
-  const onNewsMore = useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]);
+  // Tapping a category tile (or "More") on Schemes & news → the combined
+  // Schemes & Subsidies screen, deep-linked to the right tab/category.
+  const onNewsMore = useCallback(
+    (tab: 'schemes' | 'news', category?: SchemeCategory) =>
+      navigation.navigate('SchemesNewsList', { items: news, initialTab: tab, initialCategory: category ?? 'all' }),
+    [navigation, news],
+  );
 
   // Reach sibling tabs (MyProperties, Tenants, Market, Settings) from the home stack.
   const parent = useCallback(
