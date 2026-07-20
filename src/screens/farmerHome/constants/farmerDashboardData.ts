@@ -114,10 +114,10 @@ export interface BrowseCrop {
 }
 
 export const FARMER_SNAPSHOT: readonly SnapStat[] = [
-  { id: 's1', emoji: '📄', value: '2', label: 'Active leases', action: 'leases' },
-  { id: 's2', emoji: '🌾', value: '7.5', label: 'Acres farmed', action: 'satellite' },
-  { id: 's3', emoji: '🌱', value: '3', label: 'Crops', action: 'crops' },
-  { id: 's4', emoji: '✅', value: '4', label: 'Tasks due', tone: 'amber', action: 'tasks' },
+  { id: 's1', emoji: '📄', value: '-', label: 'Active leases', action: 'leases' },
+  { id: 's2', emoji: '🌾', value: '-', label: 'Acres farmed', action: 'satellite' },
+  { id: 's3', emoji: '🌱', value: '-', label: 'Crops', action: 'crops' },
+  { id: 's4', emoji: '✅', value: '-', label: 'Tasks due', tone: 'amber', action: 'tasks' },
 ];
 
 export const FARMER_AI_ADVISORY = {
@@ -135,6 +135,8 @@ export const FARMER_TICKER: readonly TickerItem[] = [
   { id: 't4', cropId: 'cotton', name: 'Cotton', emoji: '☁️', price: 6800, unit: 'qt', change: 60 },
 ];
 
+// Static mock rows for the "Today's tasks" home section. Each `action` maps to
+// a real screen via the `onAction` resolver in useFarmerHome.ts.
 export const FARMER_TASKS: readonly TaskItem[] = [
   { id: 'tk1', tone: 'blue', icon: 'water', title: 'Irrigation due · North plot', sub: 'Best before 9 AM', actionLabel: 'Schedule', action: 'satellite' },
   { id: 'tk2', tone: 'amber', icon: 'people', title: 'Confirm 3 laborers · Harvest', sub: 'Applied for tomorrow', actionLabel: 'Confirm', action: 'labor' },
@@ -144,14 +146,14 @@ export const FARMER_TASKS: readonly TaskItem[] = [
 
 export const FARMER_QUICK_ACTIONS: readonly QuickAction[] = [
   { id: 'q1', label: 'Add Crop', icon: 'add-circle', tone: 'green', action: 'addCrop' },
-  { id: 'q2', label: 'Create Work', icon: 'create', tone: 'blue', action: 'createWork' },
-  { id: 'q3', label: 'Hire Labor', icon: 'people', tone: 'amber', action: 'labor' },
-  { id: 'q4', label: 'Lease Status', icon: 'document-text', tone: 'purple', action: 'leaseStatus' },
+  //{ id: 'q2', label: 'Create Work', icon: 'create', tone: 'blue', action: 'createWork' },
+  //{ id: 'q3', label: 'Hire Labor', icon: 'people', tone: 'amber', action: 'labor' },
+  //{ id: 'q4', label: 'Lease Status', icon: 'document-text', tone: 'purple', action: 'leaseStatus' },
   { id: 'q5', label: 'Satellite', icon: 'globe', tone: 'green', action: 'satellite' },
   { id: 'q6', label: 'Soil Test', icon: 'flask', tone: 'amber', action: 'soil' },
-  { id: 'q7', label: 'Mandi Prices', icon: 'pricetags', tone: 'green', action: 'mandiCompare' },
+  //{ id: 'q7', label: 'Mandi Prices', icon: 'pricetags', tone: 'green', action: 'mandiCompare' },
   { id: 'q8', label: 'Soil Advisory', icon: 'leaf', tone: 'green', action: 'soilAdvisory' },
-  { id: 'q9', label: 'Kisan Mitra', icon: 'mic', tone: 'blue', action: 'aiAssistant' },
+  //{ id: 'q9', label: 'Kisan Mitra', icon: 'mic', tone: 'blue', action: 'aiAssistant' },
 ];
 
 export const FARMER_CROP_HEALTH: readonly CropHealth[] = [

@@ -10,6 +10,8 @@ interface RowProps {
   onAction: (action: FarmerAction) => void;
 }
 
+// One actionable reminder card (e.g. "Irrigation due"), tinted by `item.tone`
+// and routed through the shared `onAction` resolver when its button is tapped.
 const TaskRow = React.memo(({ item, onAction }: RowProps) => {
   const handlePress = useCallback(() => onAction(item.action), [onAction, item.action]);
   const t = tones[item.tone];
@@ -35,6 +37,9 @@ interface Props {
   onViewAll: () => void;
 }
 
+// "Today's tasks" home section — a short, time-sensitive to-do list (irrigation,
+// labor confirmations, lease renewals, soil results) surfaced above the fold so
+// the farmer sees what needs attention today without opening each module.
 function TasksSectionBase({ items, onAction, onViewAll }: Props) {
   return (
     <View style={s.section}>

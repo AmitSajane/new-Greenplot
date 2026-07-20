@@ -308,7 +308,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           items={vm.news}
           onAction={() => undefined}
           onOpenArticle={vm.onOpenArticle}
-          onMore={() => vm.onNewsMore()}
+          onMore={vm.onNewsMore}
         />
 
         {/* ───────── Learn · Videos ───────── */}

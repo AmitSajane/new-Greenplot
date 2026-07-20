@@ -16,7 +16,7 @@ import {
   MarketTicker,
   QuickActionsSection,
   SchemesNewsSection,
-  TasksSection,
+  // TasksSection, // Today's tasks — hidden from the farmer home page for now.
   VideosSection,
   WeatherHero,
 } from './sections';
@@ -36,7 +36,8 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const onAi = useCallback(() => onAction(vm.aiAdvisory.action), [onAction, vm.aiAdvisory.action]);
   const onMarket = useCallback(() => onAction('market'), [onAction]);
   const onMandi = useCallback(() => onAction('mandiCompare'), [onAction]);
-  const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
+  //Today's tasks — hidden from the farmer home page for now.
+  // const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
   const onCrops = useCallback(() => onAction('crops'), [onAction]);
   const onAllLands = useCallback(() => onAction('allLands'), [onAction]);
   const onMic = useCallback(() => onAction('aiAssistant'), [onAction]);
@@ -66,9 +67,9 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           onPress={onAi}
         />
         <MarketTicker items={vm.ticker} onPressItem={vm.onTickerPress} onSeeAll={onMandi} />
-        <TasksSection items={vm.tasks} onAction={onAction} onViewAll={onTasksViewAll} />
+        {/* <TasksSection items={vm.tasks} onAction={onAction} onViewAll={onTasksViewAll} /> */}
         <QuickActionsSection items={vm.quickActions} onAction={onAction} />
-        <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} />
+        {/* <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} /> */}
         <FindLandSection
           listings={vm.featuredListings}
           chips={vm.nearbyChips}
@@ -85,7 +86,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           onMore={vm.onSchemesMore}
         />
         <VideosSection onOpenVideo={vm.onOpenVideo} />
-        <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} />
+     {/* <BrowseByCropSection items={vm.browseCrops} onPress={onAllLands} /> */}
       </ScrollView>
 
       <TouchableOpacity style={s.fab} activeOpacity={0.85} onPress={onMic}>

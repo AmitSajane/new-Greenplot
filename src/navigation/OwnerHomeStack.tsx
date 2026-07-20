@@ -21,6 +21,9 @@ import AgreementScreen from '../screens/AgreementScreen';
 import ArticleScreen from '../screens/ArticleScreen';
 import MandiPricesScreen from '../screens/MandiPricesScreen';
 import SoilAdvisoryScreen from '../screens/SoilAdvisoryScreen';
+import SchemesNewsListScreen from '../screens/farmerHome/SchemesNewsListScreen';
+import type { NewsItem } from '../screens/farmerHome/constants/farmerDashboardData';
+import type { SchemeCategory } from '../screens/farmerHome/constants/schemeCatalog';
 
 export type OwnerHomeStackParamList = {
   OwnerHome: undefined;
@@ -52,6 +55,9 @@ export type OwnerHomeStackParamList = {
   SatelliteMap: undefined;
   LaborConnect: undefined;
   OwnerWorkReport: undefined;
+  SchemesNewsList:
+    | { items?: readonly NewsItem[]; initialTab?: 'schemes' | 'news'; initialCategory?: SchemeCategory | 'all' }
+    | undefined;
 };
 
 const Stack = createNativeStackNavigator<OwnerHomeStackParamList>();
@@ -146,6 +152,11 @@ export default function OwnerHomeStack() {
       <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
       <Stack.Screen name="LeaseRequests" component={LeaseRequestsScreen} options={{ title: 'Lease Requests' }} />
       <Stack.Screen name="AgreementSign" component={AgreementScreen} />
+      <Stack.Screen
+        name="SchemesNewsList"
+        component={SchemesNewsListScreen}
+        options={{ title: 'Schemes & Subsidies' }}
+      />
     </Stack.Navigator>
   );
 }
