@@ -35,16 +35,22 @@ interface Props {
   submitting: boolean;
   onClose: () => void;
   onSelectType: (type: PostType) => void;
+  /** Voice skips straight to the recorder instead of the text-compose
+   * screen — handled separately from onSelectType. */
+  onSelectVoice: () => void;
   onBackToPicker: () => void;
   onChangeTitle: (title: string) => void;
   onChangeText: (text: string) => void;
   onChangeCategory: (category: CategoryKey) => void;
   onPickMedia: (source: MediaSource) => void;
   onClearMedia: () => void;
+  onChangePollOption: (index: number, value: string) => void;
+  onAddPollOption: () => void;
+  onRemovePollOption: (index: number) => void;
   onSubmit: () => void;
 }
 
-function TypePicker({ onSelectType }: { onSelectType: (type: PostType) => void }) {
+function TypePicker({ onSelectType, onSelectVoice }: { onSelectType: (type: PostType) => void; onSelectVoice: () => void }) {
   return (
     <View>
       <Text style={s.composerPickerTitle}>What do you want to share?</Text>
@@ -78,7 +84,68 @@ function TypePicker({ onSelectType }: { onSelectType: (type: PostType) => void }
         </View>
         <Ionicons name="chevron-forward" size={16} color="#9AA79E" />
       </TouchableOpacity>
+      <TouchableOpacity style={s.composerTypeCard} activeOpacity={0.8} onPress={() => onSelectType('poll')}>
+        <View style={[s.composerTypeIconWrap, { backgroundColor: '#D4E8FC' }]}>
+          <Ionicons name="bar-chart" size={22} color="#1A5299" />
+        </View>
+        <View style={s.flex1}>
+          <Text style={s.composerTypeCardTitle}>Poll</Text>
+          <Text style={s.composerTypeCardDesc}>Ask a question, let the community vote</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#9AA79E" />
+      </TouchableOpacity>
+      <TouchableOpacity style={s.composerTypeCard} activeOpacity={0.8} onPress={onSelectVoice}>
+        <View style={[s.composerTypeIconWrap, { backgroundColor: '#EDE8FD' }]}>
+          <Ionicons name="mic" size={22} color="#4B2EA8" />
+        </View>
+        <View style={s.flex1}>
+          <Text style={s.composerTypeCardTitle}>Voice note</Text>
+          <Text style={s.composerTypeCardDesc}>Record and share a spoken tip</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#9AA79E" />
+      </TouchableOpacity>
     </View>
+  );
+}
+
+function PollOptionsEditor({
+  options,
+  onChangePollOption,
+  onAddPollOption,
+  onRemovePollOption,
+}: {
+  options: string[];
+  onChangePollOption: (index: number, value: string) => void;
+  onAddPollOption: () => void;
+  onRemovePollOption: (index: number) => void;
+}) {
+  return (
+    <>
+      <Text style={s.composerOptionsLabel}>Options</Text>
+      {options.map((opt, i) => (
+        <View key={i} style={s.composerOptionRow}>
+          <View style={s.composerOptionDot} />
+          <TextInput
+            style={s.composerOptionInput}
+            placeholder={`Option ${i + 1}`}
+            placeholderTextColor="#9EB8A8"
+            value={opt}
+            onChangeText={v => onChangePollOption(i, v)}
+          />
+          {options.length > 2 && (
+            <TouchableOpacity style={s.composerOptionRemove} onPress={() => onRemovePollOption(i)} hitSlop={8}>
+              <Ionicons name="close" size={16} color="#9EB8A8" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ))}
+      {options.length < 4 && (
+        <TouchableOpacity style={s.composerAddOption} activeOpacity={0.7} onPress={onAddPollOption}>
+          <Ionicons name="add-circle-outline" size={16} color="#1A6B3A" />
+          <Text style={s.composerAddOptionText}>Add option (up to 4)</Text>
+        </TouchableOpacity>
+      )}
+    </>
   );
 }
 
@@ -95,17 +162,28 @@ export const PostComposerModal = React.memo(
     submitting,
     onClose,
     onSelectType,
+    onSelectVoice,
     onChangeTitle,
     onChangeText,
     onChangeCategory,
     onPickMedia,
     onClearMedia,
+    onChangePollOption,
+    onAddPollOption,
+    onRemovePollOption,
     onSubmit,
   }: Props) => {
     const { user } = useAuth();
     const postable = categories.filter(c => c.key !== 'all');
     const isBlog = draft.postType === 'blog';
-    const canSubmit = (isBlog ? !!draft.title.trim() || !!draft.text.trim() : !!draft.text.trim() || !!draft.media) && !submitting;
+    const isPoll = draft.postType === 'poll';
+    const filledPollOptions = draft.pollOptions.filter(o => o.trim()).length;
+    const canSubmit =
+      (isBlog
+        ? !!draft.title.trim() || !!draft.text.trim()
+        : isPoll
+          ? !!draft.title.trim() && filledPollOptions >= 2
+          : !!draft.text.trim() || !!draft.media) && !submitting;
     const initials = useMemo(() => (user?.name || 'You').trim().slice(0, 2).toUpperCase(), [user?.name]);
     const mediaSource: MediaSource = draft.postType === 'video' ? 'gallery-video' : 'gallery-photo';
     const attachLabel = isBlog
@@ -125,7 +203,7 @@ export const PostComposerModal = React.memo(
 
           <ScrollView style={s.composerBody} keyboardShouldPersistTaps="handled">
             {screen === 'picker' ? (
-              <TypePicker onSelectType={onSelectType} />
+              <TypePicker onSelectType={onSelectType} onSelectVoice={onSelectVoice} />
             ) : (
               <>
                 <View style={s.composerAuthorRow}>
@@ -139,17 +217,17 @@ export const PostComposerModal = React.memo(
                   </View>
                 </View>
 
-                {isBlog && (
+                {(isBlog || isPoll) && (
                   <TextInput
                     style={s.composerTitleInput}
-                    placeholder="Add a title"
+                    placeholder={isPoll ? 'Ask a question' : 'Add a title'}
                     placeholderTextColor="#9EB8A8"
                     value={draft.title}
                     onChangeText={onChangeTitle}
                   />
                 )}
 
-                {!isBlog && (
+                {!isBlog && !isPoll && (
                   <TextInput
                     style={s.composerInput}
                     placeholder="Share what's happening on your farm..."
@@ -160,14 +238,25 @@ export const PostComposerModal = React.memo(
                   />
                 )}
 
-                {draft.media ? (
+                {isPoll && (
+                  <PollOptionsEditor
+                    options={draft.pollOptions}
+                    onChangePollOption={onChangePollOption}
+                    onAddPollOption={onAddPollOption}
+                    onRemovePollOption={onRemovePollOption}
+                  />
+                )}
+
+                {!isPoll && (draft.media ? (
                   <View style={s.composerMediaWrap}>
                     {draft.media.mediaType === 'image' ? (
                       <Image source={{ uri: draft.media.uri }} style={s.composerMediaImg} resizeMode="cover" />
                     ) : draft.media.mediaType === 'audio' ? (
                       <View style={s.composerVoiceCard}>
                         <Ionicons name="mic" size={28} color="#fff" />
-                        <Text style={s.previewVideoText}>Voice note · {draft.media.durationSec ?? '—'}s</Text>
+                        <Text style={s.previewVideoText}>
+                          Voice note{draft.media.durationSec != null ? ` · ${draft.media.durationSec}s` : ''}
+                        </Text>
                       </View>
                     ) : (
                       <View style={s.composerVideoCard}>
@@ -193,7 +282,7 @@ export const PostComposerModal = React.memo(
                     />
                     <Text style={s.composerBigAttachText}>{busy ? 'Preparing…' : attachLabel}</Text>
                   </TouchableOpacity>
-                )}
+                ))}
 
                 {isBlog && (
                   <TextInput

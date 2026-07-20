@@ -1,15 +1,40 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Modal, PermissionsAndroid, Platform, Text, TouchableOpacity, View } from 'react-native';
-import { WebView } from 'react-native-webview';
+import { ActivityIndicator, Alert, Modal, PermissionsAndroid, Platform, Text, TouchableOpacity, View } from 'react-native';
+import RNFS from 'react-native-fs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import Sound, { AudioEncoderAndroidType, AudioSourceAndroidType, OutputFormatAndroidType, type AudioSet } from 'react-native-nitro-sound';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { MEDIA_RULES } from '../../constants/communityData';
 import { InlineMediaPlayer } from './InlineMediaPlayer';
 
+// Defensive optional require, same pattern used for react-native-image-picker
+// in useCommunityHub.ts — @react-native-documents/picker resolves its native
+// module with TurboModuleRegistry.getEnforcing() at import time (not lazily),
+// so a plain top-level `import` throws synchronously and crashes the whole
+// app (before React even mounts) on any build that hasn't linked the native
+// module yet. Wrapping it in require()/try-catch turns that into a graceful
+// "feature unavailable" instead of a blank white screen. (react-native-nitro-
+// sound's default export is a lazy Proxy — it only touches native code on
+// first method call, not on import — so it doesn't need this treatment.)
+type DocumentPickerModule = {
+  pick: (options?: { type?: string[] }) => Promise<{ uri: string; type: string | null }[]>;
+  types: { audio: string };
+  isErrorWithCode: (err: unknown) => err is { code: string };
+  errorCodes: { OPERATION_CANCELED: string };
+};
+let DocumentPicker: DocumentPickerModule | null;
+try {
+  DocumentPicker = require('@react-native-documents/picker');
+} catch {
+  DocumentPicker = null;
+}
+
 interface RecordedVoice {
   base64: string;
   mime: string;
-  durationSec: number;
+  /** Unknown for files picked from the device (no cheap way to read audio
+   * duration without a native decoder) — only live recordings measure this. */
+  durationSec?: number;
 }
 
 interface Props {
@@ -20,40 +45,6 @@ interface Props {
 }
 
 type Phase = 'permission-denied' | 'requesting' | 'recording' | 'recorded' | 'error';
-
-const RECORDER_HTML = `<!DOCTYPE html><html><head></head><body style="margin:0;background:transparent;">
-<script>
-(function () {
-  function post(msg) { window.ReactNativeWebView.postMessage(JSON.stringify(msg)); }
-  if (!navigator.mediaDevices || !window.MediaRecorder) { post({ type: 'error', message: 'Recording is not supported on this device.' }); return; }
-  navigator.mediaDevices.getUserMedia({ audio: true }).then(function (stream) {
-    var candidates = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/aac', 'audio/ogg'];
-    var mimeType = '';
-    for (var i = 0; i < candidates.length; i++) {
-      if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(candidates[i])) { mimeType = candidates[i]; break; }
-    }
-    var recorder = mimeType ? new MediaRecorder(stream, { mimeType: mimeType }) : new MediaRecorder(stream);
-    var chunks = [];
-    recorder.ondataavailable = function (e) { if (e.data && e.data.size > 0) chunks.push(e.data); };
-    recorder.onstop = function () {
-      var blob = new Blob(chunks, { type: recorder.mimeType || mimeType || 'audio/webm' });
-      var reader = new FileReader();
-      reader.onloadend = function () {
-        var base64 = String(reader.result || '').split(',')[1] || '';
-        post({ type: 'recorded', base64: base64, mime: blob.type });
-      };
-      reader.readAsDataURL(blob);
-      stream.getTracks().forEach(function (t) { t.stop(); });
-    };
-    window.__stopRecording = function () { if (recorder.state !== 'inactive') recorder.stop(); };
-    recorder.start();
-    post({ type: 'started' });
-  }).catch(function (err) {
-    post({ type: 'error', message: String((err && err.message) || err) });
-  });
-})();
-</script>
-</body></html>`;
 
 async function ensureMicPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -72,28 +63,72 @@ async function ensureMicPermission(): Promise<boolean> {
 
 const formatTime = (sec: number) => `0:${String(sec).padStart(2, '0')}`;
 
-/** Records a short voice note entirely in-app — no native audio-recording
- * library is linked, so a hidden WebView runs the browser's MediaRecorder
- * API (getUserMedia → MediaRecorder → base64) and posts the result back. */
+const RECORD_AUDIO_SET: AudioSet = {
+  AudioEncoderAndroid: AudioEncoderAndroidType.AAC,
+  AudioSourceAndroid: AudioSourceAndroidType.MIC,
+  OutputFormatAndroid: OutputFormatAndroidType.MPEG_4,
+  AVFormatIDKeyIOS: 'aac',
+};
+
+/** Records a short voice note via the device's actual microphone
+ * (react-native-nitro-sound — a real native recorder). Previously this used
+ * a hidden WebView running the browser's MediaRecorder API as a workaround
+ * for not having a native audio library linked; that path was unreliable
+ * (WebView getUserMedia support varies a lot by device/Android version). */
 export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfirm }: Props) => {
   const [phase, setPhase] = useState<Phase>('requesting');
   const [elapsed, setElapsed] = useState(0);
   const [recorded, setRecorded] = useState<RecordedVoice | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [previewUri, setPreviewUri] = useState<string | null>(null);
-  const webviewRef = useRef<WebView>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const [importing, setImporting] = useState(false);
   const elapsedRef = useRef(0);
+  const listeningRef = useRef(false);
 
-  const stopTimer = useCallback(() => {
-    if (timerRef.current) clearInterval(timerRef.current);
-    timerRef.current = null;
+  const detachListener = useCallback(() => {
+    if (!listeningRef.current) return;
+    try {
+      Sound.removeRecordBackListener();
+    } catch {
+      /* no active listener */
+    }
+    listeningRef.current = false;
   }, []);
 
-  const stopRecording = useCallback(() => {
-    stopTimer();
-    webviewRef.current?.injectJavaScript('window.__stopRecording && window.__stopRecording(); true;');
-  }, [stopTimer]);
+  // Reads the finished recording off disk into base64 so it can flow through
+  // the exact same upload path a picked file already uses.
+  const stopRecording = useCallback(async () => {
+    detachListener();
+    try {
+      const path = await Sound.stopRecorder();
+      const durationSec = elapsedRef.current;
+      const base64 = await RNFS.readFile(path, 'base64');
+      const mime = Platform.OS === 'ios' ? 'audio/m4a' : 'audio/mp4';
+      setRecorded({ base64, mime, durationSec });
+      setPreviewUri(`data:${mime};base64,${base64}`);
+      setPhase('recorded');
+    } catch {
+      setErrorMessage('Could not save the recording. Please try again.');
+      setPhase('error');
+    }
+  }, [detachListener]);
+
+  const startRecording = useCallback(async () => {
+    try {
+      await Sound.startRecorder(undefined, RECORD_AUDIO_SET, false);
+      Sound.addRecordBackListener(meta => {
+        const sec = Math.floor((meta.currentPosition ?? 0) / 1000);
+        elapsedRef.current = sec;
+        setElapsed(sec);
+        if (sec >= MEDIA_RULES.voice.maxSec) stopRecording();
+      });
+      listeningRef.current = true;
+      setPhase('recording');
+    } catch {
+      setErrorMessage('Could not access the microphone. Please try again.');
+      setPhase('error');
+    }
+  }, [stopRecording]);
 
   useEffect(() => {
     if (!visible) return;
@@ -107,62 +142,76 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
     let cancelled = false;
     ensureMicPermission().then(granted => {
       if (cancelled) return;
-      if (!granted) setPhase('permission-denied');
-      // Otherwise the WebView mounts and requests getUserMedia itself.
+      if (!granted) {
+        setPhase('permission-denied');
+        return;
+      }
+      startRecording();
     });
 
     return () => {
       cancelled = true;
-      stopTimer();
-    };
-  }, [visible, stopTimer]);
-
-  const onWebViewMessage = useCallback(
-    (event: { nativeEvent: { data: string } }) => {
-      try {
-        const msg = JSON.parse(event.nativeEvent.data);
-        if (msg.type === 'started') {
-          setPhase('recording');
-          timerRef.current = setInterval(() => {
-            elapsedRef.current += 1;
-            setElapsed(elapsedRef.current);
-            if (elapsedRef.current >= MEDIA_RULES.voice.maxSec) stopRecording();
-          }, 1000);
-        } else if (msg.type === 'recorded') {
-          stopTimer();
-          const durationSec = elapsedRef.current;
-          setRecorded({ base64: msg.base64, mime: msg.mime, durationSec });
-          setPreviewUri(`data:${msg.mime};base64,${msg.base64}`);
-          setPhase('recorded');
-        } else if (msg.type === 'error') {
-          stopTimer();
-          setErrorMessage(msg.message || 'Could not access the microphone.');
-          setPhase('error');
-        }
-      } catch {
-        /* ignore malformed message */
+      if (listeningRef.current) {
+        detachListener();
+        Sound.stopRecorder().catch(() => {});
       }
-    },
-    [stopRecording, stopTimer],
-  );
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  // Alternative to live recording — lets the user attach an existing audio
+  // file instead. Reuses the exact same `recorded` state + confirm flow as a
+  // live take, just without a known duration (no cheap way to read that
+  // without a native audio decoder).
+  const pickAudioFile = useCallback(async () => {
+    if (!DocumentPicker) {
+      Alert.alert('Not available', 'Choosing an audio file needs an app update — please record instead for now.');
+      return;
+    }
+    setImporting(true);
+    try {
+      const [file] = await DocumentPicker.pick({ type: [DocumentPicker.types.audio] });
+      if (!file?.uri) return;
+      const base64 = await RNFS.readFile(file.uri, 'base64');
+      const mime = file.type || 'audio/mpeg';
+      setRecorded({ base64, mime, durationSec: undefined });
+      setPreviewUri(`data:${mime};base64,${base64}`);
+      setPhase('recorded');
+    } catch (err) {
+      if (DocumentPicker?.isErrorWithCode(err) && err.code === DocumentPicker.errorCodes.OPERATION_CANCELED) return;
+      Alert.alert("Can't use this file", 'Please try a different audio file.');
+    } finally {
+      setImporting(false);
+    }
+  }, []);
 
   const handleClose = useCallback(() => {
-    stopTimer();
+    if (phase === 'recording' && listeningRef.current) {
+      detachListener();
+      Sound.stopRecorder().catch(() => {});
+    }
     onClose();
-  }, [onClose, stopTimer]);
+  }, [phase, detachListener, onClose]);
 
   const handleConfirm = useCallback(() => {
     if (recorded) onConfirm(recorded);
   }, [recorded, onConfirm]);
 
   const handleRetry = useCallback(() => {
-    setPhase('requesting');
     setRecorded(null);
     setPreviewUri(null);
     setElapsed(0);
     elapsedRef.current = 0;
     setErrorMessage('');
-  }, []);
+    setPhase('requesting');
+    ensureMicPermission().then(granted => {
+      if (!granted) {
+        setPhase('permission-denied');
+        return;
+      }
+      startRecording();
+    });
+  }, [startRecording]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
@@ -171,23 +220,6 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
           <View style={s.sheetHandle} />
           <Text style={s.sheetTitle}>Voice note</Text>
           <Text style={s.sheetSub}>Record a spoken tip — up to {MEDIA_RULES.voice.maxSec} seconds.</Text>
-
-          {(phase === 'requesting' || phase === 'recording') && (
-            <WebView
-              ref={webviewRef}
-              // baseUrl matters here: an inline `html` source with no baseUrl
-              // loads as an opaque/null origin, which Chrome/WebView does NOT
-              // treat as a secure context — so navigator.mediaDevices is
-              // undefined and getUserMedia can never work. "https://localhost"
-              // is in the browser's secure-context allowlist, which unlocks it.
-              source={{ html: RECORDER_HTML, baseUrl: 'https://localhost' }}
-              style={s.voiceHiddenWebview}
-              onMessage={onWebViewMessage}
-              mediaCapturePermissionGrantType="grant"
-              javaScriptEnabled
-              originWhitelist={['*']}
-            />
-          )}
 
           {phase === 'permission-denied' && (
             <View style={s.voiceStateBox}>
@@ -213,6 +245,31 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
             </View>
           )}
 
+          {(phase === 'requesting' || phase === 'permission-denied' || phase === 'error') && (
+            <>
+              <View style={s.voiceOrDivider}>
+                <View style={s.voiceOrLine} />
+                <Text style={s.voiceOrText}>OR</Text>
+                <View style={s.voiceOrLine} />
+              </View>
+              <TouchableOpacity
+                style={s.voiceUploadBtn}
+                activeOpacity={0.8}
+                onPress={pickAudioFile}
+                disabled={importing || busy}
+              >
+                {importing ? (
+                  <ActivityIndicator color="#1A6B3A" size="small" />
+                ) : (
+                  <>
+                    <Ionicons name="folder-open-outline" size={16} color="#1A6B3A" />
+                    <Text style={s.voiceUploadBtnText}>Choose an audio file</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
+          )}
+
           {phase === 'recording' && (
             <View style={s.voiceStateBox}>
               <View style={s.voiceMicPulse}>
@@ -229,7 +286,7 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
           {phase === 'recorded' && previewUri && (
             <View style={s.voiceStateBox}>
               <Ionicons name="checkmark-circle" size={28} color="#1A6B3A" />
-              <Text style={s.voiceTimer}>{formatTime(recorded?.durationSec ?? 0)}</Text>
+              {recorded?.durationSec != null && <Text style={s.voiceTimer}>{formatTime(recorded.durationSec)}</Text>}
               <InlineMediaPlayer uri={previewUri} kind="audio" autoPlay={false} style={s.voicePreviewPlayer} />
             </View>
           )}

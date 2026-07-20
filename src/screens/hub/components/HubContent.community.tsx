@@ -3,12 +3,7 @@ import { FlatList, ListRenderItemInfo, RefreshControl, Text, TouchableOpacity, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { CommunityHubViewModel } from '../hooks/useCommunityHub';
-import {
-  FeedPost,
-  NEW_POST_TYPE_EXAMPLES,
-  POST_TYPE_FILTERS,
-  PostTypeFilterKey,
-} from '../constants/communityData';
+import { FeedPost, POST_TYPE_FILTERS, PostTypeFilterKey } from '../constants/communityData';
 import { hubStyles as s } from '../styles/hub.styles';
 import {
   BlogReaderModal,
@@ -18,7 +13,6 @@ import {
   // ContributorsStrip, // Top contributors — temporarily hidden from the feed (see below), not deleted.
   HubHeader,
   LearnStrip,
-  NewPostTypeCard,
   PostCard,
   PostComposerModal,
   PostTypeFilterRow,
@@ -39,8 +33,8 @@ function matchesPostType(post: FeedPost, filter: PostTypeFilterKey): boolean {
   if (filter === 'photo') return post.media.type === 'image' || post.media.type === 'grid';
   if (filter === 'video') return post.media.type === 'video';
   if (filter === 'voice') return post.media.type === 'audio';
-  // 'blog' / 'poll' have no real posts yet — only the example cards in the
-  // footer represent them for now.
+  if (filter === 'blog') return post.media.type === 'blog';
+  if (filter === 'poll') return post.media.type === 'poll';
   return false;
 }
 
@@ -55,6 +49,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     postComposerVisible, postComposerScreen, postDraft, postMediaBusy, postSubmitting, closePostComposer,
     selectPostType, backToPostTypePicker, setPostTitle,
     setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
+    setPollOption, addPollOption, removePollOption, onVotePoll,
     voiceRecorderVisible, closeVoiceRecorder, onVoiceRecorded,
     stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
     closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
@@ -74,14 +69,6 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     [posts, postTypeFilter],
   );
 
-  const visibleExamples = useMemo(
-    () =>
-      postTypeFilter === 'all'
-        ? NEW_POST_TYPE_EXAMPLES
-        : NEW_POST_TYPE_EXAMPLES.filter(e => e.filterKey === postTypeFilter),
-    [postTypeFilter],
-  );
-
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<FeedPost>) => (
       <PostCard
@@ -92,9 +79,10 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         onComment={onComment}
         onDelete={item.authorId === user?.id ? onDeletePost : undefined}
         onReadStory={setReadingPost}
+        onVotePoll={onVotePoll}
       />
     ),
-    [onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost, user?.id],
+    [onToggleLike, onToggleSave, onSharePost, onComment, onDeletePost, onVotePoll, user?.id],
   );
 
   const keyExtractor = useCallback((item: FeedPost) => item.id, []);
@@ -141,18 +129,6 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     [],
   );
 
-  const ListFooter = useMemo(() => {
-    if (!visibleExamples.length) return null;
-    return (
-      <View style={s.newTypeSection}>
-        <Text style={s.newTypeSectionTitle}>Try these new ways to post</Text>
-        {visibleExamples.map(example => (
-          <NewPostTypeCard key={example.id} item={example} />
-        ))}
-      </View>
-    );
-  }, [visibleExamples]);
-
   return (
     <SafeAreaView style={s.safeArea} edges={['top']}>
       <FlatList
@@ -161,7 +137,6 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         keyExtractor={keyExtractor}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={ListEmpty}
-        ListFooterComponent={ListFooter}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={s.listContent}
         initialNumToRender={4}
@@ -200,12 +175,16 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         submitting={postSubmitting}
         onClose={closePostComposer}
         onSelectType={selectPostType}
+        onSelectVoice={onAddVoice}
         onBackToPicker={backToPostTypePicker}
         onChangeTitle={setPostTitle}
         onChangeText={setPostText}
         onChangeCategory={setPostCategory}
         onPickMedia={pickPostMedia}
         onClearMedia={clearPostMedia}
+        onChangePollOption={setPollOption}
+        onAddPollOption={addPollOption}
+        onRemovePollOption={removePollOption}
         onSubmit={submitPost}
       />
       <VoiceRecorderModal

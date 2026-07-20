@@ -179,6 +179,23 @@ export const hubStyles = StyleSheet.create({
   audioWaveBar: { width: 3, borderRadius: 2, backgroundColor: '#4B2EA8' },
   audioDuration: { fontSize: 10, color: TEXT2, marginTop: 4 },
   audioInlinePlayer: { height: 40 },
+
+  // Poll post
+  pollCard: { marginHorizontal: 12, marginBottom: 10, backgroundColor: '#F4F8F5', borderRadius: 16, padding: 14 },
+  pollQuestion: { fontSize: 15, fontWeight: '800', color: '#1C2E18', marginBottom: 8, lineHeight: 20 },
+  pollSubtitleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 14 },
+  pollSubtitleText: { fontSize: 11.5, color: TEXT2, fontWeight: '600' },
+  pollOptionRow: { marginBottom: 14 },
+  pollOptionTopRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 7 },
+  pollOptionLabel: { flex: 1, fontSize: 13.5, color: '#1C2E18', fontWeight: '600' },
+  pollOptionLabelVoted: { fontWeight: '800', color: '#0F4A28' },
+  pollOptionCount: { fontSize: 12.5, color: TEXT2, fontWeight: '700' },
+  pollOptionTrack: { height: 7, borderRadius: 4, backgroundColor: '#fff', overflow: 'hidden', borderWidth: 1, borderColor: BORDER },
+  pollOptionFill: { height: 7, borderRadius: 4, backgroundColor: '#1A6B3A' },
+  pollFooterRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 2, paddingTop: 10, borderTopWidth: 1, borderTopColor: BORDER },
+  pollFooterTime: { fontSize: 10.5, color: TEXT2, fontWeight: '600' },
+  pollFooterViewVotes: { fontSize: 12, fontWeight: '800', color: '#1A6B3A' },
+
   pAct: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   pActText: { fontSize: 11, fontWeight: '600', color: TEXT2 },
   pActTextLiked: { color: '#C02828' },
@@ -273,6 +290,15 @@ export const hubStyles = StyleSheet.create({
   composerBigAttachBoxSmall: { paddingVertical: 18 },
   composerBigAttachText: { fontSize: 12, color: '#3A5040' },
 
+  // Poll compose fields
+  composerOptionsLabel: { fontSize: 11, fontWeight: '700', color: TEXT2, marginTop: 18, marginBottom: 8 },
+  composerOptionRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginBottom: 9 },
+  composerOptionDot: { width: 20, height: 20, borderRadius: 6, borderWidth: 1.5, borderColor: BORDER },
+  composerOptionInput: { flex: 1, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 10, fontSize: 12.5, color: '#1C2E18' },
+  composerOptionRemove: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center' },
+  composerAddOption: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 9, paddingHorizontal: 2 },
+  composerAddOptionText: { fontSize: 12, fontWeight: '700', color: '#1A6B3A' },
+
   // Post-type filter row (Community feed)
   filterRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, marginTop: 2, marginBottom: 4, gap: 8 },
   filterScrollContent: { gap: 7, paddingRight: 8 },
@@ -283,54 +309,7 @@ export const hubStyles = StyleSheet.create({
   filterChipTextOn: { color: '#fff' },
   filterCaption: { fontSize: 10, color: TEXT2, paddingHorizontal: 14, marginBottom: 10, lineHeight: 14 },
 
-  // New post-type example cards
-  newTypeSection: { paddingHorizontal: 14, paddingTop: 10, paddingBottom: 4 },
-  newTypeSectionTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18', marginBottom: 9 },
-  newTypeCard: { backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 16, marginHorizontal: 14, marginBottom: 12, padding: 12 },
-  newTypeHead: { flexDirection: 'row', alignItems: 'flex-start' },
-  newTypeIconBadge: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginRight: 10 },
-  newTypeTitle: { fontSize: 13, fontWeight: '800', color: '#1C2E18' },
-  newTypeSubtitle: { fontSize: 10, color: TEXT2, marginTop: 2 },
-  newTypeBadge: { backgroundColor: '#1A5299', borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
-  newTypeBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
-  newTypeCaption: { fontSize: 10.5, color: TEXT2, lineHeight: 15, marginTop: 10, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F4F8F5' },
-
-  // video example
-  ntVideoBox: { height: 130, borderRadius: 12, backgroundColor: '#2A2A2A', alignItems: 'center', justifyContent: 'center', marginTop: 10, overflow: 'hidden' },
-  ntPlayCircle: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
-  ntDurationTag: { position: 'absolute', right: 8, bottom: 8, color: '#fff', fontSize: 10, fontWeight: '700', backgroundColor: 'rgba(0,0,0,0.55)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' },
-
-  // blog example
-  ntBlogCover: { height: 90, borderRadius: 12, backgroundColor: '#8A6D4A', marginTop: 10 },
-  ntBlogTitle: { fontSize: 12.5, fontWeight: '700', color: '#1C2E18', marginTop: 9, lineHeight: 17 },
-  ntBlogMeta: { fontSize: 10, color: TEXT2, marginTop: 3 },
-
-  // poll example
-  ntPollQuestion: { fontSize: 12, fontWeight: '700', color: '#1C2E18', marginTop: 10, marginBottom: 10 },
-  ntPollRow: { marginBottom: 9 },
-  ntPollLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  ntPollLabel: { fontSize: 11, color: '#1C2E18' },
-  ntPollPct: { fontSize: 11, color: TEXT2, fontWeight: '700' },
-  ntPollTrack: { height: 8, borderRadius: 4, backgroundColor: '#F4F8F5', overflow: 'hidden' },
-  ntPollFill: { height: 8, borderRadius: 4, backgroundColor: '#1A6B3A' },
-
-  // voice example
-  ntVoiceBox: { flexDirection: 'row', alignItems: 'center', height: 44, borderRadius: 10, backgroundColor: '#F4F8F5', marginTop: 10, paddingHorizontal: 10, gap: 2 },
-  ntVoiceBar: { width: 3, borderRadius: 2, backgroundColor: '#1A6B3A' },
-  ntVoiceDuration: { fontSize: 10, color: TEXT2, marginTop: 6, textAlign: 'right' },
-
-  // before/after example
-  ntBaRow: { flexDirection: 'row', height: 90, borderRadius: 12, overflow: 'hidden', marginTop: 10 },
-  ntBaHalf: { flex: 1 },
-  ntBaBefore: { backgroundColor: '#A89060' },
-  ntBaAfter: { backgroundColor: '#6B9E5A' },
-  ntBaTag: { position: 'absolute', top: 8, color: '#fff', fontSize: 8, fontWeight: '800', backgroundColor: 'rgba(0,0,0,0.5)', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 8, overflow: 'hidden' },
-  ntBaTagLeft: { left: 8 },
-  ntBaTagRight: { right: 8 },
-  ntBaDivider: { position: 'absolute', top: '50%', left: '50%', marginLeft: -14, marginTop: -14, width: 28, height: 28, borderRadius: 14, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
-
   // Voice recorder modal
-  voiceHiddenWebview: { width: 1, height: 1, opacity: 0 },
   voiceStateBox: { alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 22 },
   voiceStateText: { fontSize: 12.5, color: TEXT2, textAlign: 'center', lineHeight: 18, paddingHorizontal: 12 },
   voiceMicPulse: { width: 68, height: 68, borderRadius: 34, backgroundColor: '#C02828', alignItems: 'center', justifyContent: 'center' },
@@ -340,6 +319,11 @@ export const hubStyles = StyleSheet.create({
   voiceRetryBtn: { marginTop: 4, backgroundColor: '#1A6B3A', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8 },
   voiceRetryText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   voicePreviewPlayer: { width: '100%', marginTop: 4 },
+  voiceOrDivider: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 6, marginBottom: 2 },
+  voiceOrLine: { flex: 1, height: 1, backgroundColor: BORDER },
+  voiceOrText: { fontSize: 10, fontWeight: '800', color: TEXT2, letterSpacing: 0.5 },
+  voiceUploadBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1.5, borderColor: '#C7DBCE', borderStyle: 'dashed', borderRadius: 14, paddingVertical: 12, marginTop: 10 },
+  voiceUploadBtnText: { fontSize: 12.5, fontWeight: '700', color: '#1A6B3A' },
 
   // Comments modal
   commentsHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
