@@ -456,24 +456,26 @@ export default function AddFarmScreen() {
         setBlockchainBadge('verified');
       }
 
-      // Auto-fill the form from the extracted record (only empty fields).
+      // Auto-fill the form from the extracted record. The uploaded govt record is the
+      // authoritative source, so it overwrites rough estimates (e.g. from the satellite
+      // boundary draw) rather than only filling blank fields.
       if (result.status === 'verified' || result.status === 'mismatch') {
         const r = result.record;
         if (r.surveyNumber && !govtSurveyNumber.trim()) setGovtSurveyNumber(r.surveyNumber);
-        if (r.area && !acres) {
+        if (r.area) {
           const n = parseFloat(String(r.area).replace(/[^\d.]/g, ''));
           if (n) setAcres(String(n));
         }
-        if (r.village && !location) {
+        if (r.village) {
           setLocation([r.village, r.district, r.state].filter(Boolean).join(', '));
         }
-        if (r.state && INDIA[r.state] && !state) {
+        if (r.state && INDIA[r.state]) {
           setState(r.state);
-          if (r.district && INDIA[r.state][r.district] && !district) setDistrict(r.district);
+          if (r.district && INDIA[r.state][r.district]) setDistrict(r.district);
         }
       }
     },
-    [govtSurveyNumber, user?.name, state, acres, location, district],
+    [govtSurveyNumber, user?.name, state],
   );
 
   const pickDocument = useCallback(

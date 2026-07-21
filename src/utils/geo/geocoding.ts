@@ -98,3 +98,27 @@ export async function forwardGeocode(query: string): Promise<GeoPlace | null> {
     state: a.state || undefined,
   };
 }
+
+/** Typed place name → up to `limit` matches, for a search-results list. */
+export async function forwardGeocodeMultiple(query: string, limit = 5): Promise<GeoPlace[]> {
+  const url = `${BASE_URL}/search?q=${encodeURIComponent(query)}&api_key=${GEOCODE_API_KEY}&limit=${limit}`;
+  const res = await fetch(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`Forward geocode failed: ${res.status}`);
+  const json: GeocodeResult[] = await res.json();
+  if (!Array.isArray(json)) return [];
+  const places: GeoPlace[] = [];
+  for (const result of json) {
+    const lat = parseFloat(result.lat ?? '');
+    const lon = parseFloat(result.lon ?? '');
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const a = result.address || {};
+    places.push({
+      lat,
+      lon,
+      label: formatAddress(result),
+      district: a.state_district || a.district || a.county || undefined,
+      state: a.state || undefined,
+    });
+  }
+  return places;
+}
