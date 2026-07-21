@@ -130,6 +130,7 @@ export const leaseApi = {
         terms_summary: ag.terms_summary, farmer_id: ag.farmer_id, farmer_name: ag.farmer_name, owner_id: ag.owner_id, owner_name: ag.owner_name,
         start_date: startDate, status: 'active',
       });
+      await c.from('lands').update({ status: 'leased' }).eq('id', ag.land_id);
     }
   },
 

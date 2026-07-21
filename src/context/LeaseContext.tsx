@@ -19,6 +19,7 @@ import { ActiveLease, Agreement, LeaseRequest } from '../types/lease';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { leaseApi } from '../services/leaseApi';
 import { useAuth } from './AuthContext';
+import { useFarmListings } from './FarmListingsContext';
 
 export type { RequestStatus, LeaseRequest, Agreement, ActiveLease } from '../types/lease';
 
@@ -63,6 +64,7 @@ const SEED_OFFERS: LeaseOffer[] = isSupabaseConfigured
 
 export function LeaseProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
+  const { updateListing } = useFarmListings();
   const [offers, setOffers] = useState<LeaseOffer[]>(SEED_OFFERS);
   const [requests, setRequests] = useState<LeaseRequest[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
@@ -200,12 +202,13 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
                     ...al,
                   ],
             );
+            updateListing(signed.landId, { status: 'leased' });
           }
           return signed;
         }),
       );
     },
-    [refetch],
+    [refetch, updateListing],
   );
 
   const value = useMemo<LeaseContextType>(
