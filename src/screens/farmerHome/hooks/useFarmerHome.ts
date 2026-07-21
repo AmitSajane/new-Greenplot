@@ -132,15 +132,17 @@ export function useFarmerHome() {
 
   const featuredListings: FarmerListingCard[] = useMemo(
     () =>
-      getFeaturedListings().map(listing => ({
-        id: listing.id,
-        title: listing.title,
-        priceLabel: `${listing.pricePerYear}/yr`,
-        locationLabel: listing.locationLabel || `${listing.location}, ${listing.district}`,
-        acresLabel: listing.acresLabel || `${listing.acres} Acres`,
-        leaseType: listing.leaseType,
-        imageUri: listing.imageUrl,
-      })),
+      getFeaturedListings()
+        .slice(0, 4)
+        .map(listing => ({
+          id: listing.id,
+          title: listing.title,
+          priceLabel: `${listing.pricePerYear}/yr`,
+          locationLabel: listing.locationLabel || `${listing.location}, ${listing.district}`,
+          acresLabel: listing.acresLabel || `${listing.acres} Acres`,
+          leaseType: listing.leaseType,
+          imageUri: listing.imageUrl,
+        })),
     [getFeaturedListings],
   );
 

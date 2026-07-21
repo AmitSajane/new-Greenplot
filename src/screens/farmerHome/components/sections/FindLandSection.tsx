@@ -9,24 +9,8 @@ import {
 } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { farmerHomeStyles as s } from '../../styles/farmerHome.styles';
-import { NearbyChip } from '../../constants/farmerDashboardData';
 import { FarmerListingCard } from '../../hooks/useFarmerHome';
 import { SectionHeader } from './SectionHeader';
-
-interface ChipProps {
-  label: NearbyChip;
-  active: boolean;
-  onSelect: (chip: NearbyChip) => void;
-}
-
-const NearbyChipButton = React.memo(({ label, active, onSelect }: ChipProps) => {
-  const handlePress = useCallback(() => onSelect(label), [onSelect, label]);
-  return (
-    <TouchableOpacity style={[s.fchip, active && s.fchipActive]} activeOpacity={0.8} onPress={handlePress}>
-      <Text style={[s.fchipText, active && s.fchipTextActive]}>{label}</Text>
-    </TouchableOpacity>
-  );
-});
 
 interface CardProps {
   item: FarmerListingCard;
@@ -62,15 +46,12 @@ const ListingCard = React.memo(({ item, onPress }: CardProps) => {
 
 interface Props {
   listings: FarmerListingCard[];
-  chips: readonly NearbyChip[];
-  selected: NearbyChip;
-  onSelectChip: (chip: NearbyChip) => void;
   onListingPress: (id: string) => void;
   onSearch: () => void;
   onViewAll: () => void;
 }
 
-function FindLandSectionBase({ listings, chips, selected, onSelectChip, onListingPress, onSearch, onViewAll }: Props) {
+function FindLandSectionBase({ listings, onListingPress, onSearch, onViewAll }: Props) {
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<FarmerListingCard>) => <ListingCard item={item} onPress={onListingPress} />,
     [onListingPress],
@@ -84,11 +65,6 @@ function FindLandSectionBase({ listings, chips, selected, onSelectChip, onListin
         <Ionicons name="search" size={16} color="#9EB8A8" />
         <Text style={s.searchText}>Search land by village, crop, price…</Text>
       </TouchableOpacity>
-      <View style={s.fchips}>
-        {chips.map(chip => (
-          <NearbyChipButton key={chip} label={chip} active={chip === selected} onSelect={onSelectChip} />
-        ))}
-      </View>
       <FlatList
         horizontal
         data={listings}

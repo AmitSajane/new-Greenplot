@@ -72,9 +72,6 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
         {/* <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} /> */}
         <FindLandSection
           listings={vm.featuredListings}
-          chips={vm.nearbyChips}
-          selected={vm.selectedNearby}
-          onSelectChip={vm.setSelectedNearby}
           onListingPress={vm.onListingPress}
           onSearch={onAllLands}
           onViewAll={onAllLands}
