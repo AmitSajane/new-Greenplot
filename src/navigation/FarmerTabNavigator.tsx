@@ -29,7 +29,7 @@ const tabIconConfig: Record<
   MyCrops: { active: 'leaf', inactive: 'leaf-outline', label: 'My Crops' },
   Market: { active: 'bar-chart', inactive: 'bar-chart-outline', label: 'Market' },
   Hub: { active: 'grid', inactive: 'grid-outline', label: 'Hub' },
-  Settings: { active: 'settings', inactive: 'settings-outline', label: 'Settings' },
+  Settings: { active: 'settings', inactive: 'settings-outline', label: 'Settings' }
 };
 
 export default function FarmerTabNavigator() {

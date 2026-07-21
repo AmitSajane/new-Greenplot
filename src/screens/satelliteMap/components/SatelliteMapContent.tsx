@@ -6,6 +6,7 @@ import { SatelliteMapViewModel } from '../hooks/useSatelliteMapScreen';
 import { satelliteMapStyles as styles } from '../styles/satelliteMap.styles';
 import { SatelliteMapHeader } from './SatelliteMapHeader';
 import { SatelliteMapCanvas } from './SatelliteMapCanvas';
+import { SatelliteMapSearchBar } from './SatelliteMapSearchBar';
 import { SatelliteLayerPanel } from './SatelliteLayerPanel';
 import { SatelliteDrawControls } from './SatelliteDrawControls';
 
@@ -24,12 +25,33 @@ export const SatelliteMapContent: React.FC<SatelliteMapViewModel> = (vm) => (
         userLocation={vm.userLocation}
         plotGeoJSON={vm.plotGeoJSON}
         drawnPlotGeoJSON={vm.drawnPlotGeoJSON}
+        drawnPoints={vm.drawnPoints}
         ndviEnabled={vm.ndviEnabled}
         ndviTileUrl={vm.ndviTileUrl}
         ndviOpacity={vm.ndviOpacity}
         govtDataEnabled={vm.govtDataEnabled}
         onMapPress={vm.onMapPress}
+        onDragPoint={vm.onDragPoint}
       />
+      {vm.isSearchBarVisible ? (
+        <SatelliteMapSearchBar
+          query={vm.searchQuery}
+          onChangeQuery={vm.onSearchChange}
+          onSubmit={vm.onSearchSubmit}
+          onClear={vm.onClearSearch}
+          isSearching={vm.isSearching}
+          results={vm.searchResults}
+          showResults={vm.showSearchResults}
+          onSelectResult={vm.onSelectSearchResult}
+        />
+      ) : (
+        <MapFloatingButton
+          icon="search"
+          onPress={vm.onReopenSearch}
+          position="top-left"
+          variant="secondary"
+        />
+      )}
       {vm.showLayerPanel && (
         <SatelliteLayerPanel
           ndviEnabled={vm.ndviEnabled}
@@ -73,14 +95,16 @@ export const SatelliteMapContent: React.FC<SatelliteMapViewModel> = (vm) => (
           style={{ bottom: 70 }}
         />
       )}
-      {vm.drawMode && (
-        <SatelliteDrawControls
-          pointCount={vm.drawnPoints.length}
-          onCancel={vm.onCancelDraw}
-          onSave={vm.onSavePlot}
-        />
-      )}
     </View>
-    <View style={styles.timelapseContainer} />
+    {vm.drawMode ? (
+      <SatelliteDrawControls
+        pointCount={vm.drawnPoints.length}
+        onUndoLastPoint={vm.onUndoLastPoint}
+        onCancel={vm.onCancelDraw}
+        onSave={vm.onSavePlot}
+      />
+    ) : (
+      <View style={styles.timelapseContainer} />
+    )}
   </SafeAreaView>
 );

@@ -5,10 +5,10 @@ import { initMapbox } from '../../../config/mapbox';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/SatelliteMapContext';
-import { calculatePolygonAreaAcres, LngLat } from '../../../utils/geo';
+import { calculatePolygonAreaAcres, formatAcresGuntas, LngLat } from '../../../utils/geo';
 import { calculatePolygonCentroid, estimateZoomForPolygon } from '../../../utils/geo/polygonCentroid';
 import { getCurrentCoords } from '../../../utils/geo/location';
-import { reverseGeocodeDetailed } from '../../../utils/geo/geocoding';
+import { forwardGeocodeMultiple, GeoPlace, reverseGeocodeDetailed } from '../../../utils/geo/geocoding';
 import { getNDVITileUrl } from '../../../services/satelliteMapService';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 
@@ -52,6 +52,11 @@ export function useSatelliteMapScreen() {
   const [drawnPoints, setDrawnPoints] = useState<LngLat[]>([]);
   const [userLocation, setUserLocation] = useState<LngLat | null>(null);
   const [zoomLevel, setZoomLevel] = useState(14);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<GeoPlace[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [isSearchBarVisible, setIsSearchBarVisible] = useState(true);
 
   const isMountedRef = React.useRef(true);
   useEffect(() => {
@@ -77,6 +82,52 @@ export function useSatelliteMapScreen() {
       setMapCenter(fallback);
     }
   }, [setMapCenter]);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearchQuery(text);
+    if (!text.trim()) {
+      setSearchResults([]);
+      setShowSearchResults(false);
+    }
+  }, []);
+
+  const handleSearchSubmit = useCallback(async () => {
+    const trimmed = searchQuery.trim();
+    if (!trimmed) return;
+    setIsSearching(true);
+    setShowSearchResults(true);
+    try {
+      const places = await forwardGeocodeMultiple(trimmed);
+      if (!isMountedRef.current) return;
+      setSearchResults(places);
+    } catch {
+      if (!isMountedRef.current) return;
+      setSearchResults([]);
+    } finally {
+      if (isMountedRef.current) setIsSearching(false);
+    }
+  }, [searchQuery]);
+
+  const handleSelectSearchResult = useCallback(
+    (place: GeoPlace) => {
+      setMapCenter([place.lon, place.lat]);
+      setZoomLevel(16); // street-level, ready to trace the boundary
+      setSearchQuery(place.label);
+      setShowSearchResults(false);
+      setIsSearchBarVisible(false); // out of the way once the village is picked
+    },
+    [setMapCenter]
+  );
+
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    setSearchResults([]);
+    setShowSearchResults(false);
+  }, []);
+
+  const handleReopenSearch = useCallback(() => {
+    setIsSearchBarVisible(true);
+  }, []);
 
   useEffect(() => {
     const initialize = async () => {
@@ -137,6 +188,10 @@ export function useSatelliteMapScreen() {
     [drawMode]
   );
 
+  const handleUndoLastPoint = useCallback(() => {
+    setDrawnPoints((prev) => prev.slice(0, -1));
+  }, []);
+
   const handleSavePlot = useCallback(async () => {
     if (drawnPoints.length < 3) {
       Alert.alert('Error', 'Please draw at least 3 points to create a polygon');
@@ -170,7 +225,7 @@ export function useSatelliteMapScreen() {
       if (!isMountedRef.current) return;
       Alert.alert(
         'Success',
-        `Farm boundaries saved!\n\nApproximate area: ${areaAcres.toFixed(2)} acres`,
+        `Farm boundaries saved!\n\nApproximate area: ${formatAcresGuntas(areaAcres)}`,
         [
           {
             text: 'Create Farm',
@@ -192,7 +247,7 @@ export function useSatelliteMapScreen() {
     } else {
       Alert.alert(
         'Success',
-        `Farm boundaries saved successfully!\n\nApproximate area: ${areaAcres.toFixed(2)} acres`
+        `Farm boundaries saved successfully!\n\nApproximate area: ${formatAcresGuntas(areaAcres)}`
       );
     }
     setDrawMode(false);
@@ -214,6 +269,10 @@ export function useSatelliteMapScreen() {
     };
   }, [drawnPoints]);
 
+  const handleDragPoint = useCallback((index: number, coordinate: LngLat) => {
+    setDrawnPoints((prev) => prev.map((p, i) => (i === index ? coordinate : p)));
+  }, []);
+
   return {
     isLoading,
     showLayerPanel,
@@ -224,6 +283,11 @@ export function useSatelliteMapScreen() {
     mapCenter,
     plotGeoJSON,
     drawnPlotGeoJSON,
+    searchQuery,
+    searchResults,
+    isSearching,
+    showSearchResults,
+    isSearchBarVisible,
     ndviEnabled,
     soilMoistureEnabled,
     weatherEnabled,
@@ -238,6 +302,8 @@ export function useSatelliteMapScreen() {
     onBack: () => navigation.goBack(),
     onToggleLayerPanel: () => setShowLayerPanel((v) => !v),
     onMapPress: handleMapPress,
+    onDragPoint: handleDragPoint,
+    onUndoLastPoint: handleUndoLastPoint,
     onSavePlot: handleSavePlot,
     onCancelDraw: () => {
       setDrawMode(false);
@@ -245,6 +311,11 @@ export function useSatelliteMapScreen() {
     },
     onStartDraw: () => setDrawMode(true),
     onCenterUser: fetchUserLocation,
+    onSearchChange: handleSearchChange,
+    onSearchSubmit: handleSearchSubmit,
+    onSelectSearchResult: handleSelectSearchResult,
+    onClearSearch: handleClearSearch,
+    onReopenSearch: handleReopenSearch,
     onZoomIn: () => setZoomLevel((p) => Math.min(p + 1, 20)),
     onZoomOut: () => setZoomLevel((p) => Math.max(p - 1, 3)),
   };

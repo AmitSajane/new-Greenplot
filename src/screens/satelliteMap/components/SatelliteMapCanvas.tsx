@@ -14,11 +14,13 @@ export interface SatelliteMapCanvasProps {
   userLocation: LngLat | null;
   plotGeoJSON: object | null;
   drawnPlotGeoJSON: object | null;
+  drawnPoints: LngLat[];
   ndviEnabled: boolean;
   ndviTileUrl: string;
   ndviOpacity: number;
   govtDataEnabled: boolean;
   onMapPress: (feature: object) => void;
+  onDragPoint: (index: number, coordinate: LngLat) => void;
 }
 
 export const SatelliteMapCanvas: React.FC<SatelliteMapCanvasProps> = ({
@@ -28,11 +30,13 @@ export const SatelliteMapCanvas: React.FC<SatelliteMapCanvasProps> = ({
   userLocation,
   plotGeoJSON,
   drawnPlotGeoJSON,
+  drawnPoints,
   ndviEnabled,
   ndviTileUrl,
   ndviOpacity,
   govtDataEnabled,
   onMapPress,
+  onDragPoint,
 }) => {
   if (isLoading) {
     return (
@@ -106,6 +110,20 @@ export const SatelliteMapCanvas: React.FC<SatelliteMapCanvasProps> = ({
           />
         </Mapbox.ShapeSource>
       )}
+      {drawnPoints.map((point, index) => (
+        <Mapbox.PointAnnotation
+          key={`drawPoint-${index}`}
+          id={`drawPoint-${index}`}
+          coordinate={point}
+          draggable
+          onDragEnd={(e) => {
+            const [lon, lat] = e.geometry.coordinates;
+            onDragPoint(index, [lon, lat]);
+          }}
+        >
+          <View style={styles.drawPointMarker} />
+        </Mapbox.PointAnnotation>
+      ))}
       {ndviEnabled && ndviTileUrl && (
         <Mapbox.RasterSource id="ndviSource" url={ndviTileUrl}>
           <Mapbox.RasterLayer id="ndviLayer" style={{ rasterOpacity: ndviOpacity }} />
