@@ -22,7 +22,8 @@ type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 
 export default function AllAvailableLandsScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { getFeaturedListings } = useFarmListings();
+  const { listings } = useFarmListings();
+  const [tab, setTab] = useState<'available' | 'leased'>('available');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'nearby' | 'low-price'>('all');
   const [soilFilter, setSoilFilter] = useState('All');
@@ -30,7 +31,9 @@ export default function AllAvailableLandsScreen() {
   const [blockchainOnly, setBlockchainOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  const allListings = getFeaturedListings();
+  const availableListings = useMemo(() => listings.filter((l) => l.status === 'active'), [listings]);
+  const leasedListings = useMemo(() => listings.filter((l) => l.status === 'leased'), [listings]);
+  const allListings = tab === 'available' ? availableListings : leasedListings;
 
   const filteredListings = useMemo(() => {
     let filtered = allListings;
@@ -45,6 +48,7 @@ export default function AllAvailableLandsScreen() {
           listing.soilType.toLowerCase().includes(query)
       );
     }
+    if (tab === 'leased') return filtered;
     if (soilFilter !== 'All') {
       filtered = filtered.filter((l) => l.soilType === soilFilter);
     }
@@ -59,28 +63,40 @@ export default function AllAvailableLandsScreen() {
       });
     }
     return filtered;
-  }, [allListings, searchQuery, selectedFilter, soilFilter, irrigationFilter, blockchainOnly]);
+  }, [allListings, tab, searchQuery, selectedFilter, soilFilter, irrigationFilter, blockchainOnly]);
 
   const handleListingPress = (farmId: string) => {
     navigation.navigate('FarmDetail', { farmId });
   };
 
-  const renderListingCard = ({ item }: { item: typeof allListings[0] }) => (
+  const renderListingCard = ({ item }: { item: typeof allListings[0] }) => {
+    const isLeased = item.status === 'leased';
+    return (
     <TouchableOpacity
       style={[styles.listingCard, shadow.card]}
       onPress={() => handleListingPress(item.id)}
       activeOpacity={0.8}
     >
-      <Image source={{ uri: item.imageUrl }} style={styles.listingImage} />
+      <Image
+        source={{ uri: item.imageUrl }}
+        style={[styles.listingImage, isLeased && styles.listingImageLeased]}
+      />
       <View style={styles.listingContent}>
         <View style={styles.listingHeader}>
           <View style={styles.acresBadge}>
             <Text style={styles.acresText}>{item.acresLabel || `${item.acres} Acres`}</Text>
           </View>
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceText}>{item.pricePerYear}</Text>
-            <Text style={styles.priceLabel}>/year</Text>
-          </View>
+          {isLeased ? (
+            <View style={styles.leasedBadge}>
+              <Ionicons name="checkmark-circle" size={14} color={colors.primaryDark} />
+              <Text style={styles.leasedBadgeText}>Leased</Text>
+            </View>
+          ) : (
+            <View style={styles.priceBadge}>
+              <Text style={styles.priceText}>{item.pricePerYear}</Text>
+              <Text style={styles.priceLabel}>/year</Text>
+            </View>
+          )}
         </View>
         <View style={styles.titleRow}>
           <Text style={styles.listingTitle}>{item.title}</Text>
@@ -112,7 +128,8 @@ export default function AllAvailableLandsScreen() {
         </View>
       </View>
     </TouchableOpacity>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -123,6 +140,26 @@ export default function AllAvailableLandsScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>All Available Lands</Text>
         <View style={styles.backButton} />
+      </View>
+
+      {/* Available / Leased toggle */}
+      <View style={styles.segment}>
+        <TouchableOpacity
+          style={[styles.segmentBtn, tab === 'available' && styles.segmentBtnActive]}
+          onPress={() => setTab('available')}
+        >
+          <Text style={[styles.segmentText, tab === 'available' && styles.segmentTextActive]}>
+            Available ({availableListings.length})
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.segmentBtn, tab === 'leased' && styles.segmentBtnActive]}
+          onPress={() => setTab('leased')}
+        >
+          <Text style={[styles.segmentText, tab === 'leased' && styles.segmentTextActive]}>
+            Leased ({leasedListings.length})
+          </Text>
+        </TouchableOpacity>
       </View>
 
       {/* Search Bar */}
@@ -144,72 +181,82 @@ export default function AllAvailableLandsScreen() {
         </View>
       </View>
 
-      {/* Land filters panel (soil, irrigation, blockchain) */}
-      <TouchableOpacity
-        style={styles.filterToggle}
-        onPress={() => setShowFilters(!showFilters)}
-      >
-        <Ionicons name="options-outline" size={20} color={colors.primary} />
-        <Text style={styles.filterToggleText}>Filters (soil, irrigation, blockchain)</Text>
-        <Ionicons name={showFilters ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
-      </TouchableOpacity>
-      {showFilters && (
-        <LandFiltersPanel
-          soilFilter={soilFilter}
-          irrigationFilter={irrigationFilter}
-          blockchainOnly={blockchainOnly}
-          onSoilChange={setSoilFilter}
-          onIrrigationChange={setIrrigationFilter}
-          onBlockchainToggle={setBlockchainOnly}
-          onClear={() => {
-            setSoilFilter('All');
-            setIrrigationFilter('All');
-            setBlockchainOnly(false);
-          }}
-        />
-      )}
+      {tab === 'available' ? (
+        <>
+          {/* Land filters panel (soil, irrigation, blockchain) */}
+          <TouchableOpacity
+            style={styles.filterToggle}
+            onPress={() => setShowFilters(!showFilters)}
+          >
+            <Ionicons name="options-outline" size={20} color={colors.primary} />
+            <Text style={styles.filterToggleText}>Filters (soil, irrigation, blockchain)</Text>
+            <Ionicons name={showFilters ? 'chevron-up' : 'chevron-down'} size={20} color={colors.textMuted} />
+          </TouchableOpacity>
+          {showFilters && (
+            <LandFiltersPanel
+              soilFilter={soilFilter}
+              irrigationFilter={irrigationFilter}
+              blockchainOnly={blockchainOnly}
+              onSoilChange={setSoilFilter}
+              onIrrigationChange={setIrrigationFilter}
+              onBlockchainToggle={setBlockchainOnly}
+              onClear={() => {
+                setSoilFilter('All');
+                setIrrigationFilter('All');
+                setBlockchainOnly(false);
+              }}
+            />
+          )}
 
-      {/* Filters */}
-      <View style={styles.filtersContainer}>
-        <TouchableOpacity
-          style={[styles.filterChip, selectedFilter === 'all' && styles.filterChipActive]}
-          onPress={() => setSelectedFilter('all')}
-        >
-          <Text
-            style={[styles.filterText, selectedFilter === 'all' && styles.filterTextActive]}
-          >
-            All ({allListings.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, selectedFilter === 'nearby' && styles.filterChipActive]}
-          onPress={() => setSelectedFilter('nearby')}
-        >
-          <Text
-            style={[styles.filterText, selectedFilter === 'nearby' && styles.filterTextActive]}
-          >
-            Nearby
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.filterChip, selectedFilter === 'low-price' && styles.filterChipActive]}
-          onPress={() => setSelectedFilter('low-price')}
-        >
-          <Text
-            style={[styles.filterText, selectedFilter === 'low-price' && styles.filterTextActive]}
-          >
-            Low Price
-          </Text>
-        </TouchableOpacity>
-      </View>
+          {/* Filters */}
+          <View style={styles.filtersContainer}>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFilter === 'all' && styles.filterChipActive]}
+              onPress={() => setSelectedFilter('all')}
+            >
+              <Text
+                style={[styles.filterText, selectedFilter === 'all' && styles.filterTextActive]}
+              >
+                All ({allListings.length})
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFilter === 'nearby' && styles.filterChipActive]}
+              onPress={() => setSelectedFilter('nearby')}
+            >
+              <Text
+                style={[styles.filterText, selectedFilter === 'nearby' && styles.filterTextActive]}
+              >
+                Nearby
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, selectedFilter === 'low-price' && styles.filterChipActive]}
+              onPress={() => setSelectedFilter('low-price')}
+            >
+              <Text
+                style={[styles.filterText, selectedFilter === 'low-price' && styles.filterTextActive]}
+              >
+                Low Price
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </>
+      ) : (
+        <View style={styles.readonlyNote}>
+          <Text style={styles.readonlyNoteText}>Read-only — these lands are no longer accepting applications</Text>
+        </View>
+      )}
 
       {/* Listings */}
       {filteredListings.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={64} color={colors.textMuted} />
-          <Text style={styles.emptyStateTitle}>No lands found</Text>
+          <Text style={styles.emptyStateTitle}>
+            {tab === 'leased' ? 'No leased lands yet' : 'No lands found'}
+          </Text>
           <Text style={styles.emptyStateText}>
-            Try adjusting your search or filters
+            {tab === 'leased' ? 'Lands will appear here once fully leased' : 'Try adjusting your search or filters'}
           </Text>
         </View>
       ) : (
@@ -261,6 +308,49 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   filterToggleText: { flex: 1, fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  segment: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    padding: spacing.xs,
+    gap: spacing.xs,
+  },
+  segmentBtn: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+  },
+  segmentBtnActive: {
+    backgroundColor: colors.primary,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  segmentTextActive: {
+    color: colors.surface,
+  },
+  readonlyNote: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: colors.surface,
+  },
+  readonlyNoteText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    textAlign: 'center',
+  },
   searchContainer: {
     padding: spacing.lg,
     backgroundColor: colors.surface,
@@ -322,6 +412,9 @@ const styles = StyleSheet.create({
     height: 180,
     backgroundColor: colors.border,
   },
+  listingImageLeased: {
+    opacity: 0.6,
+  },
   listingContent: {
     padding: spacing.lg,
   },
@@ -353,6 +446,22 @@ const styles = StyleSheet.create({
   priceLabel: {
     fontSize: 11,
     color: colors.textMuted,
+  },
+  leasedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.softGreen,
+    borderWidth: 1,
+    borderColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+  },
+  leasedBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.primaryDark,
   },
   titleRow: {
     flexDirection: 'row',

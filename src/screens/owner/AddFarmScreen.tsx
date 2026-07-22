@@ -122,6 +122,7 @@ export default function AddFarmScreen() {
   const [verifying, setVerifying] = useState(false);
   const [verifyResult, setVerifyResult] = useState<VerificationResult | null>(null);
   const [fraudBadge, setFraudBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
+  const [submitting, setSubmitting] = useState(false);
   const [blockchainBadge, setBlockchainBadge] = useState<'pending' | 'verified' | 'failed'>('pending');
 
   // Auto-fill location from the satellite-map boundary (reverse-geocoded centroid).
@@ -245,6 +246,7 @@ export default function AddFarmScreen() {
   }, []);
 
   const handleSubmit = async () => {
+    if (submitting) return;
     const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
     const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
     if (!title || !acres || !state || !district || !soilType || !tenure || !pricePerYear || !leaseType) {
@@ -301,12 +303,15 @@ export default function AddFarmScreen() {
     }
 
     let newLandId: string;
+    setSubmitting(true);
     try {
       newLandId = await addListing(listingData);
     } catch (e) {
+      setSubmitting(false);
       Alert.alert('Could not publish', 'Please check your connection and try again.');
       return;
     }
+    setSubmitting(false);
 
     Alert.alert('Land published ✓', 'Next, add lease offers so farmers can compare and apply.', [
       { text: 'Later', style: 'cancel', onPress: () => navigation.goBack() },
@@ -900,9 +905,20 @@ export default function AddFarmScreen() {
           </View>
 
           {/* Submit Button */}
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
-            <Ionicons name="add-circle" size={22} color={colors.textPrimary} />
-            <Text style={styles.submitButtonText}>List My Farm</Text>
+          <TouchableOpacity
+            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            activeOpacity={0.8}
+            disabled={submitting}
+          >
+            {submitting ? (
+              <ActivityIndicator color={colors.textPrimary} />
+            ) : (
+              <>
+                <Ionicons name="add-circle" size={22} color={colors.textPrimary} />
+                <Text style={styles.submitButtonText}>Submit</Text>
+              </>
+            )}
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -1097,6 +1113,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.lg,
     ...shadow.card,
+  },
+  submitButtonDisabled: {
+    opacity: 0.7,
   },
   submitButtonText: {
     fontSize: 16,

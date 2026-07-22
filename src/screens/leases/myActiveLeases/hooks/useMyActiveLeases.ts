@@ -3,7 +3,6 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../../navigation/FarmerHomeStack';
 import { MyLeasesStackParamList } from '../../../../navigation/MyLeasesStack';
 import { LeaseListItem, LeaseStatus } from '../../../../components/leases/LeaseCard';
-import { MOCK_ACTIVE_LEASES } from '../constants/mockLeases';
 import { useLeases } from '../../../../context/LeaseContext';
 import { LEASE_TYPE_MAP } from '../../../../constants/leaseTypes';
 
@@ -67,11 +66,9 @@ export function useMyActiveLeases({ navigation }: Props) {
     return [...toSign, ...active, ...pending];
   }, [activeLeases, agreements, requests]);
 
-  const source = useMemo(() => [...realItems, ...MOCK_ACTIVE_LEASES], [realItems]);
-
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return source.filter((l) => {
+    return realItems.filter((l) => {
       if (filter !== 'All' && l.status !== filter) return false;
       if (!q) return true;
       return (
@@ -80,7 +77,7 @@ export function useMyActiveLeases({ navigation }: Props) {
         l.locationLabel.toLowerCase().includes(q)
       );
     });
-  }, [filter, query, source]);
+  }, [filter, query, realItems]);
 
   const filterKeys: LeaseFilterKey[] = ['All', 'Active', 'Pending', 'Expired'];
 
