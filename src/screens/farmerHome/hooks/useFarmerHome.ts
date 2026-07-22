@@ -92,7 +92,7 @@ export function useFarmerHome() {
         case 'hub':
           return goTab('Hub');
         case 'settings':
-          return goTab('Settings');
+          return navigation.navigate('Settings');
         default:
           return undefined;
       }

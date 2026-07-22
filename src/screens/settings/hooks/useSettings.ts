@@ -29,10 +29,13 @@ export function useSettings() {
     [settingsNav]
   );
 
+  const onBack = useCallback(() => settingsNav.getParent()?.goBack(), [settingsNav]);
+
   return {
     user,
     onLogout: handleLogout,
     onLanguagePress,
+    onBack,
   };
 }
 

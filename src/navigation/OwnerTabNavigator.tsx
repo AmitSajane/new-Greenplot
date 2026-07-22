@@ -6,7 +6,6 @@ import OwnerHomeStack from './OwnerHomeStack';
 import MyPropertiesStack from './MyPropertiesStack';
 import TenantsScreen from '../screens/owner/TenantsScreen';
 import HubStack from './HubStack';
-import SettingsStack from './SettingsStack';
 import { MarketStack } from '../modules/market';
 
 export type OwnerTabParamList = {
@@ -15,7 +14,6 @@ export type OwnerTabParamList = {
   Tenants: undefined;
   Market: undefined;
   Hub: undefined;
-  Settings: undefined;
 };
 
 const Tab = createBottomTabNavigator<OwnerTabParamList>();
@@ -29,7 +27,6 @@ const tabIconConfig: Record<
   Tenants: { active: 'people', inactive: 'people-outline', label: 'Tenants' },
   Market: { active: 'bar-chart', inactive: 'bar-chart-outline', label: 'Market' },
   Hub: { active: 'grid', inactive: 'grid-outline', label: 'Hub' },
-  Settings: { active: 'settings', inactive: 'settings-outline', label: 'Settings' },
 };
 
 export default function OwnerTabNavigator() {
@@ -54,7 +51,6 @@ export default function OwnerTabNavigator() {
       <Tab.Screen name="Tenants" component={TenantsScreen} />
       <Tab.Screen name="Market" component={MarketStack} />
       <Tab.Screen name="Hub" component={HubStack} />
-      <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>
   );
 }

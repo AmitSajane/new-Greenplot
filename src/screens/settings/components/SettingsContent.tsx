@@ -14,9 +14,12 @@ const PREFERENCE_ITEMS = [
   { icon: 'description', label: 'Consent logs' },
 ] as const;
 
-export const SettingsContent: React.FC<SettingsViewModel> = ({ user, onLogout, onLanguagePress }) => (
+export const SettingsContent: React.FC<SettingsViewModel> = ({ user, onLogout, onLanguagePress, onBack }) => (
   <SafeAreaView style={styles.safeArea}>
     <View style={styles.header}>
+      <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Icon name="arrow-back" size={24} color={colors.textPrimary} />
+      </TouchableOpacity>
       <Text style={styles.headerTitle}>Settings</Text>
     </View>
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
