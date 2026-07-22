@@ -24,6 +24,7 @@ import SoilAdvisoryScreen from '../screens/SoilAdvisoryScreen';
 import SchemesNewsListScreen from '../screens/farmerHome/SchemesNewsListScreen';
 import type { NewsItem } from '../screens/farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../screens/farmerHome/constants/schemeCatalog';
+import SettingsStack from './SettingsStack';
 
 export type FarmerHomeStackParamList = {
   FarmerHome: undefined;
@@ -51,6 +52,7 @@ export type FarmerHomeStackParamList = {
   SchemesNewsList:
     | { items?: readonly NewsItem[]; initialTab?: 'schemes' | 'news'; initialCategory?: SchemeCategory | 'all' }
     | undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<FarmerHomeStackParamList>();
@@ -154,6 +156,7 @@ export default function FarmerHomeStack() {
         component={SchemesNewsListScreen}
         options={{ title: 'Schemes & Subsidies' }}
       />
+      <Stack.Screen name="Settings" component={SettingsStack} />
     </Stack.Navigator>
   );
 }
