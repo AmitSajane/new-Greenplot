@@ -1,25 +1,44 @@
 import React from 'react';
-import { ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
-import { useFarmListings } from '../../context/FarmListingsContext';
+import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
 
 export default function MyPropertiesScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { ownerListings } = useFarmListings();
+  const { ownerListings, deleteListing } = useFarmListings();
   const { user } = useAuth();
 
   // Filter listings for current owner (in real app, filter by user.id)
   const myListings = ownerListings.filter(
     (listing) => listing.ownerId === user?.id || listing.status === 'active'
   );
+
+  const confirmDelete = (property: FarmListing) => {
+    Alert.alert(
+      `Delete "${property.title}"?`,
+      'This will remove the listing permanently. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: () => deleteListing(property.id) },
+      ],
+    );
+  };
+
+  const handleEditPress = (property: FarmListing) => {
+    Alert.alert(property.title, undefined, [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: () => confirmDelete(property) },
+      { text: 'Edit', onPress: () => navigation.navigate('AddFarm', { editListingId: property.id }) },
+    ]);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -55,28 +74,39 @@ export default function MyPropertiesScreen() {
                   {property.location}, {property.district}, {property.state}
                 </Text>
               </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  property.status === 'leased'
-                    ? styles.statusLeased
-                    : property.status === 'active'
-                    ? styles.statusAvailable
-                    : styles.statusInactive,
-                ]}
-              >
-                <Text
+              <View style={styles.badgeRow}>
+                <View
                   style={[
-                    styles.statusText,
+                    styles.statusBadge,
                     property.status === 'leased'
-                      ? styles.statusTextLeased
+                      ? styles.statusLeased
                       : property.status === 'active'
-                      ? styles.statusTextAvailable
-                      : styles.statusTextInactive,
+                      ? styles.statusAvailable
+                      : styles.statusInactive,
                   ]}
                 >
-                  {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
-                </Text>
+                  <Text
+                    style={[
+                      styles.statusText,
+                      property.status === 'leased'
+                        ? styles.statusTextLeased
+                        : property.status === 'active'
+                        ? styles.statusTextAvailable
+                        : styles.statusTextInactive,
+                    ]}
+                  >
+                    {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+                  </Text>
+                </View>
+                {property.status !== 'leased' && (
+                  <TouchableOpacity
+                    style={styles.editButton}
+                    onPress={() => handleEditPress(property)}
+                    hitSlop={8}
+                  >
+                    <Icon name="edit" size={16} color={colors.primary} />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
@@ -161,6 +191,19 @@ const styles = StyleSheet.create({
   location: {
     fontSize: 14,
     color: colors.textSecondary,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  editButton: {
+    width: 28,
+    height: 28,
+    borderRadius: radius.pill,
+    backgroundColor: colors.softGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statusBadge: {
     paddingHorizontal: spacing.md,

@@ -60,10 +60,10 @@ export default function AddLeaseOfferScreen() {
 
   const publish = useCallback(() => {
     addOffer({ landId, typeId, terms, tenure, availableFrom: availableFrom || 'Immediately' });
-    Alert.alert('Offer added ✓', `${def.name} offer published for this land.`);
-    setTerms(defaultsFor(typeId));
-    setAvailableFrom('');
-  }, [addOffer, landId, typeId, terms, tenure, availableFrom, def.name]);
+    Alert.alert('Offer added ✓', `${def.name} offer published for this land.`, [
+      { text: 'OK', onPress: () => navigation.popToTop() },
+    ]);
+  }, [addOffer, landId, typeId, terms, tenure, availableFrom, def.name, navigation]);
 
   const renderField = (f: LeaseField) => {
     const val = terms[f.key];
@@ -248,10 +248,6 @@ export default function AddLeaseOfferScreen() {
           <Ionicons name="add-circle" size={18} color="#fff" />
           <Text style={styles.publishText}>Publish this offer</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity style={styles.doneBtn} onPress={() => navigation.popToTop()} activeOpacity={0.85}>
-          <Text style={styles.doneText}>Done — {existing.length} offer{existing.length === 1 ? '' : 's'} live</Text>
-        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
@@ -300,6 +296,4 @@ const styles = StyleSheet.create({
   previewBold: { fontWeight: '800', color: G.g1 },
   publishBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: G.g2, borderRadius: 12, paddingVertical: 14, marginTop: 14 },
   publishText: { color: '#fff', fontSize: 14, fontWeight: '800' },
-  doneBtn: { alignItems: 'center', paddingVertical: 14, marginTop: 4 },
-  doneText: { color: G.g3, fontSize: 13, fontWeight: '700' },
 });

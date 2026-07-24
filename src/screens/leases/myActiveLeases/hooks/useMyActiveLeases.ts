@@ -4,6 +4,7 @@ import { FarmerHomeStackParamList } from '../../../../navigation/FarmerHomeStack
 import { MyLeasesStackParamList } from '../../../../navigation/MyLeasesStack';
 import { LeaseListItem, LeaseStatus } from '../../../../components/leases/LeaseCard';
 import { useLeases } from '../../../../context/LeaseContext';
+import { useAuth } from '../../../../context/AuthContext';
 import { LEASE_TYPE_MAP } from '../../../../constants/leaseTypes';
 
 const DEFAULT_LEASE_IMAGE = require('../../../../assets/images/farm1.png');
@@ -18,17 +19,24 @@ export type LeaseFilterKey = 'All' | LeaseStatus;
 export function useMyActiveLeases({ navigation }: Props) {
   const [filter, setFilter] = useState<LeaseFilterKey>('All');
   const [query, setQuery] = useState('');
-  // Single-user demo: surface all active leases + agreements awaiting signature + pending requests.
   const { activeLeases, requests, agreements } = useLeases();
+  const { user } = useAuth();
+  const farmerId = user?.id || 'farmer-demo';
+
+  // Only this farmer's own active leases, agreements, and requests — everyone
+  // else's data comes back from the same fetch and must be filtered out here.
+  const myActiveLeases = useMemo(() => activeLeases.filter((l) => l.farmerId === farmerId), [activeLeases, farmerId]);
+  const myAgreements = useMemo(() => agreements.filter((a) => a.farmerId === farmerId), [agreements, farmerId]);
+  const myRequests = useMemo(() => requests.filter((r) => r.farmerId === farmerId), [requests, farmerId]);
 
   // Agreement ids that the farmer still needs to sign → tapping these jumps to the sign screen.
   const awaitingSignIds = useMemo(
-    () => new Set(agreements.filter((a) => a.status === 'awaiting' && !a.farmerSigned).map((a) => a.id)),
-    [agreements],
+    () => new Set(myAgreements.filter((a) => a.status === 'awaiting' && !a.farmerSigned).map((a) => a.id)),
+    [myAgreements],
   );
 
   const realItems: LeaseListItem[] = useMemo(() => {
-    const active: LeaseListItem[] = activeLeases.map((l) => ({
+    const active: LeaseListItem[] = myActiveLeases.map((l) => ({
       id: l.id,
       title: l.landTitle,
       ownerName: l.ownerName,
@@ -39,7 +47,7 @@ export function useMyActiveLeases({ navigation }: Props) {
       expiresInLabel: `Since ${l.startDate}`,
       image: DEFAULT_LEASE_IMAGE,
     }));
-    const toSign: LeaseListItem[] = agreements
+    const toSign: LeaseListItem[] = myAgreements
       .filter((a) => a.status === 'awaiting' && !a.farmerSigned)
       .map((a) => ({
         id: a.id,
@@ -51,7 +59,7 @@ export function useMyActiveLeases({ navigation }: Props) {
         status: 'Pending',
         image: DEFAULT_LEASE_IMAGE,
       }));
-    const pending: LeaseListItem[] = requests
+    const pending: LeaseListItem[] = myRequests
       .filter((r) => r.status === 'pending')
       .map((r) => ({
         id: r.id,
@@ -64,7 +72,7 @@ export function useMyActiveLeases({ navigation }: Props) {
         image: DEFAULT_LEASE_IMAGE,
       }));
     return [...toSign, ...active, ...pending];
-  }, [activeLeases, agreements, requests]);
+  }, [myActiveLeases, myAgreements, myRequests]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

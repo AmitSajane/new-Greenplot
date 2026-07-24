@@ -43,6 +43,7 @@ export type OwnerHomeStackParamList = {
         location?: string;
         district?: string;
         state?: string;
+        editListingId?: string;
       }
     | undefined;
   BudgetApprovals: undefined;

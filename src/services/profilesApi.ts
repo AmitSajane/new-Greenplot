@@ -48,6 +48,21 @@ export const profilesApi = {
     }
   },
 
+  /** Look up specific farmers by id (e.g. to show their saved location on a lease request card). */
+  async fetchFarmersByIds(ids: string[]): Promise<FarmerProfile[]> {
+    if (!supabase || ids.length === 0) return [];
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, phone, location, district, state, has_whatsapp, created_at')
+        .in('id', ids);
+      if (error || !data) return [];
+      return data.map(mapRow);
+    } catch {
+      return [];
+    }
+  },
+
   /** Realtime: re-run onChange whenever a profile is added/updated. */
   subscribe(onChange: () => void): () => void {
     if (!supabase) return () => {};

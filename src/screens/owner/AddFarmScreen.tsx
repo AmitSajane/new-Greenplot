@@ -61,26 +61,21 @@ const LEASE_TYPE_OPTIONS = [
 
 const CROP_OPTIONS = ['Wheat', 'Rice', 'Cotton', 'Sugarcane', 'Pulses'];
 
-// Sample images for farms
-const FARM_IMAGES = [
-  'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1500937386664-56d1dfef3854?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop',
-  'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-];
-
 interface MediaItem {
   id: string;
   uri: string; // local preview uri
   type: 'photo' | 'video';
   remoteUrl?: string; // Supabase Storage URL once uploaded
   uploading?: boolean;
+  error?: boolean;
+  base64?: string; // kept for retrying a failed photo upload
+  mime?: string;
 }
 
 export default function AddFarmScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<any>();
-  const { addListing } = useFarmListings();
+  const { addListing, updateListing, getListingById } = useFarmListings();
   const { user } = useAuth();
 
   const [title, setTitle] = useState('');
@@ -146,6 +141,44 @@ export default function AddFarmScreen() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const editListingId: string | undefined = route?.params?.editListingId;
+  const isEditMode = !!editListingId;
+
+  // Edit mode: pre-fill every field from the existing listing.
+  useEffect(() => {
+    if (!editListingId) return;
+    const listing = getListingById(editListingId) as any;
+    if (!listing) return;
+    setTitle(listing.title || '');
+    setAcres(listing.acres || '');
+    setSoilType(listing.soilType || '');
+    setState(listing.state || '');
+    setDistrict(listing.district || '');
+    setTaluk(listing.taluk || '');
+    setHobli(listing.hobli || '');
+    setVillage(listing.village || '');
+    setLocation(listing.location || '');
+    setTenure(listing.tenure || '');
+    setLeaseType(listing.leaseType || '');
+    setPricePerYear(String(listing.pricePerYear || '').replace(/[₹,]/g, ''));
+    setDescription(listing.description || '');
+    setGovtSurveyNumber(listing.surveyNumber || '');
+    if (Array.isArray(listing.crops)) setSelectedCrops(listing.crops);
+    if (Array.isArray(listing.mediaUrls) && listing.mediaUrls.length > 0) {
+      setMediaItems(
+        listing.mediaUrls.map((url: string, i: number) => ({
+          id: `existing-${i}`,
+          uri: url,
+          type: 'photo' as const,
+          remoteUrl: url,
+          uploading: false,
+        })),
+      );
+    }
+    if (listing.verified) setFraudBadge('verified');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editListingId]);
 
   // Hobli/Village (optional) still come from the older curated dataset.
   const statesData = locationHierarchy.states;
@@ -257,6 +290,13 @@ export default function AddFarmScreen() {
       Alert.alert('Please wait', 'Photos are still uploading. Try again in a moment.');
       return;
     }
+    if (mediaItems.some(m => m.error)) {
+      Alert.alert(
+        'A photo failed to upload',
+        'Retry the failed photo, or remove it, before publishing.',
+      );
+      return;
+    }
 
     // Uploaded media URLs (work across devices); first photo is the cover image.
     const uploadedUrls = mediaItems.map(m => m.remoteUrl).filter((u): u is string => !!u);
@@ -276,7 +316,7 @@ export default function AddFarmScreen() {
       leaseType,
       pricePerYear: `₹${pricePerYear}`,
       description,
-      imageUrl: uploadedUrls[0] || FARM_IMAGES[Math.floor(Math.random() * FARM_IMAGES.length)],
+      imageUrl: uploadedUrls[0] || '',
       mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       ownerId: user?.id || 'current-owner',
       ownerName: user?.name || 'Owner',
@@ -300,6 +340,21 @@ export default function AddFarmScreen() {
     }
     if (expectedHarvest) {
       listingData.expectedHarvest = expectedHarvest;
+    }
+
+    if (isEditMode && editListingId) {
+      setSubmitting(true);
+      // Never let an edit silently flip a leased land back to active.
+      const updates = { ...listingData };
+      delete updates.status;
+      delete updates.ownerId;
+      delete updates.ownerName;
+      updateListing(editListingId, updates);
+      setSubmitting(false);
+      Alert.alert('Changes saved ✓', 'Your listing has been updated.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+      return;
     }
 
     let newLandId: string;
@@ -379,25 +434,64 @@ export default function AddFarmScreen() {
 
   const newId = () => `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+  // Runs (or re-runs) the actual upload for a media item already in state.
+  // The very first attempt right after app start can race the auth session
+  // still being restored, which the storage policy correctly rejects — so on
+  // a first failure we silently retry once (session is ready by then) before
+  // ever showing the user an error.
+  const runUpload = useCallback(
+    (
+      id: string,
+      kind: 'photo' | 'video',
+      uri: string,
+      base64: string | undefined,
+      mime: string | undefined,
+      isAutoRetry = false,
+    ) => {
+      const upload =
+        kind === 'photo' && base64
+          ? storageApi.uploadImage(base64, mime || 'image/jpeg', user?.id || 'anon')
+          : storageApi.uploadFromUri(uri, mime || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), user?.id || 'anon');
+
+      const handleResult = (url: string | null) => {
+        if (url) {
+          setMediaItems(prev =>
+            prev.map(m => (m.id === id ? { ...m, uploading: false, error: false, remoteUrl: url } : m)),
+          );
+          return;
+        }
+        if (!isAutoRetry) {
+          setTimeout(() => runUpload(id, kind, uri, base64, mime, true), 1200);
+          return;
+        }
+        setMediaItems(prev => prev.map(m => (m.id === id ? { ...m, uploading: false, error: true } : m)));
+      };
+
+      upload.then(handleResult).catch(() => handleResult(null));
+    },
+    [user?.id],
+  );
+
   // Add a media item locally, then upload to Supabase Storage and swap in its URL.
   const addAndUpload = useCallback(
     (asset: { uri?: string; base64?: string; type?: string }, kind: 'photo' | 'video') => {
       if (!asset.uri) return;
       const id = newId();
-      setMediaItems(prev => [...prev, { id, uri: asset.uri!, type: kind, uploading: true }]);
-
-      const upload =
-        kind === 'photo' && asset.base64
-          ? storageApi.uploadImage(asset.base64, asset.type || 'image/jpeg', user?.id || 'anon')
-          : storageApi.uploadFromUri(asset.uri, asset.type || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), user?.id || 'anon');
-
-      upload.then(url => {
-        setMediaItems(prev =>
-          prev.map(m => (m.id === id ? { ...m, uploading: false, remoteUrl: url || undefined } : m)),
-        );
-      });
+      setMediaItems(prev => [
+        ...prev,
+        { id, uri: asset.uri!, type: kind, uploading: true, base64: asset.base64, mime: asset.type },
+      ]);
+      runUpload(id, kind, asset.uri, asset.base64, asset.type);
     },
-    [user?.id],
+    [runUpload],
+  );
+
+  const retryUpload = useCallback(
+    (item: MediaItem) => {
+      setMediaItems(prev => prev.map(m => (m.id === item.id ? { ...m, uploading: true, error: false } : m)));
+      runUpload(item.id, item.type, item.uri, item.base64, item.mime);
+    },
+    [runUpload],
   );
 
   const handleTakePhoto = useCallback(() => {
@@ -521,8 +615,8 @@ export default function AddFarmScreen() {
     )
   );
 
-  const MediaPreview = React.memo<{ item: MediaItem; index: number; onRemove: () => void }>(
-    ({ item, index, onRemove }) => (
+  const MediaPreview = React.memo<{ item: MediaItem; index: number; onRemove: () => void; onRetry: () => void }>(
+    ({ item, index, onRemove, onRetry }) => (
       <View style={styles.mediaPreviewContainer}>
         <Image source={{ uri: item.uri }} style={styles.mediaPreview} />
         {item.uploading && (
@@ -534,6 +628,12 @@ export default function AddFarmScreen() {
           <View style={styles.mediaUploaded}>
             <Ionicons name="cloud-done" size={12} color="#fff" />
           </View>
+        )}
+        {!item.uploading && item.error && (
+          <TouchableOpacity style={styles.mediaError} onPress={onRetry} activeOpacity={0.85}>
+            <Ionicons name="refresh" size={18} color="#fff" />
+            <Text style={styles.mediaErrorText}>Upload failed{'\n'}Tap to retry</Text>
+          </TouchableOpacity>
         )}
         <TouchableOpacity style={styles.removeMediaButton} onPress={onRemove} activeOpacity={0.8}>
           <Ionicons name="close-circle" size={20} color={colors.danger} />
@@ -554,7 +654,7 @@ export default function AddFarmScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Farm Listing</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit Farm Listing' : 'Add New Farm Listing'}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -569,24 +669,28 @@ export default function AddFarmScreen() {
         >
 
 
-          {/* Verification badges */}
-          <View style={styles.badgesRow}>
-            <View style={[styles.badge, fraudBadge === 'verified' && styles.badgeVerified]}>
-              <Ionicons name={fraudBadge === 'verified' ? 'shield-checkmark' : 'shield-outline'} size={18} color={fraudBadge === 'verified' ? colors.success : colors.textMuted} />
-              <Text style={[styles.badgeText, fraudBadge === 'verified' && styles.badgeTextVerified]}>Fraud check</Text>
-            </View>
-            <View style={[styles.badge, blockchainBadge === 'verified' && styles.badgeVerified]}>
-              <Ionicons name={blockchainBadge === 'verified' ? 'link' : 'link-outline'} size={18} color={blockchainBadge === 'verified' ? colors.success : colors.textMuted} />
-              <Text style={[styles.badgeText, blockchainBadge === 'verified' && styles.badgeTextVerified]}>Blockchain</Text>
-            </View>
-          </View>
+          {!isEditMode && (
+            <>
+              {/* Verification badges */}
+              <View style={styles.badgesRow}>
+                <View style={[styles.badge, fraudBadge === 'verified' && styles.badgeVerified]}>
+                  <Ionicons name={fraudBadge === 'verified' ? 'shield-checkmark' : 'shield-outline'} size={18} color={fraudBadge === 'verified' ? colors.success : colors.textMuted} />
+                  <Text style={[styles.badgeText, fraudBadge === 'verified' && styles.badgeTextVerified]}>Fraud check</Text>
+                </View>
+                <View style={[styles.badge, blockchainBadge === 'verified' && styles.badgeVerified]}>
+                  <Ionicons name={blockchainBadge === 'verified' ? 'link' : 'link-outline'} size={18} color={blockchainBadge === 'verified' ? colors.success : colors.textMuted} />
+                  <Text style={[styles.badgeText, blockchainBadge === 'verified' && styles.badgeTextVerified]}>Blockchain</Text>
+                </View>
+              </View>
 
-          {/* Boundary satellite preview */}
-          <TouchableOpacity style={styles.boundaryPreview} onPress={() => navigation.navigate('SatelliteMap')}>
-            <Ionicons name="map" size={24} color={colors.primary} />
-            <Text style={styles.boundaryPreviewText}>View boundary on satellite map</Text>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </TouchableOpacity>
+              {/* Boundary satellite preview */}
+              <TouchableOpacity style={styles.boundaryPreview} onPress={() => navigation.navigate('SatelliteMap')}>
+                <Ionicons name="map" size={24} color={colors.primary} />
+                <Text style={styles.boundaryPreviewText}>View boundary on satellite map</Text>
+                <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+              </TouchableOpacity>
+            </>
+          )}
 
           {/* Form Fields */}
           <View style={styles.formGroup}>
@@ -675,6 +779,7 @@ export default function AddFarmScreen() {
           )}
 
           {/* Govt survey fetch */}
+          {!isEditMode && (
           <View style={styles.formGroup}>
             <Text style={styles.label}>Govt Survey Number (optional)</Text>
             <TextInput
@@ -760,7 +865,9 @@ export default function AddFarmScreen() {
               </View>
             )}
           </View>
+          )}
 
+          {!isEditMode && (
           <View style={styles.formGroup}>
             <Text style={styles.label}>Location / Landmark (optional)</Text>
             <TextInput
@@ -771,6 +878,7 @@ export default function AddFarmScreen() {
               onChangeText={setLocation}
             />
           </View>
+          )}
 
           <View style={styles.row}>
             <View style={[styles.formGroup, styles.halfWidth]}>
@@ -790,12 +898,15 @@ export default function AddFarmScreen() {
             </View>
           </View>
 
+          {!isEditMode && (
           <View style={styles.formGroup}>
             <Text style={styles.label}>Lease Type *</Text>
             <Text style={styles.hintText}>Select the type of lease agreement for this land</Text>
             {renderDropdown(leaseType, 'Select Lease Type', () => setShowLeaseTypePicker(true))}
           </View>
+          )}
 
+          {!isEditMode && (
           <View style={styles.formGroup}>
             <Text style={styles.label}>Description (Optional)</Text>
             <TextInput
@@ -809,6 +920,7 @@ export default function AddFarmScreen() {
               textAlignVertical="top"
             />
           </View>
+          )}
 
           {/* Crop Care Schedule */}
           {/* <View style={styles.formGroup}>
@@ -845,6 +957,7 @@ export default function AddFarmScreen() {
           </View> */}
 
           {/* Best Crops to Grow Section */}
+          {!isEditMode && (
           <View style={styles.formGroup}>
             <Text style={styles.label}>Best Crops to Grow</Text>
             <View style={styles.cropContainer}>
@@ -858,6 +971,7 @@ export default function AddFarmScreen() {
               ))}
             </View>
           </View>
+          )}
 
           {/* Add Photos & Video Section */}
           <View style={styles.formGroup}>
@@ -872,6 +986,7 @@ export default function AddFarmScreen() {
                     item={item}
                     index={index}
                     onRemove={() => removeMedia(index)}
+                    onRetry={() => retryUpload(item)}
                   />
                 ))}
               </View>
@@ -915,8 +1030,8 @@ export default function AddFarmScreen() {
               <ActivityIndicator color={colors.textPrimary} />
             ) : (
               <>
-                <Ionicons name="add-circle" size={22} color={colors.textPrimary} />
-                <Text style={styles.submitButtonText}>Submit</Text>
+                <Ionicons name={isEditMode ? 'checkmark-circle' : 'add-circle'} size={22} color={colors.textPrimary} />
+                <Text style={styles.submitButtonText}>{isEditMode ? 'Save Changes' : 'Submit'}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -1255,6 +1370,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A6B3A',
     borderRadius: 10,
     padding: 3,
+  },
+  mediaError: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(180,40,40,0.75)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  mediaErrorText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   captureButtonsContainer: {
     flexDirection: 'row',

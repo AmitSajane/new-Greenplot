@@ -26,6 +26,11 @@ const ListingCard = React.memo(({ item, onPress }: CardProps) => {
         style={s.listingImg}
         resizeMode="cover"
       >
+        {!item.imageUri && (
+          <View style={s.listingImgPlaceholder}>
+            <Ionicons name="image-outline" size={22} color="#8FA894" />
+          </View>
+        )}
         {!!item.leaseType && <Text style={s.listingType}>{item.leaseType}</Text>}
         <Text style={s.listingPrice}>{item.priceLabel}</Text>
       </ImageBackground>
@@ -47,11 +52,10 @@ const ListingCard = React.memo(({ item, onPress }: CardProps) => {
 interface Props {
   listings: FarmerListingCard[];
   onListingPress: (id: string) => void;
-  onSearch: () => void;
   onViewAll: () => void;
 }
 
-function FindLandSectionBase({ listings, onListingPress, onSearch, onViewAll }: Props) {
+function FindLandSectionBase({ listings, onListingPress, onViewAll }: Props) {
   const renderItem = useCallback(
     ({ item }: ListRenderItemInfo<FarmerListingCard>) => <ListingCard item={item} onPress={onListingPress} />,
     [onListingPress],
@@ -61,10 +65,6 @@ function FindLandSectionBase({ listings, onListingPress, onSearch, onViewAll }: 
   return (
     <View style={s.section}>
       <SectionHeader icon="map" title="Find land to lease" linkLabel="View all" onLink={onViewAll} />
-      <TouchableOpacity style={s.search} activeOpacity={0.8} onPress={onSearch}>
-        <Ionicons name="search" size={16} color="#9EB8A8" />
-        <Text style={s.searchText}>Search land by village, crop, price…</Text>
-      </TouchableOpacity>
       <FlatList
         horizontal
         data={listings}

@@ -77,10 +77,16 @@ export default function AllAvailableLandsScreen() {
       onPress={() => handleListingPress(item.id)}
       activeOpacity={0.8}
     >
-      <Image
-        source={{ uri: item.imageUrl }}
-        style={[styles.listingImage, isLeased && styles.listingImageLeased]}
-      />
+      {item.imageUrl ? (
+        <Image
+          source={{ uri: item.imageUrl }}
+          style={[styles.listingImage, isLeased && styles.listingImageLeased]}
+        />
+      ) : (
+        <View style={[styles.listingImage, styles.listingImagePlaceholder, isLeased && styles.listingImageLeased]}>
+          <Ionicons name="image-outline" size={32} color={colors.textMuted} />
+        </View>
+      )}
       <View style={styles.listingContent}>
         <View style={styles.listingHeader}>
           <View style={styles.acresBadge}>
@@ -411,6 +417,10 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 180,
     backgroundColor: colors.border,
+  },
+  listingImagePlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   listingImageLeased: {
     opacity: 0.6,
