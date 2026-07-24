@@ -6,6 +6,7 @@ import CreateWorkScreen from '../modules/work/screens/CreateWorkScreen';
 import WorkListScreen from '../modules/work/screens/WorkListScreen';
 import WorkDetailsScreen from '../modules/work/screens/WorkDetailsScreen';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
+import SatelliteMapScreen from '../screens/satelliteMap';
 
 export type MyCropsStackParamList = {
   MyCrops: undefined;
@@ -13,7 +14,8 @@ export type MyCropsStackParamList = {
   CreateWork: { cropCycleId?: string };
   WorkList: undefined;
   WorkDetails: { jobId: string };
-  AddLand: { selfFarmed: true } | undefined;
+  AddLand: { selfFarmed: true; acres?: string; plotGeoJSON?: any; location?: string; district?: string; state?: string } | undefined;
+  SatelliteMap: { returnTo?: string } | undefined;
 };
 
 const Stack = createNativeStackNavigator<MyCropsStackParamList>();
@@ -31,6 +33,7 @@ export default function MyCropsStack() {
       <Stack.Screen name="WorkList" component={WorkListScreen} />
       <Stack.Screen name="WorkDetails" component={WorkDetailsScreen} />
       <Stack.Screen name="AddLand" component={AddFarmScreen} />
+      <Stack.Screen name="SatelliteMap" component={SatelliteMapScreen} options={{ title: 'Satellite Monitoring' }} />
     </Stack.Navigator>
   );
 }

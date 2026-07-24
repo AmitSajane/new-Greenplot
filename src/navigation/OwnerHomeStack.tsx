@@ -54,7 +54,7 @@ export type OwnerHomeStackParamList = {
   LeaseAgreements: undefined;
   AgreementDetails: undefined;
   AIAssistant: undefined;
-  SatelliteMap: undefined;
+  SatelliteMap: { returnTo?: string } | undefined;
   LaborConnect: undefined;
   OwnerWorkReport: undefined;
   SchemesNewsList:

@@ -43,7 +43,7 @@ export type FarmerHomeStackParamList = {
   LeaseConfirmation: { leaseTypeId: string; leaseTypeTitle: string };
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
   AIAssistant: undefined;
-  SatelliteMap: { farmId?: string } | undefined;
+  SatelliteMap: { farmId?: string; returnTo?: string } | undefined;
   LaborConnect: undefined;
   SoilTest: undefined;
   Article: { url: string; title?: string };

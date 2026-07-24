@@ -136,12 +136,14 @@ export default function AddFarmScreen() {
   useEffect(() => {
     const p = route?.params || {};
     if (p.location) setLocation(p.location);
+    if (p.acres) setAcres(String(p.acres));
     if (p.state && INDIA[p.state]) {
       setState(p.state);
       if (p.district && INDIA[p.state][p.district]) setDistrict(p.district);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // Re-runs whenever we're handed fresh params — in particular, when
+    // returning from the satellite map after drawing a boundary.
+  }, [route?.params]);
 
   const editListingId: string | undefined = route?.params?.editListingId;
   const isEditMode = !!editListingId;
@@ -697,7 +699,14 @@ export default function AddFarmScreen() {
               </View>
 
               {/* Boundary satellite preview */}
-              <TouchableOpacity style={styles.boundaryPreview} onPress={() => navigation.navigate('SatelliteMap')}>
+              <TouchableOpacity
+                style={styles.boundaryPreview}
+                onPress={() =>
+                  (navigation as { navigate: (name: string, params?: object) => void }).navigate('SatelliteMap', {
+                    returnTo: selfFarmed ? 'AddLand' : 'AddFarm',
+                  })
+                }
+              >
                 <Ionicons name="map" size={24} color={colors.primary} />
                 <Text style={styles.boundaryPreviewText}>View boundary on satellite map</Text>
                 <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />

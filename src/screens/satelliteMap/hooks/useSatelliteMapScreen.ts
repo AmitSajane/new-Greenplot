@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { Alert } from 'react-native';
 import { initMapbox } from '../../../config/mapbox';
-import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/SatelliteMapContext';
 import { calculatePolygonAreaAcres, formatAcresGuntas, LngLat } from '../../../utils/geo';
@@ -18,10 +17,12 @@ initMapbox();
 
 export function useSatelliteMapScreen() {
   const navigation = useNavigation();
-  const { user } = useAuth();
   const route = useRoute<RouteProp<FarmerHomeStackParamList, 'SatelliteMap'>>();
   const farmIdFromRoute = route.params?.farmId;
-  const userRole = (user as { role?: 'farmer' | 'owner' })?.role;
+  // Set by the caller when this screen is being used to draw a boundary for a
+  // new/edited listing (e.g. AddFarmScreen) — names the route to hand the
+  // drawn plot back to. Absent when just opened to monitor an existing farm.
+  const returnTo = (route.params as { returnTo?: string } | undefined)?.returnTo;
   // Access farm listings at top level (hook must be called unconditionally)
   const { getListingById } = useFarmListings();
 
@@ -213,8 +214,8 @@ export function useSatelliteMapScreen() {
       ],
     };
     setPlotGeoJSON(newGeoJSON);
-    if (userRole === 'owner') {
-      // Reverse-geocode the field centroid so AddFarm can auto-fill location.
+    if (returnTo) {
+      // Reverse-geocode the field centroid so the caller can auto-fill location.
       const centroid = calculatePolygonCentroid(coordinates as any); // [lon, lat]
       let geo: { label?: string; district?: string; state?: string } = {};
       try {
@@ -228,10 +229,10 @@ export function useSatelliteMapScreen() {
         `Farm boundaries saved!\n\nApproximate area: ${formatAcresGuntas(areaAcres)}`,
         [
           {
-            text: 'Create Farm',
+            text: 'Use This Boundary',
             onPress: () =>
               (navigation as { navigate?: (name: string, params?: object) => void }).navigate?.(
-                'AddFarm',
+                returnTo,
                 {
                   acres: areaAcres.toFixed(2),
                   plotGeoJSON: newGeoJSON,
@@ -252,7 +253,7 @@ export function useSatelliteMapScreen() {
     }
     setDrawMode(false);
     setDrawnPoints([]);
-  }, [drawnPoints, navigation, setPlotGeoJSON, userRole]);
+  }, [drawnPoints, navigation, setPlotGeoJSON, returnTo]);
 
   const drawnPlotGeoJSON = useMemo(() => {
     if (drawnPoints.length < 3) return null;
