@@ -31,7 +31,10 @@ export default function AllAvailableLandsScreen() {
   const [blockchainOnly, setBlockchainOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
-  const availableListings = useMemo(() => listings.filter((l) => l.status === 'active'), [listings]);
+  const availableListings = useMemo(
+    () => listings.filter((l) => l.status === 'active' && !l.selfFarmed),
+    [listings]
+  );
   const leasedListings = useMemo(() => listings.filter((l) => l.status === 'leased'), [listings]);
   const allListings = tab === 'available' ? availableListings : leasedListings;
 

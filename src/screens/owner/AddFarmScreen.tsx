@@ -82,6 +82,7 @@ export default function AddFarmScreen() {
   const route = useRoute<any>();
   const { addListing } = useFarmListings();
   const { user } = useAuth();
+  const selfFarmed = !!route?.params?.selfFarmed;
 
   const [title, setTitle] = useState('');
   const [acres, setAcres] = useState(() => {
@@ -249,7 +250,9 @@ export default function AddFarmScreen() {
     if (submitting) return;
     const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
     const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
-    if (!title || !acres || !state || !district || !soilType || !tenure || !pricePerYear || !leaseType) {
+    const missingCommon = !title || !acres || !state || !district || !soilType;
+    const missingLeaseFields = !selfFarmed && (!tenure || !pricePerYear || !leaseType);
+    if (missingCommon || missingLeaseFields) {
       Alert.alert('Missing Fields', 'Please select State, District and fill other required fields.');
       return;
     }
@@ -272,15 +275,16 @@ export default function AddFarmScreen() {
       taluk: taluk || undefined,
       hobli: hobli || undefined,
       village: village || undefined,
-      tenure,
-      leaseType,
-      pricePerYear: `₹${pricePerYear}`,
+      tenure: selfFarmed ? '' : tenure,
+      leaseType: selfFarmed ? undefined : leaseType,
+      pricePerYear: selfFarmed ? '' : `₹${pricePerYear}`,
       description,
       imageUrl: uploadedUrls[0] || FARM_IMAGES[Math.floor(Math.random() * FARM_IMAGES.length)],
       mediaUrls: uploadedUrls.length > 0 ? uploadedUrls : undefined,
       ownerId: user?.id || 'current-owner',
       ownerName: user?.name || 'Owner',
       status: 'active',
+      selfFarmed: selfFarmed || undefined,
       plotGeoJSON: route?.params?.plotGeoJSON,
       areaAcres: acres ? parseFloat(acres) || undefined : undefined,
       surveyNumber: govtSurveyNumber.trim() || undefined,
@@ -312,6 +316,13 @@ export default function AddFarmScreen() {
       return;
     }
     setSubmitting(false);
+
+    if (selfFarmed) {
+      Alert.alert('Land added ✓', 'You can now add a crop for it from My Crops & Plots.', [
+        { text: 'OK', onPress: () => navigation.goBack() },
+      ]);
+      return;
+    }
 
     Alert.alert('Land published ✓', 'Next, add lease offers so farmers can compare and apply.', [
       { text: 'Later', style: 'cancel', onPress: () => navigation.goBack() },
@@ -554,7 +565,7 @@ export default function AddFarmScreen() {
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Farm Listing</Text>
+        <Text style={styles.headerTitle}>{selfFarmed ? 'Add My Land' : 'Add New Farm Listing'}</Text>
         <View style={styles.backButton} />
       </View>
 
@@ -772,29 +783,33 @@ export default function AddFarmScreen() {
             />
           </View>
 
-          <View style={styles.row}>
-            <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Lease Tenure *</Text>
-              {renderDropdown(tenure, 'Select Tenure', () => setShowTenurePicker(true))}
-            </View>
-            <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Price Per Year (₹) *</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 12000"
-                placeholderTextColor={colors.textMuted}
-                value={pricePerYear}
-                onChangeText={setPricePerYear}
-                keyboardType="numeric"
-              />
-            </View>
-          </View>
+          {!selfFarmed && (
+            <>
+              <View style={styles.row}>
+                <View style={[styles.formGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Lease Tenure *</Text>
+                  {renderDropdown(tenure, 'Select Tenure', () => setShowTenurePicker(true))}
+                </View>
+                <View style={[styles.formGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Price Per Year (₹) *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g., 12000"
+                    placeholderTextColor={colors.textMuted}
+                    value={pricePerYear}
+                    onChangeText={setPricePerYear}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Lease Type *</Text>
-            <Text style={styles.hintText}>Select the type of lease agreement for this land</Text>
-            {renderDropdown(leaseType, 'Select Lease Type', () => setShowLeaseTypePicker(true))}
-          </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Lease Type *</Text>
+                <Text style={styles.hintText}>Select the type of lease agreement for this land</Text>
+                {renderDropdown(leaseType, 'Select Lease Type', () => setShowLeaseTypePicker(true))}
+              </View>
+            </>
+          )}
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Description (Optional)</Text>

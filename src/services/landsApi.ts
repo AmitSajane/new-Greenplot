@@ -30,6 +30,7 @@ const landToApp = (r: any): FarmListing => ({
   ownerName: r.owner_name || 'Owner',
   createdAt: new Date(r.created_at),
   status: r.status,
+  selfFarmed: r.self_farmed ?? undefined,
   plotGeoJSON: r.geo || undefined,
   lastYearCrop: r.last_year_crop || undefined,
   lastYearEarnings: r.last_year_earnings || undefined,
@@ -54,6 +55,7 @@ const toRow = (l: Partial<FarmListing>) => {
   if (l.description !== undefined) row.description = l.description;
   if (l.imageUrl !== undefined) row.image_url = l.imageUrl;
   if (l.status !== undefined) row.status = l.status;
+  if (l.selfFarmed !== undefined) row.self_farmed = l.selfFarmed;
   if (l.plotGeoJSON !== undefined) row.geo = l.plotGeoJSON;
   if (l.lastYearCrop !== undefined) row.last_year_crop = l.lastYearCrop;
   if (l.lastYearEarnings !== undefined) row.last_year_earnings = l.lastYearEarnings;

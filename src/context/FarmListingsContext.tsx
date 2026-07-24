@@ -21,6 +21,8 @@ export interface FarmListing {
   ownerName: string;
   createdAt: Date;
   status: 'active' | 'leased' | 'inactive';
+  /** True when the owner farms this land themselves — never shown in the lease marketplace. */
+  selfFarmed?: boolean;
   // For farmer home featured listings compatibility
   acresLabel?: string;
   locationLabel?: string;
@@ -263,7 +265,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
   );
 
   const getFeaturedListings = useCallback(() => {
-    return listings.filter((listing) => listing.status === 'active').slice(0, 10);
+    return listings.filter((listing) => listing.status === 'active' && !listing.selfFarmed).slice(0, 10);
   }, [listings]);
 
   const getListingsByLocation = useCallback(
@@ -272,6 +274,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
       return listings.filter(
         (listing) =>
           listing.status === 'active' &&
+          !listing.selfFarmed &&
           (listing.location.toLowerCase().includes(searchTerm) ||
             listing.district.toLowerCase().includes(searchTerm) ||
             listing.state.toLowerCase().includes(searchTerm))

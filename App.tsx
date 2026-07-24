@@ -14,6 +14,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { AuthProvider } from './src/context/AuthContext';
 import { FarmListingsProvider } from './src/context/FarmListingsContext';
 import { LeaseProvider } from './src/context/LeaseContext';
+import { CropCycleProvider } from './src/context/CropCycleContext';
 import { SatelliteMapProvider } from './src/context/SatelliteMapContext';
 import { laborStore } from './src/modules/labor/redux/store';
 import i18n from './src/localization/i18n';
@@ -29,9 +30,11 @@ function App() {
           <AuthProvider>
             <FarmListingsProvider>
               <LeaseProvider>
-                <SatelliteMapProvider>
-                  <AppNavigator />
-                </SatelliteMapProvider>
+                <CropCycleProvider>
+                  <SatelliteMapProvider>
+                    <AppNavigator />
+                  </SatelliteMapProvider>
+                </CropCycleProvider>
               </LeaseProvider>
             </FarmListingsProvider>
           </AuthProvider>

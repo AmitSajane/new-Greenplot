@@ -5,6 +5,7 @@ import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
 import CreateWorkScreen from '../modules/work/screens/CreateWorkScreen';
 import WorkListScreen from '../modules/work/screens/WorkListScreen';
 import WorkDetailsScreen from '../modules/work/screens/WorkDetailsScreen';
+import AddFarmScreen from '../screens/owner/AddFarmScreen';
 
 export type MyCropsStackParamList = {
   MyCrops: undefined;
@@ -12,6 +13,7 @@ export type MyCropsStackParamList = {
   CreateWork: { cropCycleId?: string };
   WorkList: undefined;
   WorkDetails: { jobId: string };
+  AddLand: { selfFarmed: true } | undefined;
 };
 
 const Stack = createNativeStackNavigator<MyCropsStackParamList>();
@@ -28,6 +30,7 @@ export default function MyCropsStack() {
       <Stack.Screen name="CreateWork" component={CreateWorkScreen} />
       <Stack.Screen name="WorkList" component={WorkListScreen} />
       <Stack.Screen name="WorkDetails" component={WorkDetailsScreen} />
+      <Stack.Screen name="AddLand" component={AddFarmScreen} />
     </Stack.Navigator>
   );
 }

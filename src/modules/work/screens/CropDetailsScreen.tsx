@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../../theme/tokens';
-import { MOCK_CROP_CYCLES } from '../mockData/cropCycles';
+import { useCropCycles } from '../../../context/CropCycleContext';
 import { workJobApi } from '../services/workJobApi';
 import { useState, useEffect } from 'react';
 
@@ -15,8 +15,9 @@ export default function CropDetailsScreen() {
   const route = useRoute<CropDetailsRoute>();
   const { cropCycleId } = route.params;
   const [jobCount, setJobCount] = useState(0);
+  const { getCropCycleById } = useCropCycles();
 
-  const crop = MOCK_CROP_CYCLES.find((c) => c.cropCycleId === cropCycleId);
+  const crop = getCropCycleById(cropCycleId);
 
   useEffect(() => {
     workJobApi.getJobsByCropCycle(cropCycleId).then((jobs) => setJobCount(jobs.length));

@@ -56,13 +56,19 @@ export interface JobApplication {
   status: ApplicationStatus;
 }
 
+export type CropHealthStatus = 'healthy' | 'needs_water' | 'pest_alert';
+
 export interface CropCycle {
   cropCycleId: string;
   landId: string;
   farmerId: string;
+  ownerId?: string;
   cropName: string;
   plotName: string;
   areaAcres: number;
   landlord: string;
   status: 'active' | 'harvested' | 'fallow';
+  sownDate?: string;
+  healthStatus?: CropHealthStatus;
+  healthNote?: string;
 }
