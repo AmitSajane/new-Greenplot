@@ -38,7 +38,14 @@ export default function MediaCarousel({ urls, height = 240 }: Props) {
     [index, width],
   );
 
-  if (items.length === 0) return null;
+  if (items.length === 0) {
+    return (
+      <View style={[styles.placeholder, { width, height }]}>
+        <Ionicons name="image-outline" size={36} color="rgba(255,255,255,0.55)" />
+        <Text style={styles.placeholderText}>No photo added</Text>
+      </View>
+    );
+  }
 
   if (items.length === 1) {
     const u = items[0];
@@ -126,4 +133,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   videoLabel: { color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '600' },
+  placeholder: { backgroundColor: '#C8D8CC', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  placeholderText: { color: 'rgba(255,255,255,0.75)', fontSize: 13, fontWeight: '600' },
 });

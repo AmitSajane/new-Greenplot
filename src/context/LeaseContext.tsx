@@ -63,7 +63,7 @@ const SEED_OFFERS: LeaseOffer[] = isSupabaseConfigured
     ];
 
 export function LeaseProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const { updateListing } = useFarmListings();
   const [offers, setOffers] = useState<LeaseOffer[]>(SEED_OFFERS);
   const [requests, setRequests] = useState<LeaseRequest[]>([]);
@@ -85,11 +85,16 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    // Wait for the session restore to finish — firing this before that
+    // resolves races the RLS-protected lease tables and comes back empty.
+    // Also re-runs on `user?.id` so switching accounts inside the same running
+    // app (no full reload) triggers a fresh fetch instead of reusing whatever
+    // the previous account's session happened to load.
+    if (!isSupabaseConfigured || !authReady) return;
     refetch();
     const unsubscribe = leaseApi.subscribe(refetch); // any change on any phone → refetch
     return unsubscribe;
-  }, [refetch]);
+  }, [refetch, authReady, user?.id]);
 
   // ── Actions: write to Supabase (realtime refetches), else mutate mock state ──
   const addOffer = useCallback(

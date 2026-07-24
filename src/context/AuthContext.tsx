@@ -20,6 +20,11 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  /** True once the saved session (if any) has been restored — false right after
+   * app launch while that check is still in flight. Anything that fires a
+   * Supabase read/write automatically on mount should wait for this instead of
+   * racing the session restore. */
+  authReady: boolean;
   /** True when auth is backed by Supabase (real accounts). */
   realAuth: boolean;
   // ── Mock (phone/OTP) — used when no backend ──
@@ -72,6 +77,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Mock mode has no session to restore, so it's ready immediately.
+  const [authReady, setAuthReady] = useState(!isSupabaseConfigured);
 
   const findProfileByPhone = useCallback(async (phone: string): Promise<ProfileRow | null> => {
     if (!supabase) return null;
@@ -203,8 +210,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Restore a saved Supabase session on launch + react to auth changes.
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) loadUserFromSession(data.session.user.id, data.session.user);
+    supabase.auth.getSession().then(async ({ data }) => {
+      // Wait for the user's profile to actually finish loading before marking
+      // auth ready — otherwise "ready" can fire while `user` is still null,
+      // and anything that reads `user?.id` at that instant sees nobody logged in.
+      // Guarded two ways so a flaky profile load can never block startup forever:
+      // a timeout in case the request just hangs, and try/finally in case it
+      // throws — either way, authReady still gets set.
+      try {
+        if (data.session?.user) {
+          await Promise.race([
+            loadUserFromSession(data.session.user.id, data.session.user),
+            new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+          ]);
+        }
+      } catch {
+        // Profile load failed — fall through and mark ready anyway below.
+      } finally {
+        setAuthReady(true);
+      }
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) loadUserFromSession(session.user.id, session.user);
@@ -454,6 +478,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         user,
         isAuthenticated: !!user,
         isLoading,
+        authReady,
         realAuth: isSupabaseConfigured,
         login,
         completeProfile,

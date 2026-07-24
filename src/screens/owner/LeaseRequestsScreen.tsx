@@ -1,14 +1,32 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useLeases, LeaseRequest } from '../../context/LeaseContext';
+import { useFarmListings } from '../../context/FarmListingsContext';
+import { profilesApi, FarmerProfile } from '../../services/profilesApi';
 import { LEASE_TYPE_MAP } from '../../constants/leaseTypes';
 
 const G = { g1: '#092E18', g2: '#0F4A28', g3: '#1A6B3A', g7: '#E4F4EC', a2: '#8A5200', a7: '#FDF5E0', r2: '#C02828', r5: '#FDD0D0', n2: '#1C2E18', n4: '#6B8074', n7: '#E8F0EC', n8: '#F4F8F5' };
 
-function RequestCard({ req, onRespond, onView }: { req: LeaseRequest; onRespond: (id: string, ok: boolean) => void; onView?: () => void }) {
+interface FarmerSnapshot {
+  farmerLocation: string;
+  activeLeaseCount: number;
+  totalAcres: number;
+}
+
+function RequestCard({
+  req,
+  snapshot,
+  onRespond,
+  onView,
+}: {
+  req: LeaseRequest;
+  snapshot?: FarmerSnapshot;
+  onRespond: (id: string, ok: boolean) => void;
+  onView?: () => void;
+}) {
   const t = LEASE_TYPE_MAP[req.typeId];
   const pending = req.status === 'pending';
   return (
@@ -27,6 +45,24 @@ function RequestCard({ req, onRespond, onView }: { req: LeaseRequest; onRespond:
           </Text>
         )}
       </View>
+      {pending && snapshot && (
+        <View style={styles.snapshot}>
+          <View style={styles.snapRow}>
+            <Ionicons name="location-outline" size={13} color={G.n4} />
+            <Text style={styles.snapText}>
+              Farmer's location: {snapshot.farmerLocation}
+            </Text>
+          </View>
+          <View style={styles.snapRow}>
+            <Ionicons name="leaf-outline" size={13} color={G.n4} />
+            <Text style={styles.snapText}>
+              {snapshot.activeLeaseCount === 0
+                ? 'No other active leases'
+                : `${snapshot.activeLeaseCount} active lease${snapshot.activeLeaseCount === 1 ? '' : 's'} · ${snapshot.totalAcres} acres total`}
+            </Text>
+          </View>
+        </View>
+      )}
       <View style={styles.offerBox}>
         <Text style={styles.offerType}>{t.emoji} {t.name}</Text>
         <Text style={styles.offerTerms}>{req.termsSummary}</Text>
@@ -58,7 +94,8 @@ function RequestCard({ req, onRespond, onView }: { req: LeaseRequest; onRespond:
 export default function LeaseRequestsScreen() {
   const navigation = useNavigation();
   // Single-owner demo: show all requests. With Supabase auth + RLS this filters by owner.
-  const { requests, agreements, approveRequest, rejectRequest } = useLeases();
+  const { requests, agreements, activeLeases, approveRequest, rejectRequest } = useLeases();
+  const { listings } = useFarmListings();
   const viewAgreement = useCallback(
     (requestId: string) => {
       const ag = agreements.find(a => a.requestId === requestId);
@@ -81,6 +118,45 @@ export default function LeaseRequestsScreen() {
   const pending = requests.filter(r => r.status === 'pending');
   const responded = requests.filter(r => r.status !== 'pending');
 
+  // Farmer context: fetch saved profile (for location) for whichever farmers
+  // currently have a pending request, so the owner can see it before deciding.
+  const [farmerProfiles, setFarmerProfiles] = useState<Record<string, FarmerProfile>>({});
+  const pendingFarmerIds = useMemo(() => [...new Set(pending.map(r => r.farmerId))], [pending]);
+  useEffect(() => {
+    if (pendingFarmerIds.length === 0) return;
+    profilesApi.fetchFarmersByIds(pendingFarmerIds).then(profiles => {
+      setFarmerProfiles(prev => {
+        const next = { ...prev };
+        profiles.forEach(p => { next[p.id] = p; });
+        return next;
+      });
+    });
+  }, [pendingFarmerIds]);
+
+  const landById = useMemo(() => new Map(listings.map(l => [l.id, l])), [listings]);
+  const locationOf = useCallback(
+    (loc?: string, district?: string, state?: string) =>
+      [loc, district, state].filter(Boolean).join(', ') || 'Location not provided',
+    [],
+  );
+
+  const snapshotFor = useCallback(
+    (req: LeaseRequest): FarmerSnapshot => {
+      const profile = farmerProfiles[req.farmerId];
+      const farmerActiveLeases = activeLeases.filter(l => l.farmerId === req.farmerId);
+      const totalAcres = farmerActiveLeases.reduce((sum, l) => {
+        const leaseLand = landById.get(l.landId);
+        return sum + (leaseLand ? parseFloat(leaseLand.acres) || 0 : 0);
+      }, 0);
+      return {
+        farmerLocation: profile ? locationOf(profile.location, profile.district, profile.state) : 'Loading…',
+        activeLeaseCount: farmerActiveLeases.length,
+        totalAcres,
+      };
+    },
+    [farmerProfiles, landById, activeLeases, locationOf],
+  );
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
@@ -100,7 +176,7 @@ export default function LeaseRequestsScreen() {
         ) : (
           <>
             {pending.length > 0 && <Text style={styles.sectionLabel}>Pending your review</Text>}
-            {pending.map(r => <RequestCard key={r.id} req={r} onRespond={onRespond} />)}
+            {pending.map(r => <RequestCard key={r.id} req={r} snapshot={snapshotFor(r)} onRespond={onRespond} />)}
             {responded.length > 0 && <Text style={styles.sectionLabel}>Responded</Text>}
             {responded.map(r => (
               <RequestCard key={r.id} req={r} onRespond={onRespond} onView={() => viewAgreement(r.id)} />
@@ -128,6 +204,9 @@ const styles = StyleSheet.create({
   badge: { fontSize: 9, fontWeight: '800', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, overflow: 'hidden' },
   badgeOk: { backgroundColor: G.g7, color: G.g2 },
   badgeNo: { backgroundColor: G.r5, color: G.r2 },
+  snapshot: { backgroundColor: G.n8, borderRadius: 10, padding: 10, marginTop: 10, gap: 6 },
+  snapRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  snapText: { flex: 1, fontSize: 11, color: G.n4, fontWeight: '600' },
   offerBox: { backgroundColor: G.n8, borderRadius: 10, padding: 10, marginTop: 10 },
   offerType: { fontSize: 13, fontWeight: '700', color: G.n2 },
   offerTerms: { fontSize: 12, color: G.n4, marginTop: 2 },

@@ -73,7 +73,6 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
         <FindLandSection
           listings={vm.featuredListings}
           onListingPress={vm.onListingPress}
-          onSearch={onAllLands}
           onViewAll={onAllLands}
         />
         <SchemesNewsSection

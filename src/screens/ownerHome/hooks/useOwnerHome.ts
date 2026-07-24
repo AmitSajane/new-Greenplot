@@ -80,7 +80,10 @@ export function useOwnerHome() {
   );
   const goTab = useCallback((tab: string, params?: object) => parent()?.navigate(tab, params), [parent]);
   const openProperty = useCallback(
-    (propertyId: string) => goTab('MyProperties', { screen: 'PropertyDetails', params: { propertyId } }),
+    (propertyId: string) =>
+      // `initial: false` pushes PropertyDetails on top of the Properties tab's
+      // own list screen instead of replacing it, so back/tab-switch behave correctly.
+      goTab('MyProperties', { screen: 'PropertyDetails', params: { propertyId }, initial: false }),
     [goTab],
   );
 

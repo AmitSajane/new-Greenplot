@@ -181,7 +181,7 @@ interface FarmListingsProviderProps {
 }
 
 export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const [listings, setListings] = useState<FarmListing[]>(isSupabaseConfigured ? [] : INITIAL_LISTINGS);
 
   // Supabase: hydrate lands once, then live-refetch on any realtime change.
@@ -195,10 +195,13 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
   }, []);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    // Wait for the session restore to finish before the first fetch, and
+    // re-fetch on `user?.id` so switching accounts inside the same running
+    // app also gets fresh data instead of reusing the previous account's.
+    if (!isSupabaseConfigured || !authReady) return;
     refetchLands();
     return landsApi.subscribe(refetchLands);
-  }, [refetchLands]);
+  }, [refetchLands, authReady, user?.id]);
 
   const addListing = useCallback(
     async (listing: Omit<FarmListing, 'id' | 'createdAt'>) => {

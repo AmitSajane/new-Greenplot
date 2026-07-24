@@ -152,6 +152,7 @@ export const farmerHomeStyles = StyleSheet.create({
   listingContent: { gap: 10, paddingRight: 14 },
   listing: { width: 172, backgroundColor: '#fff', borderWidth: 1, borderColor: BORDER, borderRadius: 14, overflow: 'hidden' },
   listingImg: { height: 84, backgroundColor: '#E4F4EC', justifyContent: 'flex-end' },
+  listingImgPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   listingType: { position: 'absolute', right: 8, top: 8, backgroundColor: 'rgba(255,255,255,0.92)', color: '#0F4A28', fontSize: 8, fontWeight: '800', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, overflow: 'hidden' },
   listingPrice: { position: 'absolute', left: 8, bottom: 8, backgroundColor: 'rgba(9,46,24,0.85)', color: '#fff', fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, overflow: 'hidden' },
   listingBody: { paddingHorizontal: 11, paddingVertical: 9 },
