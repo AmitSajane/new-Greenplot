@@ -72,3 +72,18 @@ export interface CropCycle {
   healthStatus?: CropHealthStatus;
   healthNote?: string;
 }
+
+export type CropActivityType = 'sowing' | 'irrigation' | 'fertilizer' | 'weeding' | 'pest' | 'harvest' | 'other';
+
+export interface CropActivity {
+  activityId: string;
+  cropCycleId: string;
+  farmerId: string;
+  ownerId?: string;
+  type: CropActivityType;
+  /** Farmer-given title; only meaningful (and required) when type is 'other'. */
+  title?: string;
+  note?: string;
+  date: string;
+  createdAt: string;
+}

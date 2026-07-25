@@ -12,8 +12,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../theme/tokens';
-import { useLeases } from '../../context/LeaseContext';
-import { LEASE_TYPE_MAP } from '../../constants/leaseTypes';
 import { profilesApi, FarmerProfile } from '../../services/profilesApi';
 import { isSupabaseConfigured } from '../../services/supabase';
 
@@ -33,7 +31,6 @@ function whatsappNumber(phone: string) {
 }
 
 export default function TenantsScreen() {
-  const { activeLeases } = useLeases();
   const [farmers, setFarmers] = useState<FarmerProfile[]>([]);
   const [loading, setLoading] = useState(isSupabaseConfigured);
 
@@ -62,24 +59,6 @@ export default function TenantsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Newly booked leases (real) */}
-        {activeLeases.length > 0 && (
-          <View style={booked.box}>
-            <Text style={booked.title}>✅ Active leases ({activeLeases.length})</Text>
-            {activeLeases.map(l => (
-              <View key={l.id} style={booked.row}>
-                <Text style={booked.emoji}>{LEASE_TYPE_MAP[l.typeId].emoji}</Text>
-                <View style={booked.flex}>
-                  <Text style={booked.name}>{l.farmerName}</Text>
-                  <Text style={booked.sub}>{l.landTitle} · {l.typeName}</Text>
-                  <Text style={booked.terms}>{l.termsSummary}</Text>
-                </View>
-                <Text style={booked.since}>Since {l.startDate}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
         {/* Farmers directory (real, from onboarding) */}
         <Text style={styles.sectionTitle}>Farmers on GreenPlot</Text>
         <Text style={styles.sectionHint}>Connect with farmers looking for land — call or message on WhatsApp.</Text>
@@ -172,16 +151,4 @@ const styles = StyleSheet.create({
   actionText: { fontSize: 14, fontWeight: '700', color: colors.primary },
   waButton: { backgroundColor: '#25D366', borderColor: '#25D366' },
   waText: { color: '#fff' },
-});
-
-const booked = StyleSheet.create({
-  box: { backgroundColor: '#E4F4EC', borderWidth: 1, borderColor: '#A8D8B8', borderRadius: 14, padding: 13, marginBottom: 16 },
-  title: { fontSize: 13, fontWeight: '800', color: '#0F4A28', marginBottom: 10 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 10, padding: 11, marginBottom: 8 },
-  emoji: { fontSize: 20 },
-  flex: { flex: 1 },
-  name: { fontSize: 13, fontWeight: '800', color: '#1C2E18' },
-  sub: { fontSize: 11, color: '#6B8074', marginTop: 1 },
-  terms: { fontSize: 11, color: '#3A5040', marginTop: 2 },
-  since: { fontSize: 9, color: '#6B8074', fontWeight: '600' },
 });

@@ -7,6 +7,7 @@ import LeaseDetailViewScreen from '../screens/LeaseDetailViewScreen';
 import CompareLeasesScreen from '../screens/CompareLeasesScreen';
 import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
+import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
 
 export type MyPropertiesStackParamList = {
   MyPropertiesList: undefined;
@@ -16,6 +17,7 @@ export type MyPropertiesStackParamList = {
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
   AddLeaseOffer: { landId: string; landTitle?: string };
   AddFarm: { editListingId: string };
+  CropDetails: { cropCycleId: string };
 };
 
 const Stack = createNativeStackNavigator<MyPropertiesStackParamList>();
@@ -34,6 +36,7 @@ export default function MyPropertiesStack() {
       <Stack.Screen name="CompareLeases" component={CompareLeasesScreen} />
       <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
       <Stack.Screen name="AddFarm" component={AddFarmScreen} />
+      <Stack.Screen name="CropDetails" component={CropDetailsScreen} options={{ title: 'Crop Details' }} />
     </Stack.Navigator>
   );
 }

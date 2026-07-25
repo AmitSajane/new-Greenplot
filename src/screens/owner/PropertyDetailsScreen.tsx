@@ -17,6 +17,7 @@ import { colors, radius, spacing } from '../../theme/tokens';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import MediaCarousel from '../../components/MediaCarousel';
 import { useLeases } from '../../context/LeaseContext';
+import { useCropCycles } from '../../context/CropCycleContext';
 import { LEASE_TYPE_MAP, summarizeOffer } from '../../constants/leaseTypes';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
@@ -43,10 +44,15 @@ export default function PropertyDetailsScreen() {
   const route = useRoute<PropertyDetailsRoute>();
   const { propertyId } = route.params;
   const { getListingById } = useFarmListings();
-  const { getOffersByLand } = useLeases();
+  const { getOffersByLand, activeLeases } = useLeases();
+  const { getCropCycleByLand } = useCropCycles();
   const offers = getOffersByLand(propertyId);
 
   const property = getListingById(propertyId);
+
+  // This land's current tenant (if leased) → their active crop cycle, so the owner can view it.
+  const tenantFarmerId = activeLeases.find((l) => l.landId === propertyId)?.farmerId;
+  const cropCycleId = tenantFarmerId ? getCropCycleByLand(propertyId, tenantFarmerId)?.cropCycleId : undefined;
 
   const handleShare = async () => {
     if (!property) return;
@@ -290,6 +296,16 @@ export default function PropertyDetailsScreen() {
           <Text style={styles.shareButtonText}>Share this property</Text>
         </TouchableOpacity>
 
+        {!!cropCycleId && (
+          <TouchableOpacity
+            style={[styles.shareButton, styles.cropButton]}
+            onPress={() => navigation.navigate('CropDetails', { cropCycleId })}
+          >
+            <Ionicons name="leaf-outline" size={22} color={colors.surface} />
+            <Text style={styles.shareButtonText}>Crop Details</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={styles.bottomSpacer} />
       </ScrollView>
     </SafeAreaView>
@@ -527,6 +543,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.surface,
+  },
+  cropButton: {
+    marginTop: spacing.md,
   },
   bottomSpacer: {
     height: spacing.xxl,

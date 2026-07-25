@@ -11,7 +11,7 @@ import { Provider } from 'react-redux';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { I18nextProvider } from 'react-i18next';
 import AppNavigator from './src/navigation/AppNavigator';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider } from './src/context/AuthContext'; 
 import { FarmListingsProvider } from './src/context/FarmListingsContext';
 import { LeaseProvider } from './src/context/LeaseContext';
 import { CropCycleProvider } from './src/context/CropCycleContext';
