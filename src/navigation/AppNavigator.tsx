@@ -1,4 +1,5 @@
 import React from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
@@ -31,7 +32,18 @@ function MainNavigator() {
 }
 
 export default function AppNavigator() {
-  const { isAuthenticated, realAuth } = useAuth();
+  const { isAuthenticated, realAuth, authReady } = useAuth();
+
+  if (realAuth && !authReady) {
+    // Saved session is still being restored — wait instead of treating the
+    // user as logged out, or an already-authenticated farmer/owner would
+    // briefly (or fully) see Onboarding again on every app reopen.
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
 
   return (
     <NavigationContainer>
