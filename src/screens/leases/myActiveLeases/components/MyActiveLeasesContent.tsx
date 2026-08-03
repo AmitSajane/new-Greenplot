@@ -1,32 +1,41 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FlatList, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { colors } from '../../../../theme/tokens';
+import { AppHeader } from '../../../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../../../localization/i18n';
+import { LanguagePickerModal } from '../../../farmerHome/components/LanguagePickerModal';
 import { Chip } from '../../../../components/farmerHome/Chip';
 import { SearchBar } from '../../../../components/molecules/SearchBar';
 import { LeaseCard } from '../../../../components/leases/LeaseCard';
 import { MyActiveLeasesViewModel } from '../hooks/useMyActiveLeases';
 import { myActiveLeasesStyles as styles } from '../styles/myActiveLeases.styles';
 
-export const MyActiveLeasesContent: React.FC<MyActiveLeasesViewModel> = (vm) => (
-  <SafeAreaView style={styles.safeArea} edges={['top']}>
-    <View style={styles.header}>
-      {vm.canGoBack ? (
-        <TouchableOpacity onPress={vm.onBack} activeOpacity={0.7} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-      ) : (
-        <View style={styles.backButton} />
-      )}
-      <View style={styles.headerCenter}>
-        <Text style={styles.headerTitle}>My Active Leases</Text>
-        <Text style={styles.headerSubtitle}>{vm.filtered.length} agreements</Text>
-      </View>
-      <TouchableOpacity onPress={vm.onOptionsPress} activeOpacity={0.7} style={styles.iconButton}>
-        <Ionicons name="options-outline" size={20} color={colors.textPrimary} />
-      </TouchableOpacity>
-    </View>
+export const MyActiveLeasesContent: React.FC<MyActiveLeasesViewModel> = (vm) => {
+  const [langOpen, setLangOpen] = useState(false);
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
+
+  return (
+  <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+    <AppHeader
+      data={{
+        variant: 'default',
+        title: 'My Active Leases',
+        subtitle: `${vm.filtered.length} agreements`,
+        // showBack: vm.canGoBack,
+        languageShort,
+        name: vm.userName,
+      }}
+      handler={{
+       // onBackPress: vm.onBack,
+        onProfilePress: vm.onProfilePress,
+        onLanguagePress: () => setLangOpen(true),
+        onNotificationPress: vm.onNotificationPress,
+      }}
+    />
     <View style={styles.content}>
       <SearchBar
         value={vm.query}
@@ -60,9 +69,16 @@ export const MyActiveLeasesContent: React.FC<MyActiveLeasesViewModel> = (vm) => 
         }
       />
     </View>
+
+    <TouchableOpacity style={styles.optionsFab} onPress={vm.onOptionsPress} activeOpacity={0.85}>
+      <Ionicons name="options-outline" size={20} color={colors.textPrimary} />
+    </TouchableOpacity>
     <TouchableOpacity activeOpacity={0.9} style={styles.fab} onPress={vm.onNewLeasePress}>
       <Ionicons name="add" size={20} color={colors.surface} />
       <Text style={styles.fabText}>New Lease</Text>
     </TouchableOpacity>
+
+    <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
   </SafeAreaView>
-);
+  );
+};

@@ -1,3 +1,5 @@
+export { AppHeader } from './AppHeader';
+export type { AppHeaderProps, AppHeaderData, AppHeaderStyleProps, AppHeaderAssetProps, AppHeaderHandler } from './AppHeader';
 export { EmptyState } from './EmptyState';
 export { FilterChipRow } from './FilterChipRow';
 export { LabeledTextInput } from './LabeledTextInput';

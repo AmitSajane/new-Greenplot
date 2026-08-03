@@ -19,4 +19,6 @@ export type MarketStackParamList = {
   ColdStorageDetail: { storageId: string };
   ColdStorageBooking: { storageId: string };
   StorageBookingConfirmed: { bookingId: string; storageName: string; quantityKg: number; durationDays: number; total: number };
+  NotificationsCenter: undefined;
+  Settings: undefined;
 };

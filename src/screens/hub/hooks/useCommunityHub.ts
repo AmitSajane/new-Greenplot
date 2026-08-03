@@ -644,6 +644,8 @@ export function useCommunityHub() {
     [navigation],
   );
   const onSearch = useCallback(() => navigation.navigate('FilterByCrop'), [navigation]);
+  const onProfilePress = useCallback(() => navigation.navigate('Settings'), [navigation]);
+  const onNotificationPress = useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]);
 
   return {
     // data
@@ -678,6 +680,8 @@ export function useCommunityHub() {
     onGuidesAll,
     onGuidePress,
     onSearch,
+    onProfilePress,
+    onNotificationPress,
     onVotePoll,
 
     // post composer

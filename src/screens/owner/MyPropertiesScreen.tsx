@@ -1,13 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
+import { AppHeader } from '../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
+import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
 
@@ -15,6 +19,9 @@ export default function MyPropertiesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { ownerListings, deleteListing } = useFarmListings();
   const { user } = useAuth();
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
+  const [langOpen, setLangOpen] = useState(false);
 
   // Filter listings for current owner (in real app, filter by user.id)
   const myListings = ownerListings.filter(
@@ -41,11 +48,23 @@ export default function MyPropertiesScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Properties</Text>
-        <Text style={styles.headerSubtitle}>{myListings.length} active listings</Text>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <AppHeader
+        data={{
+          variant: 'default',
+          title: 'My Properties',
+          subtitle: `${myListings.length} active listings`,
+          // sshowBack: navigation.canGoBack(),
+          languageShort,
+          name: user?.name,
+        }}
+        handler={{
+          // onBackPress: () => navigation.goBack(),
+          onProfilePress: () => navigation.navigate('Settings'),
+          onLanguagePress: () => setLangOpen(true),
+          onNotificationPress: () => navigation.navigate('NotificationsCenter'),
+        }}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -132,6 +151,7 @@ export default function MyPropertiesScreen() {
         ))
         )}
       </ScrollView>
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </SafeAreaView>
   );
 }

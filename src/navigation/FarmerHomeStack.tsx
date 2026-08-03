@@ -36,7 +36,7 @@ export type FarmerHomeStackParamList = {
   LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
   LeaseStatus: undefined;
   LeaseAgreements: undefined;
-  AgreementDetails: undefined;
+  AgreementDetails: { agreementId: string };
   MyActiveLeases: undefined;
   LeaseTypeDetails: { selectedLeaseType?: string; propertyId?: string };
   LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };

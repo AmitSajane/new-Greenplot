@@ -12,6 +12,11 @@ export const AVAILABLE_LANGUAGES: Record<string, string> = {
   ta: 'தமிழ்',
 };
 
+/** Short label shown on header language buttons per selected language. */
+export const LANGUAGE_SHORT_LABELS: Record<string, string> = {
+  en: 'EN', hi: 'हि', kn: 'ಕ', mr: 'म', te: 'తె', ta: 'த',
+};
+
 const resources: Resource = {
   en: { common: en },
 };

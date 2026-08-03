@@ -8,6 +8,8 @@ import CompareLeasesScreen from '../screens/CompareLeasesScreen';
 import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
 import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
+import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
+import SettingsStack from './SettingsStack';
 
 export type MyPropertiesStackParamList = {
   MyPropertiesList: undefined;
@@ -18,6 +20,8 @@ export type MyPropertiesStackParamList = {
   AddLeaseOffer: { landId: string; landTitle?: string };
   AddFarm: { editListingId: string };
   CropDetails: { cropCycleId: string };
+  NotificationsCenter: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<MyPropertiesStackParamList>();
@@ -37,6 +41,12 @@ export default function MyPropertiesStack() {
       <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
       <Stack.Screen name="AddFarm" component={AddFarmScreen} />
       <Stack.Screen name="CropDetails" component={CropDetailsScreen} options={{ title: 'Crop Details' }} />
+      <Stack.Screen
+        name="NotificationsCenter"
+        component={NotificationsCenterScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <Stack.Screen name="Settings" component={SettingsStack} />
     </Stack.Navigator>
   );
 }

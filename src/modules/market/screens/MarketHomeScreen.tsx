@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import {
   AlertCard,
   ChartCard,
@@ -16,6 +17,10 @@ import {
 import { market, mRadius } from '../theme/marketTokens';
 import { MarketStackParamList } from '../navigation/marketRoutes';
 import { MOCK_ALERT_STRIP, MOCK_CROPS, MOCK_CROP_MARKETS } from '../mockData';
+import { AppHeader } from '../../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../../localization/i18n';
+import { LanguagePickerModal } from '../../../screens/farmerHome/components/LanguagePickerModal';
+import { useAuth } from '../../../context/AuthContext';
 
 type Nav = NativeStackNavigationProp<MarketStackParamList, 'MarketHome'>;
 
@@ -31,7 +36,11 @@ const NAV_ROUTES: (keyof MarketStackParamList)[] = [
 
 export default function MarketHomeScreen() {
   const navigation = useNavigation<Nav>();
+  const { user } = useAuth();
   const [cropId, setCropId] = useState('tomato');
+  const [langOpen, setLangOpen] = useState(false);
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
   const crop = MOCK_CROPS.find(c => c.id === cropId)!;
   const data = MOCK_CROP_MARKETS[cropId];
 
@@ -40,6 +49,14 @@ export default function MarketHomeScreen() {
 
   return (
     <View style={styles.container}>
+      <AppHeader
+        data={{ variant: 'default', title: 'Market Intelligence', languageShort, name: user?.name }}
+        handler={{
+          onProfilePress: () => navigation.navigate('Settings'),
+          onLanguagePress: () => setLangOpen(true),
+          onNotificationPress: () => navigation.navigate('NotificationsCenter'),
+        }}
+      />
       <MarketHeader
         eyebrow="AgriArambh"
         title="Market Intelligence"
@@ -146,6 +163,7 @@ export default function MarketHomeScreen() {
           </ChartCard>
         </View>
       </ScrollView>
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </View>
   );
 }

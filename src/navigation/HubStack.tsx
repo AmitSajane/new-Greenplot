@@ -10,6 +10,8 @@ import CommunityQuestionsScreen from '../screens/CommunityQuestionsScreen';
 import CreatePostScreen from '../screens/CreatePostScreen';
 import NewsDetailScreen from '../screens/NewsDetailScreen';
 import QuestionDetailScreen from '../screens/QuestionDetailScreen';
+import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
+import SettingsStack from './SettingsStack';
 
 export type HubStackParamList = {
   Hub: undefined;
@@ -21,6 +23,8 @@ export type HubStackParamList = {
   CommunityQuestions: undefined;
   QuestionDetail: { id: string };
   CreatePost: { from?: 'hub' | 'community' } | undefined;
+  NotificationsCenter: undefined;
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<HubStackParamList>();
@@ -83,6 +87,12 @@ export default function HubStack() {
         component={CreatePostScreen}
         options={{ title: 'Create Post' }}
       />
+      <Stack.Screen
+        name="NotificationsCenter"
+        component={NotificationsCenterScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <Stack.Screen name="Settings" component={SettingsStack} />
     </Stack.Navigator>
   );
 }

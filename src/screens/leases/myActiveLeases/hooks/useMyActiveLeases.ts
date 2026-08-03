@@ -91,6 +91,7 @@ export function useMyActiveLeases({ navigation }: Props) {
 
   return {
     canGoBack: navigation.canGoBack(),
+    userName: user?.name,
     filtered,
     filter,
     filterKeys,
@@ -100,16 +101,24 @@ export function useMyActiveLeases({ navigation }: Props) {
     onBack: useCallback(() => navigation.goBack(), [navigation]),
     onLeasePress: useCallback(
       (item: LeaseListItem) => {
-        if (awaitingSignIds.has(item.id)) {
-          (navigation as { navigate: (n: string, p?: object) => void }).navigate('AgreementSign', { agreementId: item.id });
-        } else {
-          navigation.navigate('AgreementDetails');
-        }
-      },
-      [navigation, awaitingSignIds],
-    ),
+      if (awaitingSignIds.has(item.id)) {
+      (navigation as { navigate: (n: string, p?: object) => void }).navigate('AgreementSign', { agreementId: item.id });
+      } else {
+      (navigation as { navigate: (n: string, p?: object) => void }).navigate('AgreementDetails', { agreementId: item.id });
+    }
+  },
+  [navigation, awaitingSignIds],
+),
     onOptionsPress: useCallback(() => {}, []),
     onNewLeasePress: useCallback(() => {}, []),
+    onProfilePress: useCallback(
+      () => (navigation as { navigate: (n: string, p?: object) => void }).navigate('Settings'),
+      [navigation],
+    ),
+    onNotificationPress: useCallback(
+      () => (navigation as { navigate: (n: string, p?: object) => void }).navigate('NotificationsCenter'),
+      [navigation],
+    ),
   };
 }
 

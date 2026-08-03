@@ -12,12 +12,48 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 // @ts-ignore - react-native-vector-icons types may not be available
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
-import { HomeStackParamList } from '../navigation/HomeStack';
+import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
+import { useLeases } from '../context/LeaseContext';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'AgreementDetails'>;
+type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'AgreementDetails'>;
 
-export default function AgreementDetailsScreen({ navigation }: Props) {
+function toInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((p) => p[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
+export default function AgreementDetailsScreen({ navigation, route }: Props) {
+  const { agreementId } = route.params;
+  const { getAgreementById, activeLeases } = useLeases();
+  const agreement = getAgreementById(agreementId);
+  const activeLease = activeLeases.find((l) => l.id === agreementId);
+  const record = agreement || activeLease;
+
+  if (!record) {
+    return (
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScreenHeader
+          title="Agreement Details"
+          onBack={() => navigation.goBack()}
+          buttonBackgroundColor="transparent"
+          titleWeight="700"
+          showBorder={false}
+        />
+        <Text style={{ paddingHorizontal: spacing.xl, color: colors.textSecondary }}>
+          Agreement not found.
+        </Text>
+      </SafeAreaView>
+    );
+  }
+
+  const tenure = 'tenure' in record ? record.tenure : undefined;
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
@@ -36,12 +72,12 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
         <View style={styles.statusSection}>
           <View style={styles.statusBadge}>
             <Icon name="check-circle" size={14} color={colors.surface} />
-            <Text style={styles.statusText}>STATUS: ACTIVE</Text>
+            <Text style={styles.statusText}>STATUS: {record.status.toUpperCase()}</Text>
           </View>
           <Text style={styles.agreementTitle}>
-            Lease Agreement for Ramgarh Plot
+            Lease Agreement for {record.landTitle}
           </Text>
-          <Text style={styles.agreementId}>#AG-2023-8842</Text>
+          <Text style={styles.agreementId}>#{record.id}</Text>
         </View>
 
         {/* Land Details Section */}
@@ -67,7 +103,7 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Plot Name</Text>
-              <Text style={styles.infoValue}>Ramgarh Plot A</Text>
+              <Text style={styles.infoValue}>{record.landTitle}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Survey No.</Text>
@@ -97,7 +133,7 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
               <Text style={styles.termLabel}>Monthly Rent</Text>
             </View>
             <View style={styles.termRight}>
-              <Text style={styles.termValue}>₹15,000</Text>
+              <Text style={styles.termValue}>{record.termsSummary}</Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Pre-paid</Text>
               </View>
@@ -109,9 +145,9 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
               <Icon name="event" size={20} color={colors.textSecondary} />
               <Text style={styles.termLabel}>Duration</Text>
             </View>
-            <Text style={styles.termValue}>11 Months</Text>
+            <Text style={styles.termValue}>{tenure || '—'}</Text>
           </View>
-          <Text style={styles.termSubtext}>Jan '24 - Dec '24</Text>
+          <Text style={styles.termSubtext}>{record.startDate ? `Since ${record.startDate}` : ''}</Text>
 
           <View style={styles.termRow}>
             <View style={styles.termLeft}>
@@ -157,11 +193,11 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
           <View style={styles.partyRow}>
             <View style={styles.partyLeft}>
               <View style={[styles.avatar, styles.avatarOrange]}>
-                <Text style={styles.avatarText}>RK</Text>
+                <Text style={styles.avatarText}>{toInitials(record.ownerName)}</Text>
               </View>
               <View style={styles.partyInfo}>
                 <View style={styles.partyNameRow}>
-                  <Text style={styles.partyName}>Rajesh Kumar</Text>
+                  <Text style={styles.partyName}>{record.ownerName}</Text>
                   <Icon name="check-circle" size={16} color={colors.success} />
                 </View>
                 <Text style={styles.partyRole}>Lessor (Owner)</Text>
@@ -175,11 +211,11 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
           <View style={styles.partyRow}>
             <View style={styles.partyLeft}>
               <View style={[styles.avatar, styles.avatarBlue]}>
-                <Text style={styles.avatarText}>AS</Text>
+                <Text style={styles.avatarText}>{toInitials(record.farmerName)}</Text>
               </View>
               <View style={styles.partyInfo}>
                 <View style={styles.partyNameRow}>
-                  <Text style={styles.partyName}>Amit Singh</Text>
+                  <Text style={styles.partyName}>{record.farmerName}</Text>
                   <Icon name="check-circle" size={16} color={colors.success} />
                 </View>
                 <Text style={styles.partyRole}>Lessee (Tenant)</Text>

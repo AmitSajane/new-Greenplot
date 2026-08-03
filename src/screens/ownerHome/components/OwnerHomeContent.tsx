@@ -1,10 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
+import { AppHeader } from '../../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../../localization/i18n';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
-import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
+import { ownerHomeStyles as s, tone } from '../styles/ownerHome.styles';
 import { SchemesNewsSection, VideosSection, WeatherHero } from '../../farmerHome/components/sections';
-import { HomeHeader } from '../../../components/organisms/HomeHeader';
+import { LanguagePickerModal } from '../../farmerHome/components/LanguagePickerModal';
 import useCurrentLocation from '../../../hooks/useCurrentLocation';
 import useWeather from '../../../hooks/useWeather';
 
@@ -12,25 +15,28 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
   const { address, loading } = useCurrentLocation();
   const headerLocation = vm.locationLabel || address || '';
   const liveWeather = useWeather(headerLocation);
+  const [langOpen, setLangOpen] = useState(false);
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
 
   return (
     <View style={s.safeArea}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ───────── Header + portfolio ───────── */}
-        <HomeHeader
-          gradientColors={OWNER_HEADER_GRADIENT}
-          name={vm.userName}
-          location={headerLocation}
-          locationLoading={loading}
-          onAvatarPress={vm.onAvatar}
-          actions={[{ icon: 'notifications', onPress: vm.onBell, showDot: vm.hasNotifications }]}
-          avatarSize={44}
-          avatarBackgroundColor="#F5C86A"
-          avatarTextColor="#5C3300"
-          actionButtonSize={40}
-          actionButtonRadius={12}
-          dotSize={8}
-          contentPaddingBottom={18}
+        <AppHeader
+          style={{ container: { paddingBottom: 18 } }}
+          data={{
+            variant: 'home',
+            name: vm.userName,
+            location: headerLocation,
+            loading,
+            languageShort,
+          }}
+          handler={{
+            onProfilePress: vm.onAvatar,
+            onLanguagePress: () => setLangOpen(true),
+            onNotificationPress: vm.onBell,
+          }}
         >
           <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
             <Text style={s.portLabel}>Total portfolio value</Text>
@@ -53,7 +59,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
               ))}
             </View>
           </TouchableOpacity>
-        </HomeHeader>
+        </AppHeader>
 
         <WeatherHero
           weather={liveWeather.weather}
@@ -297,6 +303,8 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
       <TouchableOpacity style={s.fab} onPress={vm.onMicPress} activeOpacity={0.85}>
         <Ionicons name="mic" size={24} color="#fff" />
       </TouchableOpacity>
+
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </View>
   );
 };
