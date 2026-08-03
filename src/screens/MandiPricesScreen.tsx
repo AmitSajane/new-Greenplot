@@ -20,6 +20,8 @@ import { useNavigation } from '@react-navigation/native';
 import { mandiApi, MandiPrice } from '../services/mandiApi';
 import { useAuth } from '../context/AuthContext';
 import INDIA_LOCATIONS from '../constants/indiaLocations.json';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { colors } from '../theme/tokens';
 
 const STATES = Object.keys(INDIA_LOCATIONS as Record<string, unknown>).sort();
 const POPULAR = ['Tomato', 'Onion', 'Potato', 'Wheat', 'Paddy(Dhan)(Common)', 'Cotton', 'Maize', 'Soyabean'];
@@ -141,13 +143,13 @@ export default function MandiPricesScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#0F4A28" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Mandi Prices</Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <ScreenHeader
+        title="Mandi Prices"
+        onBack={() => navigation.goBack()}
+        titleColor={colors.deepGreen.n1}
+        iconColor={colors.deepGreen.g2}
+        buttonBackgroundColor="transparent"
+      />
 
       {/* Selectors */}
       <View style={styles.selectors}>
@@ -228,9 +230,6 @@ export default function MandiPricesScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F4F8F5' },
-  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E6EFE9' },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: '#0D1509' },
 
   selectors: { flexDirection: 'row', gap: 12, padding: 16, paddingBottom: 4 },
   selector: { flex: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E6EFE9', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 6 },

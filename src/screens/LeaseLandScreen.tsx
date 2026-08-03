@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing } from '../theme/tokens';
 import { Header } from '../components/leaseLand/Header';
-import { SearchBar } from '../components/leaseLand/SearchBar';
+import { SearchBar } from '../components/molecules/SearchBar';
 import { ActionButtonsRow } from '../components/leaseLand/ActionButtonsRow';
 import { LandCard } from '../components/leaseLand/LandCard';
 import { TipsCard } from '../components/leaseLand/TipsCard';
@@ -135,8 +135,9 @@ export default function LeaseLandScreen() {
           onAddPostPress={() => {}}
         />
         <SearchBar
-          onSearchPress={() => {}}
-          onNearMePress={() => {}}
+          onFocus={() => {}}
+          trailingAction={{ icon: 'location', label: 'Near me', onPress: () => {} }}
+          containerStyle={styles.searchBar}
         />
         <ActionButtonsRow
           onJoinMembershipPress={() => {}}
@@ -248,6 +249,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
+  },
+  searchBar: {
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
   },
   section: {
     marginHorizontal: spacing.xl,

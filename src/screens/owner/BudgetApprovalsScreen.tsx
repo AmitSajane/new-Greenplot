@@ -11,6 +11,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 
 type PendingRequest = {
   id: string;
@@ -86,23 +87,13 @@ export default function BudgetApprovalsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={handleBack} style={styles.headerBtn} hitSlop={12}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Budget & Approvals</Text>
-        <TouchableOpacity onPress={handleNotifications} style={styles.headerBtn} hitSlop={12}>
-          <View>
-            <Ionicons name="notifications-outline" size={24} color={colors.textPrimary} />
-            {NOTIFICATION_COUNT > 0 && (
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{NOTIFICATION_COUNT}</Text>
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Budget & Approvals"
+        onBack={handleBack}
+        rightAction={{ icon: 'notifications-outline', onPress: handleNotifications, badgeCount: NOTIFICATION_COUNT }}
+        buttonBackgroundColor="transparent"
+        titleWeight="700"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}

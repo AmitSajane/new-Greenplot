@@ -3,19 +3,6 @@ import { colors, radius, spacing } from '../../../theme/tokens';
 
 export const settingsStyles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: { padding: spacing.xs },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   scrollContent: { padding: spacing.xl },
   section: { marginBottom: spacing.xl },
   sectionHeader: {

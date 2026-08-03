@@ -13,6 +13,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
 import { HomeStackParamList } from '../navigation/HomeStack';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'AgreementDetails'>;
 
@@ -23,17 +24,13 @@ export default function AgreementDetailsScreen({ navigation }: Props) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={styles.backButton}
-          >
-            <Icon name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Agreement Details</Text>
-        </View>
+        <ScreenHeader
+          title="Agreement Details"
+          onBack={() => navigation.goBack()}
+          buttonBackgroundColor="transparent"
+          titleWeight="700"
+          showBorder={false}
+        />
 
         {/* Status Badge and Agreement Title */}
         <View style={styles.statusSection}>
@@ -262,22 +259,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    padding: spacing.sm,
-    marginRight: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   statusSection: {
     paddingHorizontal: spacing.xl,

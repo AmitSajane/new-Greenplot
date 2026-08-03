@@ -13,6 +13,7 @@ import { colors, radius, spacing } from '../../theme/tokens';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { MOCK_WORK_JOBS } from '../../modules/work/mockData/workJobs';
 import { MOCK_CROP_CYCLES } from '../../modules/work/mockData/cropCycles';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 
 export default function OwnerWorkReportScreen() {
   const navigation = useNavigation<any>();
@@ -61,12 +62,7 @@ export default function OwnerWorkReportScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Work Report</Text>
-      </View>
+      <ScreenHeader title="Work Report" onBack={() => navigation.goBack()} titleWeight="700" />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -129,16 +125,6 @@ export default function OwnerWorkReportScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { padding: spacing.xs, marginRight: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl },
   summaryCard: {
     backgroundColor: colors.primary,

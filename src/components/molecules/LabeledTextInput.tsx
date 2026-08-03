@@ -6,6 +6,9 @@ import { colors, radius, spacing } from '../../theme/tokens';
 export interface LabeledTextInputProps extends TextInputProps {
   label: string;
   containerStyle?: ViewStyle;
+  /** Validation error — shows red border + message below the input when set. */
+  error?: string;
+  required?: boolean;
 }
 
 /**
@@ -16,18 +19,26 @@ export const LabeledTextInput: React.FC<LabeledTextInputProps> = ({
   label,
   containerStyle,
   style,
+  error,
+  required,
   placeholderTextColor = colors.textMuted,
   ...inputProps
 }) => (
   <View style={[styles.group, containerStyle]}>
     <Text variant="body" weight="600" style={styles.label}>
       {label}
+      {required && <Text color={colors.danger}> *</Text>}
     </Text>
     <TextInput
-      style={[styles.input, style]}
+      style={[styles.input, !!error && styles.inputError, style]}
       placeholderTextColor={placeholderTextColor}
       {...inputProps}
     />
+    {!!error && (
+      <Text variant="caption" color={colors.danger} style={styles.error}>
+        {error}
+      </Text>
+    )}
   </View>
 );
 
@@ -43,5 +54,11 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     borderWidth: 1,
     borderColor: colors.border,
+  },
+  inputError: {
+    borderColor: colors.danger,
+  },
+  error: {
+    marginTop: spacing.xs,
   },
 });

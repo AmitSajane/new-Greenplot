@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../theme/tokens';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 const MOCK_APPLICATIONS = [
   { id: '1', propertyTitle: 'Fertile Wheat Land', status: 'pending', date: '2024-02-10', leaseType: 'Fixed Rent' },
@@ -22,12 +23,7 @@ export default function LeaseStatusScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Lease Status</Text>
-      </View>
+      <ScreenHeader title="Lease Status" onBack={() => navigation.goBack()} titleWeight="700" />
       <FlatList
         data={MOCK_APPLICATIONS}
         keyExtractor={(item) => item.id}
@@ -53,16 +49,6 @@ export default function LeaseStatusScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { marginRight: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   list: { padding: spacing.lg },
   card: {
     backgroundColor: colors.surface,

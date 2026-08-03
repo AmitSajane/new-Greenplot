@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../theme/tokens';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 export default function LeaseApplicationScreen() {
   const navigation = useNavigation<any>();
@@ -21,12 +22,7 @@ export default function LeaseApplicationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Lease Application</Text>
-      </View>
+      <ScreenHeader title="Lease Application" onBack={() => navigation.goBack()} titleWeight="700" />
       <View style={styles.content}>
         <Ionicons name="document-text-outline" size={64} color={colors.primary} style={styles.icon} />
         <Text style={styles.heading}>Apply for lease</Text>
@@ -43,16 +39,6 @@ export default function LeaseApplicationScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { marginRight: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   content: { flex: 1, padding: spacing.xl, alignItems: 'center', justifyContent: 'center' },
   icon: { marginBottom: spacing.xl },
   heading: { fontSize: 22, fontWeight: '700', color: colors.textPrimary, marginBottom: spacing.sm },

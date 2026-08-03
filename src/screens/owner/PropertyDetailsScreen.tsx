@@ -18,6 +18,7 @@ import { useFarmListings } from '../../context/FarmListingsContext';
 import MediaCarousel from '../../components/MediaCarousel';
 import { useLeases } from '../../context/LeaseContext';
 import { useCropCycles } from '../../context/CropCycleContext';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 import { LEASE_TYPE_MAP, summarizeOffer } from '../../constants/leaseTypes';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
@@ -101,16 +102,14 @@ export default function PropertyDetailsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Property Details</Text>
-        <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-          <Ionicons name="share-outline" size={24} color={colors.primary} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Property Details"
+        onBack={() => navigation.goBack()}
+        rightAction={{ icon: 'share-outline', onPress: handleShare }}
+        rightIconColor={colors.primary}
+        buttonBackgroundColor="transparent"
+        titleWeight="700"
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -334,25 +333,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerButton: {
-    padding: spacing.sm,
-    minWidth: 40,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   scrollContent: {
     paddingBottom: spacing.xxl,

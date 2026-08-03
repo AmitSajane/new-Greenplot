@@ -1,21 +1,11 @@
 import React, { useRef, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  TextInput,
-  TouchableOpacity,
-  Platform,
-  Image,
-  KeyboardAvoidingView,
-  ScrollView,
-  Animated,
-} from 'react-native';
+import { Animated, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthStack';
-import { spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
+import { AuthLayout } from '../components/organisms/AuthLayout';
+import { PhoneNumberInput } from '../components/molecules/PhoneNumberInput';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
@@ -58,230 +48,163 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView keyboardShouldPersistTaps="handled">
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
-          {/* ── Header ── */}
-          <View style={styles.headerBlock}>
-            <Text style={styles.headlineTop}>JOIN THE</Text>
-            <Text style={styles.headlineMain}>COMMUNITY</Text>
-            <Image
-              source={require('../assets/images/green-plot.png')}
-              style={styles.brandImage}
-            />
-          </View>
+    <AuthLayout
+      headlineTop="JOIN THE"
+      headlineMain="COMMUNITY"
+      headerMarginTop={20}
+      headerMarginBottom={40}
+      brandImageHeight={70}
+      containerPaddingBottom={40}
+    >
+      {/* Full Name */}
+      <Text style={styles.label}>Full Name</Text>
+      <TextInput
+        style={[styles.input, fullName.length > 0 && !isValidName && styles.inputError]}
+        placeholder="e.g. Ramesh Kumar"
+        placeholderTextColor={colors.authGreen.muted}
+        value={fullName}
+        onChangeText={setFullName}
+        autoCapitalize="words"
+        returnKeyType="next"
+      />
+      {fullName.length > 0 && !isValidName && (
+        <Text style={styles.errorText}>Name must be at least 2 characters</Text>
+      )}
 
-          {/* ── Form Card ── */}
-          <View style={styles.formCard}>
+      {/* Mobile Number */}
+      <Text style={[styles.label, { marginTop: spacing.lg }]}>Mobile Number</Text>
+      <PhoneNumberInput
+        value={mobileNumber}
+        onChangeText={(text) => setMobileNumber(sanitizeIndianMobileInput(text))}
+        error={mobileNumber.length > 0 && !isValidPhone}
+        height={50}
+        borderRadius={8}
+      />
+      {mobileNumber.length > 0 && !isValidPhone && (
+        <Text style={styles.errorText}>Enter a valid 10-digit mobile number</Text>
+      )}
 
-            {/* Full Name */}
-            <Text style={styles.label}>Full Name</Text>
-            <TextInput
-              style={[styles.input, fullName.length > 0 && !isValidName && styles.inputError]}
-              placeholder="e.g. Ramesh Kumar"
-              placeholderTextColor="#7ea18a"
-              value={fullName}
-              onChangeText={setFullName}
-              autoCapitalize="words"
-              returnKeyType="next"
-            />
-            {fullName.length > 0 && !isValidName && (
-              <Text style={styles.errorText}>Name must be at least 2 characters</Text>
-            )}
+      {/* Email (Optional) */}
+      <Text style={[styles.label, { marginTop: spacing.lg }]}>
+        Email{' '}
+        <Text style={styles.optional}>(optional)</Text>
+      </Text>
+      <TextInput
+        style={[styles.input, email.length > 0 && !isValidEmail && styles.inputError]}
+        placeholder="email@example.com"
+        placeholderTextColor={colors.authGreen.muted}
+        keyboardType="email-address"
+        autoCapitalize="none"
+        value={email}
+        onChangeText={setEmail}
+        returnKeyType="next"
+      />
+      {email.length > 0 && !isValidEmail && (
+        <Text style={styles.errorText}>Enter a valid email address</Text>
+      )}
 
-            {/* Mobile Number */}
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>Mobile Number</Text>
-            <View style={styles.inputRow}>
-              <TouchableOpacity style={styles.countryPicker} activeOpacity={0.8}>
-                <Text style={styles.flagText}>🇮🇳</Text>
-                <Text style={styles.chevron}>▾</Text>
-              </TouchableOpacity>
-              <TextInput
-                style={[
-                  styles.input,
-                  styles.inputFlex,
-                  mobileNumber.length > 0 && !isValidPhone && styles.inputError,
-                ]}
-                placeholder="Mobile Number"
-                placeholderTextColor="#7ea18a"
-                keyboardType="phone-pad"
-                maxLength={10}
-                value={mobileNumber}
-                onChangeText={text => setMobileNumber(sanitizeIndianMobileInput(text))}
-                returnKeyType="next"
-              />
+      {/* Role Selection */}
+      <Text style={[styles.label, { marginTop: spacing.xl }]}>I am a</Text>
+      <View style={styles.roleRow}>
+        {/* Farmer Card */}
+        <Animated.View style={[{ flex: 1 }, { transform: [{ scale: farmerAnim }] }]}>
+          <TouchableOpacity
+            style={[styles.roleCard, role === 'farmer' && styles.roleCardSelected]}
+            onPress={() => handleRoleSelect('farmer')}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.roleIconWrap, role === 'farmer' && styles.roleIconWrapSelected]}>
+              <Text style={styles.roleEmoji}>👨‍🌾</Text>
             </View>
-            {mobileNumber.length > 0 && !isValidPhone && (
-              <Text style={styles.errorText}>Enter a valid 10-digit mobile number</Text>
-            )}
-
-            {/* Email (Optional) */}
-            <Text style={[styles.label, { marginTop: spacing.lg }]}>
-              Email{' '}
-              <Text style={styles.optional}>(optional)</Text>
+            <Text style={[styles.roleTitle, role === 'farmer' && styles.roleTitleSelected]}>
+              Farmer
             </Text>
-            <TextInput
-              style={[styles.input, email.length > 0 && !isValidEmail && styles.inputError]}
-              placeholder="email@example.com"
-              placeholderTextColor="#7ea18a"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              value={email}
-              onChangeText={setEmail}
-              returnKeyType="next"
-            />
-            {email.length > 0 && !isValidEmail && (
-              <Text style={styles.errorText}>Enter a valid email address</Text>
-            )}
-
-            {/* Role Selection */}
-            <Text style={[styles.label, { marginTop: spacing.xl }]}>I am a</Text>
-            <View style={styles.roleRow}>
-              {/* Farmer Card */}
-              <Animated.View style={[{ flex: 1 }, { transform: [{ scale: farmerAnim }] }]}>
-                <TouchableOpacity
-                  style={[styles.roleCard, role === 'farmer' && styles.roleCardSelected]}
-                  onPress={() => handleRoleSelect('farmer')}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.roleIconWrap, role === 'farmer' && styles.roleIconWrapSelected]}>
-                    <Text style={styles.roleEmoji}>👨‍🌾</Text>
-                  </View>
-                  <Text style={[styles.roleTitle, role === 'farmer' && styles.roleTitleSelected]}>
-                    Farmer
-                  </Text>
-                  <Text style={[styles.roleDesc, role === 'farmer' && styles.roleDescSelected]}>
-                    Lease land &{'\n'}grow crops
-                  </Text>
-                  {role === 'farmer' && (
-                    <View style={styles.selectedBadge}>
-                      <Text style={styles.selectedBadgeText}>✓</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </Animated.View>
-
-              <View style={{ width: spacing.md }} />
-
-              {/* Owner Card */}
-              <Animated.View style={[{ flex: 1 }, { transform: [{ scale: ownerAnim }] }]}>
-                <TouchableOpacity
-                  style={[styles.roleCard, role === 'owner' && styles.roleCardSelected]}
-                  onPress={() => handleRoleSelect('owner')}
-                  activeOpacity={0.85}
-                >
-                  <View style={[styles.roleIconWrap, role === 'owner' && styles.roleIconWrapSelected]}>
-                    <Text style={styles.roleEmoji}>🏡</Text>
-                  </View>
-                  <Text style={[styles.roleTitle, role === 'owner' && styles.roleTitleSelected]}>
-                    Land Owner
-                  </Text>
-                  <Text style={[styles.roleDesc, role === 'owner' && styles.roleDescSelected]}>
-                    List land &{'\n'}manage leases
-                  </Text>
-                  {role === 'owner' && (
-                    <View style={styles.selectedBadge}>
-                      <Text style={styles.selectedBadgeText}>✓</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-
-            {/* Sign Up Button */}
-            <TouchableOpacity
-              style={[styles.signUpButton, !canProceed && styles.signUpButtonDisabled]}
-              activeOpacity={0.9}
-              disabled={!canProceed}
-              onPress={handleSignUp}
-            >
-              <Text style={styles.signUpButtonText}>Get OTP & Sign Up</Text>
-            </TouchableOpacity>
-
-            {/* Divider */}
-            <View style={styles.dividerRow}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
-            </View>
-
-            {/* Login Link */}
-            <TouchableOpacity
-              style={styles.loginLink}
-              onPress={() => navigation.navigate('Login')}
-            >
-              <Text style={styles.loginLinkText}>
-                Already have an account?{' '}
-                <Text style={styles.loginLinkAccent}>Login</Text>
-              </Text>
-            </TouchableOpacity>
-
-            {/* Terms */}
-            <Text style={styles.termsText}>
-              By signing up you agree to our{' '}
-              <Text style={styles.termsLink}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+            <Text style={[styles.roleDesc, role === 'farmer' && styles.roleDescSelected]}>
+              Lease land &{'\n'}grow crops
             </Text>
-          </View>
-        </KeyboardAvoidingView>
-      </ScrollView>
-    </SafeAreaView>
+            {role === 'farmer' && (
+              <View style={styles.selectedBadge}>
+                <Text style={styles.selectedBadgeText}>✓</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        <View style={{ width: spacing.md }} />
+
+        {/* Owner Card */}
+        <Animated.View style={[{ flex: 1 }, { transform: [{ scale: ownerAnim }] }]}>
+          <TouchableOpacity
+            style={[styles.roleCard, role === 'owner' && styles.roleCardSelected]}
+            onPress={() => handleRoleSelect('owner')}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.roleIconWrap, role === 'owner' && styles.roleIconWrapSelected]}>
+              <Text style={styles.roleEmoji}>🏡</Text>
+            </View>
+            <Text style={[styles.roleTitle, role === 'owner' && styles.roleTitleSelected]}>
+              Land Owner
+            </Text>
+            <Text style={[styles.roleDesc, role === 'owner' && styles.roleDescSelected]}>
+              List land &{'\n'}manage leases
+            </Text>
+            {role === 'owner' && (
+              <View style={styles.selectedBadge}>
+                <Text style={styles.selectedBadgeText}>✓</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+      </View>
+
+      {/* Sign Up Button */}
+      <TouchableOpacity
+        style={[styles.signUpButton, !canProceed && styles.signUpButtonDisabled]}
+        activeOpacity={0.9}
+        disabled={!canProceed}
+        onPress={handleSignUp}
+      >
+        <Text style={styles.signUpButtonText}>Get OTP & Sign Up</Text>
+      </TouchableOpacity>
+
+      {/* Divider */}
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* Login Link */}
+      <TouchableOpacity
+        style={styles.loginLink}
+        onPress={() => navigation.navigate('Login')}
+      >
+        <Text style={styles.loginLinkText}>
+          Already have an account?{' '}
+          <Text style={styles.loginLinkAccent}>Login</Text>
+        </Text>
+      </TouchableOpacity>
+
+      {/* Terms */}
+      <Text style={styles.termsText}>
+        By signing up you agree to our{' '}
+        <Text style={styles.termsLink}>Terms of Service</Text>
+        {' '}and{' '}
+        <Text style={styles.termsLink}>Privacy Policy</Text>
+      </Text>
+    </AuthLayout>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#f2fbf2' },
-
-  container: {
-    flex: 1,
-    paddingHorizontal: 28,
-    paddingTop: 32,
-    paddingBottom: 40,
-    backgroundColor: '#f2fbf2',
-  },
-
-  // ── Header ──────────────────────────────────────────────
-  headerBlock: {
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 40,
-  },
-  headlineTop: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#A9CDAD',
-    letterSpacing: 1,
-  },
-  headlineMain: {
-    fontSize: 44,
-    fontWeight: '800',
-    color: '#A9CDAD',
-    marginTop: 4,
-    letterSpacing: 2,
-  },
-  brandImage: {
-    height: 70,
-    resizeMode: 'contain',
-    marginTop: 10,
-  },
-
-  // ── Form ────────────────────────────────────────────────
-  formCard: {
-    flex: 1,
-  },
-
   label: {
-    color: '#138115',
+    color: colors.authGreen.label,
     fontSize: 16,
     fontWeight: '700',
     marginBottom: 10,
   },
   optional: {
-    color: '#7ea18a',
+    color: colors.authGreen.muted,
     fontWeight: '500',
     fontSize: 13,
   },
@@ -289,26 +212,21 @@ const styles = StyleSheet.create({
   input: {
     height: 50,
     borderRadius: 8,
-    backgroundColor: '#b3c9b3',
+    backgroundColor: colors.authGreen.chipBg,
     paddingHorizontal: 14,
-    color: '#1f3b2a',
+    color: colors.authGreen.inputText,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 2,
   },
-  inputFlex: {
-    flex: 1,
-    marginLeft: 10,
-    marginBottom: 0,
-  },
   inputError: {
     borderWidth: 1.5,
-    borderColor: '#e53935',
-    backgroundColor: '#fce4e4',
+    borderColor: colors.authGreen.errorBorder,
+    backgroundColor: colors.authGreen.errorBg,
   },
 
   errorText: {
-    color: '#e53935',
+    color: colors.authGreen.errorBorder,
     fontSize: 12,
     fontWeight: '500',
     marginBottom: 4,
@@ -316,30 +234,13 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 2,
-  },
-  countryPicker: {
-    width: 70,
-    height: 50,
-    borderRadius: 8,
-    backgroundColor: '#d9e7d9',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-evenly',
-  },
-  flagText: { fontSize: 20 },
-  chevron: { fontSize: 16, color: '#4c6a55' },
-
   // ── Role Cards ───────────────────────────────────────────
   roleRow: {
     flexDirection: 'row',
     marginBottom: 28,
   },
   roleCard: {
-    backgroundColor: '#d9e7d9',
+    backgroundColor: colors.authGreen.countryPickerBg,
     borderRadius: 14,
     padding: 16,
     alignItems: 'center',
@@ -351,8 +252,8 @@ const styles = StyleSheet.create({
   },
   roleCardSelected: {
     backgroundColor: '#e8f5e9',
-    borderColor: '#0b980b',
-    shadowColor: '#0b980b',
+    borderColor: colors.authGreen.bright,
+    shadowColor: colors.authGreen.bright,
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 10,
@@ -362,7 +263,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#b3c9b3',
+    backgroundColor: colors.authGreen.chipBg,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -376,15 +277,15 @@ const styles = StyleSheet.create({
   roleTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1f3b2a',
+    color: colors.authGreen.inputText,
     textAlign: 'center',
   },
   roleTitleSelected: {
-    color: '#0b980b',
+    color: colors.authGreen.bright,
   },
   roleDesc: {
     fontSize: 11,
-    color: '#4c6a55',
+    color: colors.authGreen.chevron,
     textAlign: 'center',
     marginTop: 4,
     lineHeight: 16,
@@ -399,7 +300,7 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 11,
-    backgroundColor: '#0b980b',
+    backgroundColor: colors.authGreen.bright,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -413,7 +314,7 @@ const styles = StyleSheet.create({
   signUpButton: {
     height: 54,
     borderRadius: 28,
-    backgroundColor: '#0b980b',
+    backgroundColor: colors.authGreen.bright,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -441,11 +342,11 @@ const styles = StyleSheet.create({
   dividerLine: {
     flex: 1,
     height: 1,
-    backgroundColor: '#b3c9b3',
+    backgroundColor: colors.authGreen.chipBg,
   },
   dividerText: {
     marginHorizontal: 12,
-    color: '#7ea18a',
+    color: colors.authGreen.muted,
     fontSize: 13,
     fontWeight: '600',
   },
@@ -456,24 +357,24 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   loginLinkText: {
-    color: '#4c6a55',
+    color: colors.authGreen.chevron,
     fontSize: 14,
     fontWeight: '600',
   },
   loginLinkAccent: {
-    color: '#0b980b',
+    color: colors.authGreen.bright,
     fontWeight: '800',
   },
 
   termsText: {
     textAlign: 'center',
-    color: '#7ea18a',
+    color: colors.authGreen.muted,
     fontSize: 11,
     lineHeight: 17,
     paddingHorizontal: 10,
   },
   termsLink: {
-    color: '#138115',
+    color: colors.authGreen.label,
     fontWeight: '600',
   },
 });

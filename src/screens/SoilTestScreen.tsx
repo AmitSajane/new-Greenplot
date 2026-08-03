@@ -22,6 +22,8 @@ import { Loader } from '../components/atoms/Loader';
 import { Button } from '../components/atoms/Button';
 import { MapSection } from '../components/organisms/MapSection';
 import { SoilReportView } from '../components/soil/SoilReport';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { colors } from '../theme/tokens';
 
 // Fallback region used if location permission is denied / unavailable.
 const DEFAULT_COORDS = { lat: 16.591018669999993, lon: 74.91707610999997 };
@@ -106,23 +108,19 @@ export default function SoilTestScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color="#0F4A28" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleContainer}>
-          <Text variant="h2" weight="900" color="#0F4A28">
-            Soil Test
-          </Text>
-          <Text variant="caption" weight="600" color="#6B8074">
-            Know your soil, grow more 🌱
-          </Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <Ionicons name="flask" size={20} color="#1A6B3A" />
-        </View>
-      </View>
+      <ScreenHeader
+        title="Soil Test"
+        subtitle="Know your soil, grow more 🌱"
+        onBack={() => navigation.goBack()}
+        rightAction={{ icon: 'flask' }}
+        titleColor={colors.deepGreen.g2}
+        subtitleColor={colors.deepGreen.n4}
+        iconColor={colors.deepGreen.g2}
+        rightIconColor={colors.deepGreen.g3}
+        buttonBackgroundColor={colors.deepGreen.g7}
+        titleSize={24}
+        titleWeight="900"
+      />
 
       {/* Location bar */}
       <View style={styles.locCard}>
@@ -170,32 +168,6 @@ export default function SoilTestScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F8F5' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8F0EC',
-  },
-  backButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: '#E4F4EC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitleContainer: { flex: 1, marginLeft: 12 },
-  headerIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: '#E4F4EC',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   locCard: {
     flexDirection: 'row',
     alignItems: 'center',

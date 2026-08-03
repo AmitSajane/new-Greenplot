@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, radius, spacing } from '../theme/tokens';
 import { HubStackParamList } from '../navigation/HubStack';
 import { latestNews } from '../constants/hubMockData';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<HubStackParamList, 'NewsDetail'>;
 
@@ -33,20 +34,11 @@ export default function NewsDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ScreenHeader backVariant="text" onBack={() => navigation.goBack()} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={styles.backButton}
-          >
-            <Text style={styles.backIcon}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-
         <Image source={{ uri: article.imageUrl }} style={styles.image} />
 
         <View style={styles.metaRow}>
@@ -74,20 +66,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: spacing.xxl,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  backIcon: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
   },
   image: {
     width: '100%',

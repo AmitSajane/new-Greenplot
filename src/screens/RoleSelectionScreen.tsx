@@ -11,18 +11,14 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing, shadow } from '../theme/tokens';
 import { AuthStackParamList } from '../navigation/AuthStack';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'RoleSelection'>;
 
 export default function RoleSelectionScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>I am a</Text>
-      </View>
+      <ScreenHeader title="I am a" onBack={() => navigation.goBack()} titleSize={20} />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -61,17 +57,6 @@ export default function RoleSelectionScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backBtn: { padding: spacing.xs, marginRight: spacing.sm },
-  title: { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl },
   subtitle: {
     fontSize: 15,

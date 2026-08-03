@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, radius, spacing } from '../theme/tokens';
 import { MandiPrice, mandiPrices } from '../constants/hubMockData';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 const CROPS = ['All', 'Wheat', 'Onion', 'Tomato', 'Maize', 'Cotton'] as const;
 type CropFilter = (typeof CROPS)[number];
@@ -43,17 +44,8 @@ export default function FilterByCropScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ScreenHeader backVariant="text" onBack={() => navigation.goBack()} />
       <View style={styles.container}>
-        <View style={styles.headerRow}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={styles.backButton}
-          >
-            <Text style={styles.backIcon}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-        
         <View style={styles.filterRow}>
           {CROPS.map((crop) => {
             const isActive = crop === activeCrop;
@@ -92,18 +84,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: spacing.xl,
-  },
-  headerRow: {
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  backIcon: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
   },
   filterRow: {
     flexDirection: 'row',

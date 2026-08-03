@@ -7,6 +7,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing, shadow } from '../theme/tokens';
 import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 const LANGUAGE_OPTIONS = ['en', 'kn', 'hi', 'mr'] as const;
 
@@ -38,14 +39,12 @@ export default function LanguageSelectionScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        {!fromAuth ? (
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-          </TouchableOpacity>
-        ) : null}
-        <Text style={styles.title}>Select Language</Text>
-      </View>
+      <ScreenHeader
+        title="Select Language"
+        backVariant={fromAuth ? 'none' : 'icon'}
+        onBack={() => navigation.goBack()}
+        titleWeight="700"
+      />
       <View style={styles.list}>
         {LANGUAGE_OPTIONS.map(code => (
           <TouchableOpacity
@@ -75,16 +74,6 @@ export default function LanguageSelectionScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { padding: spacing.xs, marginRight: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   list: { padding: spacing.xl },
   item: {
     flexDirection: 'row',

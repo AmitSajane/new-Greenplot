@@ -17,6 +17,7 @@ import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import { LandFiltersPanel } from '../../components/leases/LandFiltersPanel';
 import { BlockchainVerifiedBadge } from '../../components/leases/BlockchainVerifiedBadge';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 
@@ -142,14 +143,7 @@ export default function AllAvailableLandsScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>All Available Lands</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader title="All Available Lands" onBack={() => navigation.goBack()} buttonBackgroundColor="transparent" titleWeight="700" />
 
       {/* Available / Leased toggle */}
       <View style={styles.segment}>
@@ -285,27 +279,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   filterToggle: {
     flexDirection: 'row',

@@ -13,12 +13,13 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { LEASE_TYPES, LEASE_TYPE_MAP, LeaseField, LeaseTypeId, summarizeOffer } from '../../constants/leaseTypes';
 import { useLeases } from '../../context/LeaseContext';
+import { colors } from '../../theme/tokens';
 
 type ParamList = { AddLeaseOffer: { landId: string; landTitle?: string } };
 
 const TENURES = ['1 year', '2 years', '3 years', '5 years', '10 years'];
 
-const G = { g1: '#092E18', g2: '#0F4A28', g3: '#1A6B3A', g7: '#E4F4EC', n2: '#1C2E18', n4: '#6B8074', n7: '#E8F0EC', n8: '#F4F8F5', white: '#fff' };
+const G = colors.deepGreen;
 
 function defaultsFor(typeId: LeaseTypeId): Record<string, string | number> {
   const out: Record<string, string | number> = {};

@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../theme/tokens';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 const MOCK_NOTIFICATIONS = [
   { id: '1', type: 'lease', title: 'Lease request', body: 'Ramesh Kumar requested to lease your 5-acre plot.', time: '2h ago', read: false },
@@ -25,12 +26,7 @@ export default function NotificationsCenterScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.title}>Notifications</Text>
-      </View>
+      <ScreenHeader title="Notifications" onBack={() => navigation.goBack()} titleWeight="700" />
       <FlatList
         data={MOCK_NOTIFICATIONS}
         keyExtractor={(item) => item.id}
@@ -54,16 +50,6 @@ export default function NotificationsCenterScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-    backgroundColor: colors.surface,
-  },
-  backBtn: { marginRight: spacing.sm },
-  title: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   list: { padding: spacing.lg },
   card: {
     flexDirection: 'row',

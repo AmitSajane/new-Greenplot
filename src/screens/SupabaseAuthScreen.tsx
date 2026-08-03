@@ -16,8 +16,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/auth';
 import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
+import { colors } from '../theme/tokens';
 
-const G = { g1: '#092E18', g2: '#0F4A28', g3: '#1A6B3A', g7: '#E4F4EC', a7: '#FDF5E0', a2: '#8A5200', r2: '#C02828', n2: '#1C2E18', n4: '#6B8074', n7: '#E8F0EC', n8: '#F4F8F5' };
+const G = colors.deepGreen;
 
 export default function SupabaseAuthScreen() {
   const { signInWithPhone, signUpWithPhone } = useAuth();

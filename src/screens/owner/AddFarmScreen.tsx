@@ -23,6 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import locationHierarchy, { type StateItem } from '../../data/locationHierarchy';
 import INDIA_LOCATIONS from '../../constants/indiaLocations.json';
 import { lookupPincode } from '../../services/pincodeApi';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 import { landVerifier, VerificationResult } from '../../services/landVerifier';
 import { storageApi } from '../../services/storageApi';
 
@@ -662,16 +663,13 @@ export default function AddFarmScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {selfFarmed ? 'Add My Land' : isEditMode ? 'Edit Farm Listing' : 'Add New Farm Listing'}
-        </Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader
+        title={selfFarmed ? 'Add My Land' : isEditMode ? 'Edit Farm Listing' : 'Add New Farm Listing'}
+        onBack={() => navigation.goBack()}
+        buttonBackgroundColor="transparent"
+        backgroundColor={colors.background}
+        titleWeight="700"
+      />
 
       <KeyboardAvoidingView
         style={styles.flex}
@@ -1131,27 +1129,6 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    // backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   scrollContent: {
     padding: spacing.xl,

@@ -6,12 +6,14 @@ import { Text } from './Text';
 interface ButtonProps extends TouchableOpacityProps {
   label: string;
   variant?: 'primary' | 'secondary' | 'brown';
+  size?: 'md' | 'sm';
   icon?: React.ReactNode;
 }
 
 export const Button: React.FC<ButtonProps> = ({
   label,
   variant = 'primary',
+  size = 'md',
   icon,
   style,
   ...props
@@ -30,12 +32,17 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <TouchableOpacity
-      style={[styles.button, { backgroundColor: bgColors[variant] }, style]}
+      style={[
+        styles.button,
+        size === 'sm' ? styles.buttonSm : styles.buttonMd,
+        { backgroundColor: bgColors[variant] },
+        style,
+      ]}
       activeOpacity={0.8}
       {...props}
     >
       {icon && <View style={styles.iconContainer}>{icon}</View>}
-      <Text variant="subtitle" weight="bold" color={textColors[variant]}>
+      <Text variant={size === 'sm' ? 'body' : 'subtitle'} weight="bold" color={textColors[variant]}>
         {label}
       </Text>
     </TouchableOpacity>
@@ -47,9 +54,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: radius.md,
+  },
+  buttonMd: {
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.xl,
-    borderRadius: radius.md,
+  },
+  buttonSm: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
   },
   iconContainer: {
     marginRight: spacing.sm,

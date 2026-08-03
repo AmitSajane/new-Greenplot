@@ -13,6 +13,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
@@ -325,14 +326,13 @@ export default function CompareLeasesScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Compare Leases</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader
+        title="Compare Leases"
+        onBack={() => navigation.goBack()}
+        buttonBackgroundColor="transparent"
+        titleWeight="700"
+        showBorder={false}
+      />
 
       {/* Horizontal Scrolling List */}
       <FlatList
@@ -354,25 +354,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   listContent: {
     padding: spacing.lg,

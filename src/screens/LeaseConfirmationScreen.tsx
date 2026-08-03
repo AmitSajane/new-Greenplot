@@ -12,6 +12,7 @@ import { useRoute, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../theme/tokens';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
@@ -191,14 +192,13 @@ export default function LeaseConfirmationScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lease Confirmation</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader
+        title="Lease Confirmation"
+        onBack={() => navigation.goBack()}
+        buttonBackgroundColor="transparent"
+        titleWeight="700"
+        showBorder={false}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -346,25 +346,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   scrollContent: {
     padding: spacing.xl,

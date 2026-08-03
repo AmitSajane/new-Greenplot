@@ -5,6 +5,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { colors, radius, spacing } from '../theme/tokens';
 import { HubStackParamList } from '../navigation/HubStack';
 import { communityQuestions } from '../constants/hubMockData';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<HubStackParamList, 'QuestionDetail'>;
 
@@ -38,20 +39,11 @@ export default function QuestionDetailScreen({ route, navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <ScreenHeader backVariant="text" onBack={() => navigation.goBack()} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            activeOpacity={0.7}
-            style={styles.backButton}
-          >
-            <Text style={styles.backIcon}>← Back</Text>
-          </TouchableOpacity>
-        </View>
-
         <View style={styles.card}>
           <View style={styles.headerRow}>
             <View style={styles.avatar}>
@@ -91,18 +83,6 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: spacing.xl,
     paddingBottom: spacing.xxl,
-  },
-  header: {
-    marginBottom: spacing.lg,
-  },
-  backButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  backIcon: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
   },
   card: {
     borderRadius: radius.lg,

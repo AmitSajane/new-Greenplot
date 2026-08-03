@@ -13,6 +13,7 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { useFarmListings } from '../context/FarmListingsContext';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
@@ -168,16 +169,14 @@ export default function LeaseDetailViewScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lease Details</Text>
-        <TouchableOpacity style={styles.shareButton}>
-          <Ionicons name="share-outline" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Lease Details"
+        onBack={() => navigation.goBack()}
+        rightAction={{ icon: 'share-outline' }}
+        buttonBackgroundColor="transparent"
+        titleWeight="700"
+        showBorder={false}
+      />
 
       <ScrollView
         contentContainerStyle={styles.scrollContent}
@@ -307,31 +306,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  shareButton: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   scrollContent: {
     padding: spacing.xl,

@@ -1,8 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity } from 'react-native';
-import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../../theme/tokens';
-import { satelliteMapStyles as styles } from '../styles/satelliteMap.styles';
+import { ScreenHeader } from '../../../components/molecules/ScreenHeader';
 
 export interface SatelliteMapHeaderProps {
   showLayerPanel: boolean;
@@ -15,17 +13,12 @@ export const SatelliteMapHeader: React.FC<SatelliteMapHeaderProps> = ({
   onBack,
   onToggleLayerPanel,
 }) => (
-  <View style={styles.header}>
-    <TouchableOpacity style={styles.headerButton} onPress={onBack}>
-      <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
-    </TouchableOpacity>
-    <Text style={styles.headerTitle}>Satellite Monitoring</Text>
-    <TouchableOpacity style={styles.headerButton} onPress={onToggleLayerPanel}>
-      <Ionicons
-        name={showLayerPanel ? 'layers' : 'layers-outline'}
-        size={24}
-        color={colors.primary}
-      />
-    </TouchableOpacity>
-  </View>
+  <ScreenHeader
+    title="Satellite Monitoring"
+    onBack={onBack}
+    rightAction={{ icon: showLayerPanel ? 'layers' : 'layers-outline', onPress: onToggleLayerPanel }}
+    buttonBackgroundColor="transparent"
+    rightIconColor={colors.primary}
+    titleWeight="700"
+  />
 );

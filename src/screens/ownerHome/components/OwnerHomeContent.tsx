@@ -1,22 +1,12 @@
 import React from 'react';
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import LinearGradient from 'react-native-linear-gradient';
+import { ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { OwnerHomeViewModel } from '../hooks/useOwnerHome';
 import { ownerHomeStyles as s, OWNER_HEADER_GRADIENT, tone } from '../styles/ownerHome.styles';
 import { SchemesNewsSection, VideosSection, WeatherHero } from '../../farmerHome/components/sections';
+import { HomeHeader } from '../../../components/organisms/HomeHeader';
 import useCurrentLocation from '../../../hooks/useCurrentLocation';
 import useWeather from '../../../hooks/useWeather';
-
-function initials(name: string) {
-  return name
-    .split(' ')
-    .map(p => p[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase();
-}
 
 export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
   const { address, loading } = useCurrentLocation();
@@ -27,54 +17,43 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
     <View style={s.safeArea}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
         {/* ───────── Header + portfolio ───────── */}
-        <LinearGradient colors={OWNER_HEADER_GRADIENT} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-          <SafeAreaView edges={['top']}>
-            <View style={s.header}>
-              <View style={s.headerTop}>
-                <TouchableOpacity style={s.avatar} onPress={vm.onAvatar} activeOpacity={0.8}>
-                  <Text style={s.avatarText}>{initials(vm.userName)}</Text>
-                </TouchableOpacity>
-                <View>
-                 <Text style={s.hi}>Namaste 🙏</Text>
-                  <Text style={s.name}>{vm.userName}</Text>
-                  <View style={s.locRow}>
-                    <Ionicons name="location" size={11} color="rgba(255,255,255,0.55)" />
-                    <Text style={s.locText}>{headerLocation}</Text>
-                    {loading ? (
-                      <ActivityIndicator style={{ marginLeft: 8 }} size="small" color="rgba(255,255,255,0.9)" />
-                    ) : null}
-                  </View>
-                </View>
-                <TouchableOpacity style={s.bell} onPress={vm.onBell} activeOpacity={0.8}>
-                  <Ionicons name="notifications" size={18} color="#fff" />
-                  {vm.hasNotifications && <View style={s.bellDot} />}
-                </TouchableOpacity>
-              </View>
-
-              <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
-                <Text style={s.portLabel}>Total portfolio value</Text>
-                <Text style={s.portVal}>{vm.portfolio.valueDisplay}</Text>
-                <View style={s.portChip}>
-                  <Ionicons name="trending-up" size={12} color="#CFEFDB" />
-                  <Text style={s.portChipText}>+{vm.portfolio.changePct}% this year</Text>
-                </View>
-                <View style={s.portStats}>
-                  {[
-                    ['Lands', vm.portfolio.lands],
-                    ['Leased', vm.portfolio.leased],
-                    ['Vacant', vm.portfolio.vacant],
-                    ['Acres', vm.portfolio.acresDisplay],
-                  ].map(([label, value], i, arr) => (
-                    <View key={label as string} style={[s.pst, i === arr.length - 1 && s.pstLast]}>
-                      <Text style={s.pstV}>{value}</Text>
-                      <Text style={s.pstL}>{label}</Text>
-                    </View>
-                  ))}
-                </View>
-              </TouchableOpacity>
+        <HomeHeader
+          gradientColors={OWNER_HEADER_GRADIENT}
+          name={vm.userName}
+          location={headerLocation}
+          locationLoading={loading}
+          onAvatarPress={vm.onAvatar}
+          actions={[{ icon: 'notifications', onPress: vm.onBell, showDot: vm.hasNotifications }]}
+          avatarSize={44}
+          avatarBackgroundColor="#F5C86A"
+          avatarTextColor="#5C3300"
+          actionButtonSize={40}
+          actionButtonRadius={12}
+          dotSize={8}
+          contentPaddingBottom={18}
+        >
+          <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
+            <Text style={s.portLabel}>Total portfolio value</Text>
+            <Text style={s.portVal}>{vm.portfolio.valueDisplay}</Text>
+            <View style={s.portChip}>
+              <Ionicons name="trending-up" size={12} color="#CFEFDB" />
+              <Text style={s.portChipText}>+{vm.portfolio.changePct}% this year</Text>
             </View>
-          </SafeAreaView>
-        </LinearGradient>
+            <View style={s.portStats}>
+              {[
+                ['Lands', vm.portfolio.lands],
+                ['Leased', vm.portfolio.leased],
+                ['Vacant', vm.portfolio.vacant],
+                ['Acres', vm.portfolio.acresDisplay],
+              ].map(([label, value], i, arr) => (
+                <View key={label as string} style={[s.pst, i === arr.length - 1 && s.pstLast]}>
+                  <Text style={s.pstV}>{value}</Text>
+                  <Text style={s.pstL}>{label}</Text>
+                </View>
+              ))}
+            </View>
+          </TouchableOpacity>
+        </HomeHeader>
 
         <WeatherHero
           weather={liveWeather.weather}

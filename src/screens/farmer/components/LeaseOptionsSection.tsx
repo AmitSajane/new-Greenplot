@@ -5,8 +5,9 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useLeases } from '../../../context/LeaseContext';
 import { useAuth } from '../../../context/AuthContext';
 import { LEASE_TYPE_MAP, LeaseOffer, summarizeOffer } from '../../../constants/leaseTypes';
+import { colors } from '../../../theme/tokens';
 
-const G = { g1: '#092E18', g2: '#0F4A28', g3: '#1A6B3A', g7: '#E4F4EC', a3: '#B87214', a7: '#FDF5E0', n1: '#0D1509', n2: '#1C2E18', n4: '#6B8074', n7: '#E8F0EC', n8: '#F4F8F5' };
+const G = colors.deepGreen;
 
 type OfferState = 'apply' | 'applied' | 'sign' | 'active';
 

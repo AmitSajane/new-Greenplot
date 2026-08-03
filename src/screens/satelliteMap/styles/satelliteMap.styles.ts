@@ -3,18 +3,6 @@ import { colors, radius, shadow, spacing } from '../../../theme/tokens';
 
 export const satelliteMapStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  headerButton: { padding: spacing.xs },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: colors.textPrimary },
   mapContainer: { flex: 1, position: 'relative' },
   map: { flex: 1 },
   loadingContainer: {

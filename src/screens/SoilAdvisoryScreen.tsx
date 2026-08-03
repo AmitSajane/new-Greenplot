@@ -17,6 +17,8 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { soilAdvisoryApi, SoilAdvisory, SoilAdvice } from '../services/soilAdvisoryApi';
 import { getCurrentCoords } from '../utils/geo/location';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { colors } from '../theme/tokens';
 
 const TONE: Record<SoilAdvice['tone'], { bg: string; fg: string }> = {
   green: { bg: '#E4F4EC', fg: '#1A6B3A' },
@@ -55,15 +57,14 @@ export default function SoilAdvisoryScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <View style={styles.headerBar}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={24} color="#0F4A28" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Soil Advisory</Text>
-        <TouchableOpacity onPress={load} style={styles.backBtn}>
-          <Ionicons name="refresh" size={20} color="#0F4A28" />
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader
+        title="Soil Advisory"
+        onBack={() => navigation.goBack()}
+        rightAction={{ icon: 'refresh', onPress: load }}
+        titleColor={colors.deepGreen.n1}
+        iconColor={colors.deepGreen.g2}
+        buttonBackgroundColor="transparent"
+      />
 
       {loading ? (
         <View style={styles.center}>
@@ -144,9 +145,6 @@ function Stat({ label, value, sub }: { label: string; value: string; sub: string
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F4F8F5' },
-  headerBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 8, paddingVertical: 10, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#E6EFE9' },
-  backBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-  title: { fontSize: 18, fontWeight: '800', color: '#0D1509' },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 },
   loadingText: { fontSize: 14, color: '#6B8074', fontWeight: '600', textAlign: 'center' },

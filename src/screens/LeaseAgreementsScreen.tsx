@@ -14,6 +14,7 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
 import { HomeStackParamList } from '../navigation/HomeStack';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<HomeStackParamList, 'LeaseAgreements'>;
 
@@ -307,17 +308,14 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.7}
-          style={styles.backButton}
-        >
-          <Icon name="arrow-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Lease Agreements</Text>
-      </View>
+      <ScreenHeader
+        title="Lease Agreements"
+        onBack={() => navigation.goBack()}
+        buttonBackgroundColor="transparent"
+        titleSize={24}
+        titleWeight="700"
+        showBorder={false}
+      />
 
       {/* Filter Tabs */}
       <ScrollView
@@ -373,22 +371,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    padding: spacing.sm,
-    marginRight: spacing.sm,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: colors.textPrimary,
   },
   filterContainer: {
     paddingHorizontal: spacing.xl,

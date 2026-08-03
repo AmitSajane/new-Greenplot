@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors } from '../../../../theme/tokens';
 import { Chip } from '../../../../components/farmerHome/Chip';
-import { SearchBar } from '../../../../components/farmerHome/SearchBar';
+import { SearchBar } from '../../../../components/molecules/SearchBar';
 import { LeaseCard } from '../../../../components/leases/LeaseCard';
 import { MyActiveLeasesViewModel } from '../hooks/useMyActiveLeases';
 import { myActiveLeasesStyles as styles } from '../styles/myActiveLeases.styles';
@@ -28,7 +28,11 @@ export const MyActiveLeasesContent: React.FC<MyActiveLeasesViewModel> = (vm) => 
       </TouchableOpacity>
     </View>
     <View style={styles.content}>
-      <SearchBar value={vm.query} onChangeText={vm.setQuery} />
+      <SearchBar
+        value={vm.query}
+        onChangeText={vm.setQuery}
+        trailingAction={{ icon: 'mic' }}
+      />
       <View style={styles.filtersRow}>
         {vm.filterKeys.map((k) => (
           <Chip key={k} label={k} selected={vm.filter === k} onPress={() => vm.setFilter(k)} />

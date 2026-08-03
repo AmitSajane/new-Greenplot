@@ -13,6 +13,7 @@ import { colors, radius, spacing } from '../theme/tokens';
 import { communityQuestions } from '../constants/hubMockData';
 import { QuestionCard } from '../components/hub/QuestionCard';
 import { HubStackParamList } from '../navigation/HubStack';
+import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type NavigationProp = NativeStackNavigationProp<HubStackParamList>;
 
@@ -33,17 +34,7 @@ export default function CommunityQuestionsScreen() {
       <FlatList
         data={communityQuestions}
         keyExtractor={(item) => item.id}
-        ListHeaderComponent={
-          <View style={styles.header}>
-            <TouchableOpacity
-              onPress={() => navigation.goBack()}
-              activeOpacity={0.7}
-              style={styles.backButton}
-            >
-              <Text style={styles.backIcon}>← Back</Text>
-            </TouchableOpacity>
-          </View>
-        }
+        ListHeaderComponent={<ScreenHeader backVariant="text" onBack={() => navigation.goBack()} />}
         renderItem={({ item }) => (
           <View style={styles.cardWrapper}>
             <QuestionCard
@@ -73,20 +64,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-  },
-  backButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  backIcon: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.primary,
   },
   listContent: {
     padding: spacing.xl,

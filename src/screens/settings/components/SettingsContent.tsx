@@ -5,6 +5,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme/tokens';
 import { SettingsViewModel } from '../hooks/useSettings';
 import { settingsStyles as styles } from '../styles/settings.styles';
+import { ScreenHeader } from '../../../components/molecules/ScreenHeader';
 
 const PREFERENCE_ITEMS = [
   { icon: 'notifications', label: 'Notifications' },
@@ -16,12 +17,7 @@ const PREFERENCE_ITEMS = [
 
 export const SettingsContent: React.FC<SettingsViewModel> = ({ user, onLogout, onLanguagePress, onBack }) => (
   <SafeAreaView style={styles.safeArea}>
-    <View style={styles.header}>
-      <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-        <Icon name="arrow-back" size={24} color={colors.textPrimary} />
-      </TouchableOpacity>
-      <Text style={styles.headerTitle}>Settings</Text>
-    </View>
+    <ScreenHeader title="Settings" onBack={onBack} titleSize={20} />
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
       <View style={styles.section}>
         <View style={styles.sectionHeader}>

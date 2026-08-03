@@ -18,6 +18,8 @@ import {
   SchemeLink,
   STATE_SCHEMES,
 } from './constants/schemeCatalog';
+import { ScreenHeader } from '../../components/molecules/ScreenHeader';
+import { colors } from '../../theme/tokens';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'SchemesNewsList'>;
 type ScreenRouteProp = RouteProp<FarmerHomeStackParamList, 'SchemesNewsList'>;
@@ -128,13 +130,15 @@ export default function SchemesNewsListScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton} hitSlop={8}>
-          <Ionicons name="arrow-back" size={22} color="#1C2E18" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Schemes & Subsidies</Text>
-        <View style={styles.backButton} />
-      </View>
+      <ScreenHeader
+        title="Schemes & Subsidies"
+        onBack={() => navigation.goBack()}
+        buttonBackgroundColor="transparent"
+        titleColor={colors.deepGreen.n1}
+        iconColor="#1C2E18"
+        titleSize={15}
+        titleWeight="800"
+      />
 
       <View style={s.tabsWrap}>
         <TouchableOpacity
@@ -233,18 +237,6 @@ export default function SchemesNewsListScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: '#F4F8F5' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8F0EC',
-    backgroundColor: '#fff',
-  },
-  backButton: { width: 30, height: 30, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 15, fontWeight: '800', color: '#0D1509' },
   schemesContent: { padding: 14, paddingTop: 4, paddingBottom: 32, flexGrow: 1 },
   newsCardWrapper: { marginTop: 12 },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 80 },
