@@ -1,4 +1,3 @@
-export { FarmerHeader } from './FarmerHeader';
 export { WeatherHero } from './WeatherHero';
 export { FarmSnapshot } from './FarmSnapshot';
 export { AiAdvisoryCard } from './AiAdvisoryCard';

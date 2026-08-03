@@ -1,6 +1,8 @@
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MarketStackParamList } from './marketRoutes';
+import NotificationsCenterScreen from '../../../screens/NotificationsCenterScreen';
+import SettingsStack from '../../../navigation/SettingsStack';
 import {
   MarketHomeScreen,
   PriceTrendScreen,
@@ -46,6 +48,12 @@ export default function MarketStack() {
       <Stack.Screen name="ColdStorageDetail" component={ColdStorageDetailScreen} />
       <Stack.Screen name="ColdStorageBooking" component={ColdStorageBookingScreen} />
       <Stack.Screen name="StorageBookingConfirmed" component={StorageBookingConfirmedScreen} />
+      <Stack.Screen
+        name="NotificationsCenter"
+        component={NotificationsCenterScreen}
+        options={{ title: 'Notifications' }}
+      />
+      <Stack.Screen name="Settings" component={SettingsStack} />
     </Stack.Navigator>
   );
 }

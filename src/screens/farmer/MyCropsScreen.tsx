@@ -16,8 +16,12 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useTranslation } from 'react-i18next';
 import type { MyCropsStackParamList } from '../../navigation/MyCropsStack';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
+import { AppHeader } from '../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
+import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
 import { useAuth } from '../../context/AuthContext';
 import { useLeases } from '../../context/LeaseContext';
 import { useFarmListings } from '../../context/FarmListingsContext';
@@ -64,6 +68,9 @@ export default function MyCropsScreen() {
   const { activeLeases } = useLeases();
   const { listings, getListingById } = useFarmListings();
   const { getCropCycleByLand, saveCropCycle, removeCropCycle } = useCropCycles();
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
+  const [langOpen, setLangOpen] = useState(false);
 
   const [activeTab, setActiveTab] = useState<'own' | 'leased'>('own');
 
@@ -300,28 +307,22 @@ export default function MyCropsScreen() {
   const activeList = isOwn ? myOwnLands : myLeases;
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerIconBtn}
-          onPress={() => (navigation as any).goBack?.()}
-          accessibilityRole="button"
-          accessibilityLabel="Go back"
-        >
-          <Icon name="chevron-back" size={24} color={colors.textPrimary} />
-        </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>My Crops & Plots</Text>
-
-        <TouchableOpacity
-          style={styles.headerIconBtn}
-          onPress={() => {}}
-          accessibilityRole="button"
-          accessibilityLabel="Help"
-        >
-          <Icon name="help-circle-outline" size={22} color={colors.textPrimary} />
-        </TouchableOpacity>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
+      <AppHeader
+        data={{
+          variant: 'default',
+          title: 'My Crops & Plots',
+          // showBack: navigation.canGoBack(),
+          languageShort,
+          name: user?.name,
+        }}
+        handler={{
+          // onBackPress: () => navigation.goBack(),
+          onProfilePress: () => navigation.navigate('Settings'),
+          onLanguagePress: () => setLangOpen(true),
+          onNotificationPress: () => navigation.navigate('NotificationsCenter'),
+        }}
+      />
 
       {toastMsg && (
         <View style={styles.toast} pointerEvents="none">
@@ -567,6 +568,7 @@ export default function MyCropsScreen() {
           </View>
         </View>
       </Modal>
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </SafeAreaView>
   );
 }

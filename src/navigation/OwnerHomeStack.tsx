@@ -52,7 +52,7 @@ export type OwnerHomeStackParamList = {
   CreateWork: { cropCycleId?: string };
   LeaseLand: undefined;
   LeaseAgreements: undefined;
-  AgreementDetails: undefined;
+  AgreementDetails: { agreementId: string };
   AIAssistant: undefined;
   SatelliteMap: { returnTo?: string } | undefined;
   LaborConnect: undefined;

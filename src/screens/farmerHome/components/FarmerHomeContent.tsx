@@ -1,6 +1,9 @@
 import React, { useCallback, useState } from 'react';
 import { ScrollView, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
+import { AppHeader } from '../../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../../localization/i18n';
 import { FarmerHomeViewModel } from '../hooks/useFarmerHome';
 import useCurrentLocation from '../hooks/useCurrentLocation';
 import useWeather from '../../../hooks/useWeather';
@@ -10,7 +13,6 @@ import {
   AiAdvisoryCard,
   BrowseByCropSection,
   CropHealthSection,
-  FarmerHeader,
   FarmSnapshot,
   FindLandSection,
   MarketTicker,
@@ -27,6 +29,8 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const weatherLocation = vm.locationLabel || address || '';
   const liveWeather = useWeather(weatherLocation);
   const [langOpen, setLangOpen] = useState(false);
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
 
   // Derived, stable handlers (onAction is memoised in the hook, so these are too).
   const onSettings = useCallback(() => onAction('settings'), [onAction]);
@@ -45,13 +49,19 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   return (
     <View style={s.safeArea}>
       <ScrollView contentContainerStyle={s.scrollContent} showsVerticalScrollIndicator={false}>
-        <FarmerHeader
-          name={vm.userName}
-          location={vm.locationLabel || address}
-          loading={loading}
-          onAvatar={onSettings}
-          onLanguage={onLanguage}
-          onNotifications={onNotifications}
+        <AppHeader
+          data={{
+            variant: 'home',
+            name: vm.userName,
+            location: vm.locationLabel || address,
+            loading,
+            languageShort,
+          }}
+          handler={{
+            onProfilePress: onSettings,
+            onLanguagePress: onLanguage,
+            onNotificationPress: onNotifications,
+          }}
         />
         <WeatherHero
           weather={liveWeather.weather}

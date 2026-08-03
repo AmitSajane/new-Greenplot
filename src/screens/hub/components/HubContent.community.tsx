@@ -2,6 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, ListRenderItemInfo, RefreshControl, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
+import { AppHeader } from '../../../components/molecules/AppHeader';
+import { LANGUAGE_SHORT_LABELS } from '../../../localization/i18n';
+import { LanguagePickerModal } from '../../farmerHome/components/LanguagePickerModal';
 import { CommunityHubViewModel } from '../hooks/useCommunityHub';
 import { FeedPost, POST_TYPE_FILTERS, PostTypeFilterKey } from '../constants/communityData';
 import { hubStyles as s } from '../styles/hub.styles';
@@ -41,11 +45,15 @@ function matchesPostType(post: FeedPost, filter: PostTypeFilterKey): boolean {
 export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   const { user } = useAuth();
   const [readingPost, setReadingPost] = useState<FeedPost | null>(null);
+  const [langOpen, setLangOpen] = useState(false);
+  const { i18n } = useTranslation();
+  const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
   const {
     stats, reward, referral, spotlight, guides, categories, posts, category, refreshing, onRefresh,
     setCategory, onToggleLike, onToggleSave, onSharePost, onComment,
     onAddPhoto, onAddVideo, onAddVoice, onWritePost, onReferEarn, onRewards,
     onSpotlight, onGuidesAll, onGuidePress, onSearch, onDeletePost, onOpenMyPosts,
+    onProfilePress, onNotificationPress,
     postComposerVisible, postComposerScreen, postDraft, postMediaBusy, postSubmitting, closePostComposer,
     selectPostType, backToPostTypePicker, setPostTitle,
     setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
@@ -130,7 +138,15 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
   );
 
   return (
-    <SafeAreaView style={s.safeArea} edges={['top']}>
+    <SafeAreaView style={s.safeArea} edges={['left', 'right', 'bottom']}>
+      <AppHeader
+        data={{ variant: 'default', title: 'Community Hub', languageShort, name: user?.name }}
+        handler={{
+          onProfilePress,
+          onLanguagePress: () => setLangOpen(true),
+          onNotificationPress,
+        }}
+      />
       <FlatList
         data={filteredPosts}
         renderItem={renderItem}
@@ -209,6 +225,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         onCancelEdit={cancelEditComment}
         onDelete={deleteComment}
       />
+      <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
     </SafeAreaView>
   );
 };

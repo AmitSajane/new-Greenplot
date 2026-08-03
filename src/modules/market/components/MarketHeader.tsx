@@ -29,7 +29,7 @@ export default function MarketHeader({
 }: Props) {
   return (
     <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-      <SafeAreaView edges={['top']}>
+    
         <View style={styles.inner}>
           <View style={styles.row}>
             <View style={styles.left}>
@@ -58,7 +58,6 @@ export default function MarketHeader({
           </View>
           {children}
         </View>
-      </SafeAreaView>
     </LinearGradient>
   );
 }
