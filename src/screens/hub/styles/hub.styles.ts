@@ -347,8 +347,8 @@ export const hubStyles = StyleSheet.create({
   commentEditingBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FDF5E0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 7, marginHorizontal: 16, marginBottom: 8 },
   commentEditingText: { fontSize: 11, fontWeight: '700', color: '#8A5200' },
   commentEditingCancel: { fontSize: 11, fontWeight: '800', color: '#8A5200' },
-  commentInputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 16, paddingVertical: 10, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: '#fff' },
-  commentInput: { flex: 1, maxHeight: 90, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9, fontSize: 13, color: '#1C2E18', textAlign: 'left', writingDirection: 'ltr' },
+  commentInputBar: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, paddingHorizontal: 24, paddingVertical: 8, borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: '#fff' },
+  commentInput: { flex: 1, maxHeight: 90, backgroundColor: '#F4F8F5', borderWidth: 1, borderColor: BORDER, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 10, fontSize: 13, color: '#1C2E18', textAlign: 'left', writingDirection: 'ltr' },
   commentSendBtn: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#0F4A28', alignItems: 'center', justifyContent: 'center' },
   commentSendBtnDisabled: { opacity: 0.4 },
 });

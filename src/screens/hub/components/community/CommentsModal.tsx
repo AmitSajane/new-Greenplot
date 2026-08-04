@@ -157,7 +157,7 @@ export const CommentsModal = React.memo(
               </View>
             )}
 
-            <SafeAreaView edges={['bottom']}>
+            <SafeAreaView edges={['bottom']} style={{ backgroundColor: '#fff' }}>
               <View style={s.commentInputBar}>
                 <TextInput
                   style={s.commentInput}

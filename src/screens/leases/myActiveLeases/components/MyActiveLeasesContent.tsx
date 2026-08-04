@@ -70,14 +70,6 @@ export const MyActiveLeasesContent: React.FC<MyActiveLeasesViewModel> = (vm) => 
       />
     </View>
 
-    <TouchableOpacity style={styles.optionsFab} onPress={vm.onOptionsPress} activeOpacity={0.85}>
-      <Ionicons name="options-outline" size={20} color={colors.textPrimary} />
-    </TouchableOpacity>
-    <TouchableOpacity activeOpacity={0.9} style={styles.fab} onPress={vm.onNewLeasePress}>
-      <Ionicons name="add" size={20} color={colors.surface} />
-      <Text style={styles.fabText}>New Lease</Text>
-    </TouchableOpacity>
-
     <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
   </SafeAreaView>
   );
