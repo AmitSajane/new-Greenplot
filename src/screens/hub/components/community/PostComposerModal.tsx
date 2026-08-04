@@ -196,8 +196,8 @@ export const PostComposerModal = React.memo(
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
         <View style={s.safeAreaModal}>
           <View style={s.composerHeader}>
-            <TouchableOpacity onPress={onClose} disabled={submitting}>
-              <Text style={s.composerCancelText}>Cancel</Text>
+            <TouchableOpacity onPress={onClose} disabled={submitting} style={s.composerBackButton} hitSlop={8}>
+              <Ionicons name="arrow-back" size={22} color="#1F2937" />
             </TouchableOpacity>
           </View>
 

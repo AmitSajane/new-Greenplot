@@ -34,7 +34,7 @@ export const myActiveLeasesStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  content: { flex: 1, paddingHorizontal: spacing.xl ,paddingTop: spacing.md},
+  content: { flex: 1, paddingHorizontal: spacing.xl, paddingTop: spacing.md },
   filtersRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',

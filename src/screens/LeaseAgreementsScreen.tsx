@@ -13,10 +13,10 @@ import { NativeStackScreenProps } from '@react-navigation/native-stack';
 // @ts-ignore - react-native-vector-icons types may not be available
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
-import { HomeStackParamList } from '../navigation/HomeStack';
+import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
-type Props = NativeStackScreenProps<HomeStackParamList, 'LeaseAgreements'>;
+type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'LeaseAgreements'>;
 
 type FilterType = 'All Agreements' | 'Active' | 'Pending' | 'Expired';
 
@@ -232,7 +232,7 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
                 <>
                   <TouchableOpacity
                     style={styles.primaryButton}
-                    onPress={() => navigation.navigate('AgreementDetails')}
+                    onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.primaryButtonText}>View Details</Text>
@@ -281,7 +281,7 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
                 <>
                   <TouchableOpacity
                     style={styles.secondaryButton}
-                    onPress={() => navigation.navigate('AgreementDetails')}
+                    onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
                     activeOpacity={0.8}
                   >
                     <Text style={styles.secondaryButtonText}>View Details</Text>
@@ -524,6 +524,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 100,
     alignItems: 'center',
+    flexDirection: 'row',
     justifyContent:'center',
   },
   primaryButtonText: {

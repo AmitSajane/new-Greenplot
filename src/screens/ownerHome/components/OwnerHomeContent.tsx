@@ -191,10 +191,10 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
             </Text>
           </View>
           <View style={s.card}>
-            {vm.properties.map((p, i) => (
+            {vm.properties.slice(0, 3).map((p, i, arr) => (
               <TouchableOpacity
                 key={p.id}
-                style={[s.propRow, i === vm.properties.length - 1 && { borderBottomWidth: 0 }]}
+                style={[s.propRow, i === arr.length - 1 && { borderBottomWidth: 0 }]}
                 onPress={() => vm.onPropertyPress(p.id)}
                 activeOpacity={0.8}
               >

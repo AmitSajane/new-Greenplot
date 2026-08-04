@@ -5,6 +5,5 @@ export { Card } from './Card';
 export { Chip } from './Chip';
 export { IconCircle } from './IconCircle';
 export { Loader } from './Loader';
-export { StatusDot } from './StatusDot';
 export { Text } from './Text';
 export type { TextProps } from './Text';

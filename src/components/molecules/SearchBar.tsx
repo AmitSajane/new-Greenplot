@@ -66,6 +66,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
+    width: '100%',
+    alignSelf: 'stretch',
   },
   inputContainer: {
     flex: 1,

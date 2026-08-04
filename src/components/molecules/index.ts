@@ -13,4 +13,3 @@ export { SearchBar } from './SearchBar';
 export { SectionHeader } from './SectionHeader';
 export { SelectableRoleCard } from './SelectableRoleCard';
 export type { SelectableRoleCardProps } from './SelectableRoleCard';
-export { StatItem } from './StatItem';
