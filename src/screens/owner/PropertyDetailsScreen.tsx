@@ -155,7 +155,11 @@ export default function PropertyDetailsScreen() {
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabRow}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabRow}
+        >
           {tabs.map((tab) => (
             <TouchableOpacity
               key={tab.key}
@@ -166,7 +170,7 @@ export default function PropertyDetailsScreen() {
               <Text style={[styles.tabLabel, activeTab === tab.key && styles.tabLabelActive]}>{tab.label}</Text>
             </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
         {/* Tab content */}
         {activeTab === 'lease' && (
@@ -381,21 +385,19 @@ const styles = StyleSheet.create({
   },
   tabRow: {
     flexDirection: 'row',
-    marginHorizontal: spacing.xl,
+    paddingHorizontal: spacing.xl,
     marginBottom: spacing.lg,
     backgroundColor: colors.surface,
     borderRadius: radius.md,
-    padding: spacing.xs,
-    flexWrap: 'wrap',
+    paddingVertical: spacing.xs,
   },
   tab: {
-    flex: 1,
-    minWidth: 70,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
     borderRadius: radius.sm,
   },
   tabActive: { backgroundColor: colors.softGreen },

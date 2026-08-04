@@ -524,6 +524,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 100,
     alignItems: 'center',
+    flexDirection: 'row',
     justifyContent:'center',
   },
   primaryButtonText: {

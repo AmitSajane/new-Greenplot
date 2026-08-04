@@ -265,7 +265,7 @@ export const hubStyles = StyleSheet.create({
 
   // Post composer (full-screen)
   composerHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
-  composerCancelText: { fontSize: 13, fontWeight: '700', color: TEXT2 },
+  composerBackButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#E7F3EA', alignItems: 'center', justifyContent: 'center' },
   composerBody: { flex: 1, padding: 16 },
 
   // Post type picker (first screen of the composer)
