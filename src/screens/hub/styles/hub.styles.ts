@@ -19,7 +19,7 @@ export const hubStyles = StyleSheet.create({
   listContent: { paddingBottom: 96 },
   flex1: { flex: 1 },
   noBottomBorder: { borderBottomWidth: 0 },
-  safeAreaModal:{ flex: 1, backgroundColor: '#F4F8F5',marginTop:30 },
+  safeAreaModal:{ flex: 1, backgroundColor: '#F4F8F5' },
 
   // Header
   header: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 16 },
@@ -264,8 +264,8 @@ export const hubStyles = StyleSheet.create({
   viewerTapZone: { flex: 1 },
 
   // Post composer (full-screen)
-  composerHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER },
-  composerBackButton: { width: 40, height: 40, borderRadius: 12, backgroundColor: '#E7F3EA', alignItems: 'center', justifyContent: 'center' },
+  composerHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: BORDER, backgroundColor: '#fff' },
+  composerTitle: { fontSize: 15, fontWeight: '800', color: '#1C2E18' },
   composerBody: { flex: 1, padding: 16 },
 
   // Post type picker (first screen of the composer)

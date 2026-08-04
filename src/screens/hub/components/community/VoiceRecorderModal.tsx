@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Modal, PermissionsAndroid, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Alert, Modal, PermissionsAndroid, Platform, Pressable, Text, TouchableOpacity, View } from 'react-native';
 import RNFS from 'react-native-fs';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import Sound, { AudioEncoderAndroidType, AudioSourceAndroidType, OutputFormatAndroidType, type AudioSet } from 'react-native-nitro-sound';
@@ -44,7 +44,7 @@ interface Props {
   onConfirm: (voice: RecordedVoice) => void;
 }
 
-type Phase = 'permission-denied' | 'requesting' | 'recording' | 'recorded' | 'error';
+type Phase = 'choose' | 'permission-denied' | 'requesting' | 'recording' | 'recorded' | 'error';
 
 async function ensureMicPermission(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -76,7 +76,7 @@ const RECORD_AUDIO_SET: AudioSet = {
  * for not having a native audio library linked; that path was unreliable
  * (WebView getUserMedia support varies a lot by device/Android version). */
 export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfirm }: Props) => {
-  const [phase, setPhase] = useState<Phase>('requesting');
+  const [phase, setPhase] = useState<Phase>('choose');
   const [elapsed, setElapsed] = useState(0);
   const [recorded, setRecorded] = useState<RecordedVoice | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -130,34 +130,36 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
     }
   }, [stopRecording]);
 
-  useEffect(() => {
-    if (!visible) return;
+  // Kicked off only once the user explicitly chooses "Record Audio" in the
+  // 'choose' step (not automatically on open) — requests the mic permission,
+  // then starts recording.
+  const beginRecording = useCallback(() => {
     setPhase('requesting');
-    setRecorded(null);
-    setPreviewUri(null);
-    setElapsed(0);
-    elapsedRef.current = 0;
-    setErrorMessage('');
-
-    let cancelled = false;
     ensureMicPermission().then(granted => {
-      if (cancelled) return;
       if (!granted) {
         setPhase('permission-denied');
         return;
       }
       startRecording();
     });
+  }, [startRecording]);
+
+  useEffect(() => {
+    if (!visible) return;
+    setPhase('choose');
+    setRecorded(null);
+    setPreviewUri(null);
+    setElapsed(0);
+    elapsedRef.current = 0;
+    setErrorMessage('');
 
     return () => {
-      cancelled = true;
       if (listeningRef.current) {
         detachListener();
         Sound.stopRecorder().catch(() => {});
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visible]);
+  }, [visible, detachListener]);
 
   // Alternative to live recording — lets the user attach an existing audio
   // file instead. Reuses the exact same `recorded` state + confirm flow as a
@@ -203,23 +205,37 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
     setElapsed(0);
     elapsedRef.current = 0;
     setErrorMessage('');
-    setPhase('requesting');
-    ensureMicPermission().then(granted => {
-      if (!granted) {
-        setPhase('permission-denied');
-        return;
-      }
-      startRecording();
-    });
-  }, [startRecording]);
+    beginRecording();
+  }, [beginRecording]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={handleClose}>
-      <View style={s.modalBackdrop}>
-        <View style={s.sheet}>
-          <View style={s.sheetHandle} />
+      <Pressable style={s.modalBackdrop} onPress={handleClose} />
+      <View style={s.sheet}>
+        <View style={s.sheetHandle} />
           <Text style={s.sheetTitle}>Voice note</Text>
-          <Text style={s.sheetSub}>Record a spoken tip — up to {MEDIA_RULES.voice.maxSec} seconds.</Text>
+          <Text style={s.sheetSub}>Record a spoken tip — up to {MEDIA_RULES.voice.maxSec} seconds, or choose an existing file.</Text>
+
+          {phase === 'choose' && (
+            <View style={s.sourceGrid}>
+              <TouchableOpacity style={s.sourceBtn} activeOpacity={0.8} onPress={beginRecording} disabled={busy}>
+                <View style={s.sourceIcon}>
+                  <Ionicons name="mic" size={22} color="#1A6B3A" />
+                </View>
+                <Text style={s.sourceLabel}>Record Audio</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.sourceBtn} activeOpacity={0.8} onPress={pickAudioFile} disabled={importing || busy}>
+                <View style={s.sourceIcon}>
+                  {importing ? (
+                    <ActivityIndicator color="#1A6B3A" size="small" />
+                  ) : (
+                    <Ionicons name="folder-open-outline" size={22} color="#1A6B3A" />
+                  )}
+                </View>
+                <Text style={s.sourceLabel}>Choose Audio File</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {phase === 'permission-denied' && (
             <View style={s.voiceStateBox}>
@@ -245,7 +261,7 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
             </View>
           )}
 
-          {(phase === 'requesting' || phase === 'permission-denied' || phase === 'error') && (
+          {(phase === 'permission-denied' || phase === 'error') && (
             <>
               <View style={s.voiceOrDivider}>
                 <View style={s.voiceOrLine} />
@@ -301,7 +317,6 @@ export const VoiceRecorderModal = React.memo(({ visible, busy, onClose, onConfir
               </TouchableOpacity>
             )}
           </View>
-        </View>
       </View>
     </Modal>
   );

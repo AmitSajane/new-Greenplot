@@ -306,8 +306,9 @@ export function useCommunityHub() {
     );
   }, []);
 
-  // ── voice-note recording (separate flow: record first, then hand the
-  // result to the same composer/submit path photo & video already use) ──────
+  // ── voice-note recording (opened from the compose screen's attach box,
+  // same as Photo/Video open their MediaSourceSheet, then hands the result
+  // to the same composer/submit path photo & video already use) ──────
   const [voiceRecorderVisible, setVoiceRecorderVisible] = useState(false);
   const openVoiceRecorder = useCallback(() => setVoiceRecorderVisible(true), []);
   const closeVoiceRecorder = useCallback(() => setVoiceRecorderVisible(false), []);
@@ -477,16 +478,12 @@ export function useCommunityHub() {
 
   const onAddPhoto = useCallback(() => openPostComposer('photo'), [openPostComposer]);
   const onAddVideo = useCallback(() => openPostComposer('video'), [openPostComposer]);
-  // Voice skips the picker's text-compose screen and goes straight to
-  // recording; onVoiceRecorded re-opens the composer (already primed with
-  // postType 'voice' + 'compose' screen) once a clip is captured, matching
-  // how Photo/Video land back on the compose screen with their media set.
-  const onAddVoice = useCallback(() => {
-    setPostDraft({ ...EMPTY_DRAFT, postType: 'voice' });
-    setPostComposerScreen('compose');
-    setPostComposerVisible(false);
-    openVoiceRecorder();
-  }, [openVoiceRecorder]);
+  // Voice now lands on the same compose screen Photo/Video do (postType
+  // 'voice', empty media) instead of jumping straight into the recorder —
+  // the compose screen's attach box opens the recorder (see
+  // onOpenVoiceRecorder below), matching the "tap attach box to pick a
+  // source" pattern Photo/Video already use.
+  const onAddVoice = useCallback(() => openPostComposer('voice'), [openPostComposer]);
   const onWritePost = useCallback(() => openPostComposer(), [openPostComposer]);
 
   // ── stories (24h ephemeral, persisted + auto-purged once Supabase is on) ────

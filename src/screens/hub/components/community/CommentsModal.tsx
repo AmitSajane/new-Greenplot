@@ -118,7 +118,7 @@ export const CommentsModal = React.memo(
 
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <View style={s.safeAreaModal}>
+        <SafeAreaView style={s.safeAreaModal} edges={['top']}>
           <View style={s.commentsHeader}>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
               <Ionicons name="arrow-back" size={20} color="#1C2E18" />
@@ -177,7 +177,7 @@ export const CommentsModal = React.memo(
               </View>
             </SafeAreaView>
           </KeyboardAvoidingView>
-        </View>
+        </SafeAreaView>
       </Modal>
     );
   },

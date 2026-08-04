@@ -44,7 +44,7 @@ export default function FilterByCropScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScreenHeader backVariant="text" onBack={() => navigation.goBack()} />
+      <ScreenHeader title="Mandi Prices" onBack={() => navigation.goBack()} />
       <View style={styles.container}>
         <View style={styles.filterRow}>
           {CROPS.map((crop) => {
