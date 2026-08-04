@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { Image, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { FeedPost } from '../../constants/communityData';
@@ -18,7 +19,7 @@ export const BlogReaderModal = React.memo(({ post, onClose }: Props) => {
 
   return (
     <Modal visible={!!post} animationType="slide" onRequestClose={onClose}>
-      <View style={s.safeAreaModal}>
+      <SafeAreaView style={s.safeAreaModal} edges={['top']}>
         <View style={s.readerHeader}>
           <TouchableOpacity onPress={onClose} hitSlop={8}>
             <Ionicons name="arrow-back" size={20} color="#1C2E18" />
@@ -48,7 +49,7 @@ export const BlogReaderModal = React.memo(({ post, onClose }: Props) => {
             ))}
           </ScrollView>
         )}
-      </View>
+      </SafeAreaView>
     </Modal>
   );
 });

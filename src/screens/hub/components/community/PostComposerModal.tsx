@@ -1,12 +1,15 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { useAuth } from '../../../../context/AuthContext';
 import { CategoryDef, CategoryKey, PostType } from '../../constants/communityData';
 import { MediaSource, PostDraft } from '../../hooks/useCommunityHub';
+import { PHOTO_SOURCES, VIDEO_SOURCES } from '../../constants/mediaSources';
 import { Avatar } from './Avatar';
 import { CategoryChips } from './CategoryChips';
+import { MediaSourceSheet } from './MediaSourceSheet';
 
 const SUBMIT_BAR_STYLE = {
   paddingHorizontal: 16,
@@ -35,9 +38,9 @@ interface Props {
   submitting: boolean;
   onClose: () => void;
   onSelectType: (type: PostType) => void;
-  /** Voice skips straight to the recorder instead of the text-compose
-   * screen — handled separately from onSelectType. */
-  onSelectVoice: () => void;
+  /** Compose screen's attach box opens this when postType is 'voice' —
+   * mirrors how the Photo/Video attach box opens MediaSourceSheet. */
+  onOpenVoiceRecorder: () => void;
   onBackToPicker: () => void;
   onChangeTitle: (title: string) => void;
   onChangeText: (text: string) => void;
@@ -50,7 +53,7 @@ interface Props {
   onSubmit: () => void;
 }
 
-function TypePicker({ onSelectType, onSelectVoice }: { onSelectType: (type: PostType) => void; onSelectVoice: () => void }) {
+function TypePicker({ onSelectType }: { onSelectType: (type: PostType) => void }) {
   return (
     <View>
       <Text style={s.composerPickerTitle}>What do you want to share?</Text>
@@ -94,7 +97,7 @@ function TypePicker({ onSelectType, onSelectVoice }: { onSelectType: (type: Post
         </View>
         <Ionicons name="chevron-forward" size={16} color="#9AA79E" />
       </TouchableOpacity>
-      <TouchableOpacity style={s.composerTypeCard} activeOpacity={0.8} onPress={onSelectVoice}>
+      <TouchableOpacity style={s.composerTypeCard} activeOpacity={0.8} onPress={() => onSelectType('voice')}>
         <View style={[s.composerTypeIconWrap, { backgroundColor: '#EDE8FD' }]}>
           <Ionicons name="mic" size={22} color="#4B2EA8" />
         </View>
@@ -162,7 +165,7 @@ export const PostComposerModal = React.memo(
     submitting,
     onClose,
     onSelectType,
-    onSelectVoice,
+    onOpenVoiceRecorder,
     onChangeTitle,
     onChangeText,
     onChangeCategory,
@@ -174,9 +177,12 @@ export const PostComposerModal = React.memo(
     onSubmit,
   }: Props) => {
     const { user } = useAuth();
+    const [sourceSheetVisible, setSourceSheetVisible] = useState(false);
     const postable = categories.filter(c => c.key !== 'all');
     const isBlog = draft.postType === 'blog';
     const isPoll = draft.postType === 'poll';
+    const isVideo = draft.postType === 'video';
+    const isVoice = draft.postType === 'voice';
     const filledPollOptions = draft.pollOptions.filter(o => o.trim()).length;
     const canSubmit =
       (isBlog
@@ -185,25 +191,40 @@ export const PostComposerModal = React.memo(
           ? !!draft.title.trim() && filledPollOptions >= 2
           : !!draft.text.trim() || !!draft.media) && !submitting;
     const initials = useMemo(() => (user?.name || 'You').trim().slice(0, 2).toUpperCase(), [user?.name]);
-    const mediaSource: MediaSource = draft.postType === 'video' ? 'gallery-video' : 'gallery-photo';
+    // Blog covers are photos too, so blog + photo share the same source pair.
+    const mediaSources = isVideo ? VIDEO_SOURCES : PHOTO_SOURCES;
     const attachLabel = isBlog
       ? 'Add cover'
-      : draft.postType === 'video'
+      : isVideo
         ? 'Add video'
-        : 'Add photo';
+        : isVoice
+          ? 'Add voice note'
+          : 'Add photo';
+    const attachIcon = isVoice ? 'mic' : isVideo ? 'videocam' : 'camera';
+    const attachIconColor = isVoice ? '#4B2EA8' : isVideo ? '#C02828' : '#1A6B3A';
+    const handlePickSource = (source: MediaSource) => {
+      setSourceSheetVisible(false);
+      onPickMedia(source);
+    };
+    const handleAttachPress = () => {
+      if (isVoice) onOpenVoiceRecorder();
+      else setSourceSheetVisible(true);
+    };
 
     return (
-      <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <View style={s.safeAreaModal}>
+      <>
+        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        <SafeAreaView style={s.safeAreaModal} edges={['top']}>
           <View style={s.composerHeader}>
-            <TouchableOpacity onPress={onClose} disabled={submitting} style={s.composerBackButton} hitSlop={8}>
-              <Ionicons name="arrow-back" size={22} color="#1F2937" />
+            <TouchableOpacity onPress={onClose} disabled={submitting} hitSlop={8}>
+              <Ionicons name="arrow-back" size={20} color="#1C2E18" />
             </TouchableOpacity>
+            <Text style={s.composerTitle}>Create Post</Text>
           </View>
 
           <ScrollView style={s.composerBody} keyboardShouldPersistTaps="handled">
             {screen === 'picker' ? (
-              <TypePicker onSelectType={onSelectType} onSelectVoice={onSelectVoice} />
+              <TypePicker onSelectType={onSelectType} />
             ) : (
               <>
                 <View style={s.composerAuthorRow}>
@@ -273,13 +294,9 @@ export const PostComposerModal = React.memo(
                     style={[s.composerBigAttachBox, isBlog && s.composerBigAttachBoxSmall]}
                     activeOpacity={0.8}
                     disabled={busy}
-                    onPress={() => onPickMedia(mediaSource)}
+                    onPress={handleAttachPress}
                   >
-                    <Ionicons
-                      name={draft.postType === 'video' ? 'videocam' : 'camera'}
-                      size={isBlog ? 20 : 26}
-                      color={draft.postType === 'video' ? '#C02828' : '#1A6B3A'}
-                    />
+                    <Ionicons name={attachIcon} size={isBlog ? 20 : 26} color={attachIconColor} />
                     <Text style={s.composerBigAttachText}>{busy ? 'Preparing…' : attachLabel}</Text>
                   </TouchableOpacity>
                 ))}
@@ -312,8 +329,19 @@ export const PostComposerModal = React.memo(
               </TouchableOpacity>
             </View>
           )}
-        </View>
+        </SafeAreaView>
       </Modal>
+
+      <MediaSourceSheet
+        visible={sourceSheetVisible}
+        title={attachLabel}
+        subtitle={isVideo ? "Choose how you'd like to add your video." : "Choose how you'd like to add your photo."}
+        sources={mediaSources}
+        busy={busy}
+        onPick={handlePickSource}
+        onClose={() => setSourceSheetVisible(false)}
+      />
+      </>
     );
   },
 );

@@ -127,60 +127,43 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             <Text style={styles.sectionTitle}>Lease Terms</Text>
           </View>
 
-          <View style={styles.termRow}>
-            <View style={styles.termLeft}>
-              <Icon name="attach-money" size={20} color={colors.primary} />
-              <Text style={styles.termLabel}>Monthly Rent</Text>
-            </View>
-            <View style={styles.termRight}>
-              <Text style={styles.termValue}>{record.termsSummary}</Text>
+          <View style={styles.infoGrid}>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Monthly Rent</Text>
+              <Text style={styles.infoValue}>{record.termsSummary}</Text>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>Pre-paid</Text>
               </View>
             </View>
-          </View>
 
-          <View style={styles.termRow}>
-            <View style={styles.termLeft}>
-              <Icon name="event" size={20} color={colors.textSecondary} />
-              <Text style={styles.termLabel}>Duration</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Duration</Text>
+              <Text style={styles.infoValue}>{tenure || '—'}</Text>
+              {!!record.startDate && (
+                <Text style={styles.termSubtext}>Since {record.startDate}</Text>
+              )}
             </View>
-            <Text style={styles.termValue}>{tenure || '—'}</Text>
-          </View>
-          <Text style={styles.termSubtext}>{record.startDate ? `Since ${record.startDate}` : ''}</Text>
 
-          <View style={styles.termRow}>
-            <View style={styles.termLeft}>
-              <Icon name="schedule" size={20} color={colors.textSecondary} />
-              <Text style={styles.termLabel}>Payment Freq.</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Payment Freq.</Text>
+              <Text style={styles.infoValue}>Monthly</Text>
+              <Text style={styles.termSubtext}>Due on 5th</Text>
             </View>
-            <Text style={styles.termValue}>Monthly</Text>
-          </View>
-          <Text style={styles.termSubtext}>Due on 5th</Text>
 
-          <View style={styles.termRow}>
-            <View style={styles.termLeft}>
-              <Icon name="security" size={20} color={colors.textSecondary} />
-              <Text style={styles.termLabel}>Security Deposit</Text>
-            </View>
-            <View style={styles.termRight}>
-              <Text style={styles.termValue}>₹50,000</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Security Deposit</Text>
+              <Text style={styles.infoValue}>₹50,000</Text>
               <View style={[styles.badge, styles.badgeSuccess]}>
-                <Text style={[styles.badgeText, styles.badgeTextSuccess]}>
-                  Paid
-                </Text>
+                <Text style={[styles.badgeText, styles.badgeTextSuccess]}>Paid</Text>
               </View>
             </View>
-          </View>
 
-          <View style={styles.termRow}>
-            <View style={styles.termLeft}>
-              <Icon name="opacity" size={20} color={colors.textSecondary} />
-              <Text style={styles.termLabel}>Water Rights</Text>
+            <View style={styles.infoItem}>
+              <Text style={styles.infoLabel}>Water Rights</Text>
+              <Text style={styles.infoValue}>Full Access</Text>
+              <Text style={styles.termSubtext}>Source: Canal Source</Text>
             </View>
-            <Text style={styles.termValue}>Full Access</Text>
           </View>
-          <Text style={styles.termSubtext}>Source: Canal Source</Text>
         </View>
 
         {/* Parties Involved Section */}
@@ -399,39 +382,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.textPrimary,
   },
-  termRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  termLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    flex: 1,
-  },
-  termLabel: {
-    fontSize: 14,
-    color: colors.textSecondary,
-  },
-  termRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  termValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
   termSubtext: {
     fontSize: 12,
     color: colors.textSecondary,
-    marginLeft: spacing.xl + spacing.sm,
-    marginBottom: spacing.sm,
+    marginTop: 2,
   },
   badge: {
+    alignSelf: 'flex-start',
+    marginTop: spacing.xs,
     backgroundColor: colors.border,
     paddingHorizontal: spacing.sm,
     paddingVertical: 2,

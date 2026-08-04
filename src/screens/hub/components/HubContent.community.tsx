@@ -58,7 +58,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
     selectPostType, backToPostTypePicker, setPostTitle,
     setPostText, setPostCategory, pickPostMedia, clearPostMedia, submitPost,
     setPollOption, addPollOption, removePollOption, onVotePoll,
-    voiceRecorderVisible, closeVoiceRecorder, onVoiceRecorded,
+    voiceRecorderVisible, openVoiceRecorder, closeVoiceRecorder, onVoiceRecorded,
     stories, storyComposerVisible, pendingStory, storyMediaBusy, storySubmitting, viewerOpen, viewerIndex, setViewerIndex,
     closeStoryComposer, pickStoryMedia, discardPendingStory, confirmStory,
     closeStoryViewer,
@@ -191,7 +191,7 @@ export const CommunityHubContent: React.FC<CommunityHubViewModel> = vm => {
         submitting={postSubmitting}
         onClose={closePostComposer}
         onSelectType={selectPostType}
-        onSelectVoice={onAddVoice}
+        onOpenVoiceRecorder={openVoiceRecorder}
         onBackToPicker={backToPostTypePicker}
         onChangeTitle={setPostTitle}
         onChangeText={setPostText}

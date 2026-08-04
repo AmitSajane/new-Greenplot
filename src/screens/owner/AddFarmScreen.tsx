@@ -907,7 +907,7 @@ export default function AddFarmScreen() {
                 {renderDropdown(tenure, 'Select Tenure', () => setShowTenurePicker(true))}
               </View>
               <View style={[styles.formGroup, styles.halfWidth]}>
-                <Text style={styles.label}>Price Per Year (₹) *</Text>
+                <Text style={styles.label}>Price/Year/Acre (₹) *</Text>
                 <TextInput
                   style={styles.input}
                   placeholder="e.g., 12000"
