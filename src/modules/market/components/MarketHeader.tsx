@@ -1,7 +1,6 @@
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { market, mRadius } from '../theme/marketTokens';
 
@@ -29,16 +28,15 @@ export default function MarketHeader({
 }: Props) {
   return (
     <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-    
-        <View style={styles.inner}>
+      <View style={styles.inner}>
           <View style={styles.row}>
             <View style={styles.left}>
               {onBack && (
                 <TouchableOpacity onPress={onBack} style={styles.back} hitSlop={10}>
-                  <Ionicons name="arrow-back" size={20} color="rgba(255,255,255,0.8)" />
+                  <Ionicons name="arrow-back" size={25} color="rgba(255,255,255,0.8)" />
                 </TouchableOpacity>
               )}
-              <View style={{ flex: 1 }}>
+              <View style={styles.titleContent}>
                 {!!eyebrow && <Text style={styles.eyebrow}>{eyebrow}</Text>}
                 <Text style={styles.title}>{title}</Text>
                 {!!badge && (
@@ -57,7 +55,7 @@ export default function MarketHeader({
             )}
           </View>
           {children}
-        </View>
+      </View>
     </LinearGradient>
   );
 }
@@ -66,6 +64,7 @@ const styles = StyleSheet.create({
   inner: { paddingHorizontal: 16, paddingTop: 14, paddingBottom: 18 },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   left: { flexDirection: 'row', flex: 1, alignItems: 'flex-start' },
+  titleContent: { flex: 1 },
   back: { marginRight: 8, marginTop: 2 },
   eyebrow: {
     color: 'rgba(255,255,255,0.55)',
