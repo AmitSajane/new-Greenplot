@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { market, mTypography, mRadius } from '../theme/marketTokens';
 
@@ -13,6 +14,11 @@ interface Props {
   onBack?: () => void;
   colors?: string[];
   children?: React.ReactNode;
+  /** Set to false when this header is NOT the top-of-screen element (e.g. it
+   * follows another header like AppHeader that already consumes the top
+   * safe-area inset) — otherwise the inset gets applied twice. Defaults to
+   * true, since most screens use MarketHeader as their only/first header. */
+  safeTop?: boolean;
 }
 
 /** Dark-green gradient header used across every Market screen. */
@@ -25,15 +31,19 @@ export default function MarketHeader({
   onBack,
   colors = [market.g1, market.g2, market.g3],
   children,
+  safeTop = true,
 }: Props) {
+  const Wrapper = safeTop ? SafeAreaView : View;
+  const wrapperProps = safeTop ? { edges: ['top'] as const } : {};
   return (
     <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}>
-      <View style={styles.inner}>
+      <Wrapper {...wrapperProps}>
+        <View style={styles.inner}>
           <View style={styles.row}>
             <View style={styles.left}>
               {onBack && (
                 <TouchableOpacity onPress={onBack} style={styles.back} hitSlop={10}>
-                  <Ionicons name="arrow-back" size={25} color="rgba(255,255,255,0.8)" />
+                  <Ionicons name="arrow-back" size={22} color="#fff" />
                 </TouchableOpacity>
               )}
               <View style={styles.titleContent}>
@@ -55,7 +65,8 @@ export default function MarketHeader({
             )}
           </View>
           {children}
-      </View>
+        </View>
+      </Wrapper>
     </LinearGradient>
   );
 }
@@ -65,7 +76,15 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   left: { flexDirection: 'row', flex: 1, alignItems: 'flex-start' },
   titleContent: { flex: 1 },
-  back: { marginRight: 8, marginTop: 2 },
+  back: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
   eyebrow: {
     color: 'rgba(255,255,255,0.55)',
     fontSize: mTypography.small,

@@ -209,6 +209,7 @@ export default function ArrivalsScreen() {
       <AppHeader
         data={{
           variant: 'default',
+          showBack: true,
           title: t('market.arrivals.title'),
           subtitle: marketName || `${crop} · ${state}`,
           name: user?.name,
@@ -216,6 +217,7 @@ export default function ArrivalsScreen() {
           hasNotificationDot: true,
         }}
         handler={{
+          onBackPress: () => navigation.goBack(),
           onProfilePress: () => navigation.navigate('Settings'),
           onLanguagePress: () => setLanguageOpen(true),
           onNotificationPress: () => navigation.navigate('NotificationsCenter'),

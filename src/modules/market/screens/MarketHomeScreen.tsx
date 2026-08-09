@@ -105,6 +105,7 @@ export default function MarketHomeScreen() {
         }}
       />
       <MarketHeader
+        safeTop={false}
         eyebrow={t('market.home.eyebrow')}
         title={t('market.home.title')}
         badge={summary ? `${t('market.home.officialData')} · ${state}` : t('market.home.officialData')}

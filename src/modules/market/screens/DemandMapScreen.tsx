@@ -148,8 +148,9 @@ export default function DemandMapScreen() {
   return (
     <View style={styles.screen}>
       <AppHeader
-        data={{ variant: 'default', title: t('market.demand.title'), subtitle: `${commodity} · ${state}`, name: user?.name, languageShort }}
+        data={{ variant: 'default', showBack: true, title: t('market.demand.title'), subtitle: `${commodity} · ${state}`, name: user?.name, languageShort }}
         handler={{
+          onBackPress: () => navigation.goBack(),
           onProfilePress: () => navigation.navigate('Settings'),
           onLanguagePress: () => setLanguageOpen(true),
           onNotificationPress: () => navigation.navigate('NotificationsCenter'),
