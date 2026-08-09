@@ -4,6 +4,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
+import { useLeases } from '../../../context/LeaseContext';
+import { useCropCycles } from '../../../context/CropCycleContext';
 import { useAgriNews } from './useAgriNews';
 import type { SchemeCategory } from '../constants/schemeCatalog';
 import {
@@ -13,12 +15,14 @@ import {
   FARMER_NEARBY_CHIPS,
   FARMER_NEWS,
   FARMER_QUICK_ACTIONS,
-  FARMER_SNAPSHOT,
   FARMER_TASKS,
   FARMER_TICKER,
   type FarmerAction,
   type NearbyChip,
+  type SnapStat,
 } from '../constants/farmerDashboardData';
+
+const formatAcres = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(1));
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'FarmerHome'>;
 
@@ -38,7 +42,9 @@ export interface FarmerListingCard {
 export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { getFeaturedListings } = useFarmListings();
+  const { getFeaturedListings, listings, getListingById } = useFarmListings();
+  const { activeLeases } = useLeases();
+  const { cropCycles } = useCropCycles();
 
   const [query, setQuery] = useState('');
   const [selectedNearby, setSelectedNearby] = useState<NearbyChip>('Nearby');
@@ -130,6 +136,44 @@ export function useFarmerHome() {
     [navigation],
   );
 
+  // Real farm-snapshot numbers — mirrors the own+leased acreage pattern already
+  // used on MyCropsScreen, and the same activeLeases/cropCycles filters used
+  // throughout the app (farmerId === current user).
+  const myActiveLeases = useMemo(
+    () => activeLeases.filter(l => l.farmerId === user?.id),
+    [activeLeases, user?.id],
+  );
+
+  const totalAcresFarmed = useMemo(() => {
+    const ownAcres = listings
+      .filter(l => l.selfFarmed && l.ownerId === user?.id)
+      .reduce((sum, l) => sum + (parseFloat(l.acres) || 0), 0);
+    const leasedAcres = myActiveLeases.reduce((sum, l) => {
+      const listing = getListingById(l.landId);
+      return sum + (listing ? parseFloat(listing.acres) || 0 : 0);
+    }, 0);
+    return ownAcres + leasedAcres;
+  }, [listings, user?.id, myActiveLeases, getListingById]);
+
+  const activeCropsCount = useMemo(
+    () => cropCycles.filter(c => c.farmerId === user?.id && c.status === 'active').length,
+    [cropCycles, user?.id],
+  );
+
+  // "Tasks due" has no real backing concept in the app yet (no task/reminder
+  // model exists) — show a placeholder rather than a fabricated or
+  // loosely-related number, same approach as the NDVI/Yield "Coming soon"
+  // cards on CropDetailsScreen.
+  const snapshot: SnapStat[] = useMemo(
+    () => [
+      { id: 's1', emoji: '📄', value: String(myActiveLeases.length), label: 'Active leases', action: 'leases' },
+      { id: 's2', emoji: '🌾', value: formatAcres(totalAcresFarmed), label: 'Acres farmed', action: 'crops' },
+      { id: 's3', emoji: '🌱', value: String(activeCropsCount), label: 'Crops', action: 'crops' },
+      { id: 's4', emoji: '✅', value: 'Soon', label: 'Tasks due', tone: 'amber', action: 'tasks', disabled: true },
+    ],
+    [myActiveLeases.length, totalAcresFarmed, activeCropsCount],
+  );
+
   const featuredListings: FarmerListingCard[] = useMemo(
     () =>
       getFeaturedListings()
@@ -150,8 +194,10 @@ export function useFarmerHome() {
     userName: user?.name?.trim() || 'Farmer',
     locationLabel: (user as { location?: string })?.location || '',
 
+    // Dynamic (computed from real data)
+    snapshot,
+
     // Static (stable) content
-    snapshot: FARMER_SNAPSHOT,
     aiAdvisory: FARMER_AI_ADVISORY,
     ticker: FARMER_TICKER,
     tasks: FARMER_TASKS,

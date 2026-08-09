@@ -55,6 +55,8 @@ export interface SnapStat {
   label: string;
   tone?: Tone;
   action: FarmerAction;
+  /** Tile has nothing real to navigate to yet (e.g. "Tasks due" placeholder) — render non-tappable. */
+  disabled?: boolean;
 }
 
 export interface TickerItem {
