@@ -6,4 +6,6 @@ export { default as MandiRow } from './MandiRow';
 export { default as NavStrip } from './NavStrip';
 export { default as PriceAreaChart } from './PriceAreaChart';
 export { default as ComparisonChart } from './ComparisonChart';
+export { default as MarketOptionModal } from './MarketOptionModal';
+export { default as MarketFeatureUnavailable } from './MarketFeatureUnavailable';
 export { Card, SectionLabel, ChartCard, LegendItem, StatTile, ProgressRow } from './ui';

@@ -9,7 +9,7 @@ import Svg, {
   Circle,
   Text as SvgText,
 } from 'react-native-svg';
-import { market } from '../theme/marketTokens';
+import { market, mTypography } from '../theme/marketTokens';
 
 interface Props {
   history: number[];
@@ -80,7 +80,7 @@ export default function PriceAreaChart({ history, forecast, width = 250, height 
 
         {/* today reference */}
         <Line x1={todayX} y1={padT - 4} x2={todayX} y2={padT + innerH} stroke={market.a4} strokeWidth={0.8} strokeDasharray="3,2" />
-        <SvgText x={todayX - 2} y={padT - 4} fill={market.a3} fontSize={7} textAnchor="end">
+        <SvgText x={todayX - 2} y={padT - 4} fill={market.a3} fontSize={mTypography.chart} textAnchor="end">
           Today
         </SvgText>
 
@@ -89,10 +89,10 @@ export default function PriceAreaChart({ history, forecast, width = 250, height 
         <Circle cx={lastX} cy={y(forecast[forecast.length - 1])} r={2.5} fill={market.a3} stroke="#fff" strokeWidth={1.2} />
 
         {/* value labels */}
-        <SvgText x={padL} y={y(max) - 2} fill={market.n4} fontSize={7}>
+        <SvgText x={padL} y={y(max) - 2} fill={market.n4} fontSize={mTypography.chart}>
           ₹{max}
         </SvgText>
-        <SvgText x={lastX} y={y(forecast[forecast.length - 1]) + 8} fill={market.r3} fontSize={7} textAnchor="end">
+        <SvgText x={lastX} y={y(forecast[forecast.length - 1]) + 8} fill={market.r3} fontSize={mTypography.chart} textAnchor="end">
           ₹{forecast[forecast.length - 1]}
         </SvgText>
       </Svg>

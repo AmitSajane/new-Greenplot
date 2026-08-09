@@ -51,7 +51,6 @@ export default function MarketStack() {
       <Stack.Screen
         name="NotificationsCenter"
         component={NotificationsCenterScreen}
-        options={{ title: 'Notifications' }}
       />
       <Stack.Screen name="Settings" component={SettingsStack} />
     </Stack.Navigator>

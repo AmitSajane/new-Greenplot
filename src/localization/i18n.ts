@@ -2,6 +2,7 @@ import i18n, { Resource } from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import languageDetector from './languageDetector';
 import en from './resources/en.json';
+import { MARKET_TRANSLATIONS } from './marketTranslations';
 
 export const AVAILABLE_LANGUAGES: Record<string, string> = {
   en: 'English',
@@ -18,7 +19,7 @@ export const LANGUAGE_SHORT_LABELS: Record<string, string> = {
 };
 
 const resources: Resource = {
-  en: { common: en },
+  en: { common: { ...en, market: MARKET_TRANSLATIONS.en } },
 };
 
 export async function loadLanguage(lng: string) {
@@ -51,6 +52,7 @@ export async function loadLanguage(lng: string) {
       console.warn('[i18n] Failed to load language bundle', lng, e);
     }
   }
+  i18n.addResourceBundle(lng, 'common', { market: MARKET_TRANSLATIONS[lng] || MARKET_TRANSLATIONS.en }, true, true);
   await i18n.changeLanguage(lng);
 }
 

@@ -4,6 +4,7 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useTranslation } from 'react-i18next';
 import { Card } from '../components';
 import { market, mRadius } from '../theme/marketTokens';
 import { MarketStackParamList } from '../navigation/marketRoutes';
@@ -11,6 +12,7 @@ import { MarketStackParamList } from '../navigation/marketRoutes';
 type Nav = NativeStackNavigationProp<MarketStackParamList, 'StorageBookingConfirmed'>;
 
 export default function StorageBookingConfirmedScreen() {
+  const { i18n, t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const { params } = useRoute<RouteProp<MarketStackParamList, 'StorageBookingConfirmed'>>();
 
@@ -20,40 +22,38 @@ export default function StorageBookingConfirmedScreen() {
         <View style={styles.checkCircle}>
           <Ionicons name="checkmark" size={44} color="#fff" />
         </View>
-        <Text style={styles.title}>Booking confirmed!</Text>
-        <Text style={styles.sub}>
-          Your cold storage slot is reserved. Drop off your produce at the scheduled time.
-        </Text>
+        <Text style={styles.title}>{t('market.storageFlow.bookingConfirmed')}</Text>
+        <Text style={styles.sub}>{t('market.storageFlow.bookingConfirmedBody')}</Text>
 
         <Card style={styles.card}>
           <View style={styles.row}>
-            <Text style={styles.key}>Booking ID</Text>
+            <Text style={styles.key}>{t('market.storageFlow.bookingId')}</Text>
             <Text style={[styles.val, { color: market.g2 }]}>{params.bookingId}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.key}>Storage</Text>
+            <Text style={styles.key}>{t('market.storageFlow.storage')}</Text>
             <Text style={styles.val}>{params.storageName}</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.key}>Quantity</Text>
-            <Text style={styles.val}>{params.quantityKg.toLocaleString('en-IN')} kg</Text>
+            <Text style={styles.key}>{t('market.storageFlow.quantity')}</Text>
+            <Text style={styles.val}>{params.quantityKg.toLocaleString(i18n.language)} kg</Text>
           </View>
           <View style={styles.row}>
-            <Text style={styles.key}>Duration</Text>
-            <Text style={styles.val}>{params.durationDays} days</Text>
+            <Text style={styles.key}>{t('market.storageFlow.duration')}</Text>
+            <Text style={styles.val}>{t('market.storageFlow.dayCount', { count: params.durationDays })}</Text>
           </View>
           <View style={[styles.row, { borderBottomWidth: 0 }]}>
-            <Text style={styles.key}>Amount paid</Text>
-            <Text style={[styles.val, styles.total]}>₹{params.total.toLocaleString('en-IN')}</Text>
+            <Text style={styles.key}>{t('market.storageFlow.amountPaid')}</Text>
+            <Text style={[styles.val, styles.total]}>₹{params.total.toLocaleString(i18n.language)}</Text>
           </View>
         </Card>
 
         <View style={styles.nextCard}>
-          <Text style={styles.nextTitle}>What's next</Text>
+          <Text style={styles.nextTitle}>{t('market.storageFlow.whatsNext')}</Text>
           {[
-            ['cube', 'Pack & label your produce with the booking ID'],
-            ['bus', 'Arrange transport — reefer pickup can be requested'],
-            ['notifications', "We'll alert you when prices recover to sell"],
+            ['cube', t('market.storageFlow.nextPack')],
+            ['bus', t('market.storageFlow.nextTransport')],
+            ['notifications', t('market.storageFlow.nextAlert')],
           ].map(([icon, text]) => (
             <View key={text} style={styles.nextRow}>
               <Ionicons name={icon} size={16} color={market.g3} />
@@ -69,14 +69,14 @@ export default function StorageBookingConfirmedScreen() {
           activeOpacity={0.85}
           onPress={() => navigation.navigate('AlertsCentre')}
         >
-          <Text style={styles.primaryBtnText}>View in alerts</Text>
+          <Text style={styles.primaryBtnText}>{t('market.storageFlow.viewAlerts')}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.secondaryBtn}
           activeOpacity={0.85}
           onPress={() => navigation.popToTop()}
         >
-          <Text style={styles.secondaryBtnText}>Back to market</Text>
+          <Text style={styles.secondaryBtnText}>{t('market.storageFlow.backToMarket')}</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

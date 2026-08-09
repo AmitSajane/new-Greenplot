@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { market, mRadius } from '../theme/marketTokens';
+import { market, mTypography, mRadius } from '../theme/marketTokens';
+import { useTranslation } from 'react-i18next';
 import { Crop, CropMarket } from '../types';
 
 interface Props {
@@ -16,7 +17,8 @@ const trendMeta = {
 
 /** Headline price card with today's change + AI 30-day forecast. */
 export default function PriceHero({ crop, data }: Props) {
-  const t = trendMeta[data.trend];
+  const { t: translate } = useTranslation();
+  const trend = trendMeta[data.trend];
   const changeStr = `${data.changeToday < 0 ? '▼' : data.changeToday > 0 ? '▲' : '—'} ₹${Math.abs(
     data.changeToday,
   )} today`;
@@ -28,7 +30,7 @@ export default function PriceHero({ crop, data }: Props) {
           <Text style={styles.cropName}>{crop.name}</Text>
           {data.oversupply && (
             <View style={[styles.chip, { backgroundColor: market.r5 }]}>
-              <Text style={[styles.chipText, { color: market.r2 }]}>Oversupply</Text>
+              <Text style={[styles.chipText, { color: market.r2 }]}>{translate('market.common.oversupply')}</Text>
             </View>
           )}
         </View>
@@ -38,20 +40,20 @@ export default function PriceHero({ crop, data }: Props) {
         </Text>
         <View style={styles.subRow}>
           <Text style={styles.subText}>{data.referenceMandi}</Text>
-          <View style={[styles.trendChip, { backgroundColor: t.chip }]}>
-            <Text style={[styles.trendChipText, { color: t.chipText }]}>{t.label}</Text>
+          <View style={[styles.trendChip, { backgroundColor: trend.chip }]}>
+            <Text style={[styles.trendChipText, { color: trend.chipText }]}>{trend.label}</Text>
           </View>
         </View>
-        <Text style={[styles.changeText, { color: t.color }]}>{changeStr}</Text>
+        <Text style={[styles.changeText, { color: trend.color }]}>{changeStr}</Text>
       </View>
       <View style={styles.right}>
         <View style={styles.aiPill}>
-          <Text style={styles.aiPillText}>✦ AI forecast</Text>
+          <Text style={styles.aiPillText}>{translate('market.common.aiForecast')}</Text>
         </View>
         <Text style={[styles.forecast, { color: data.trend === 'rising' ? market.g3 : market.r2 }]}>
           ₹{data.forecast30d}/{data.unit}
         </Text>
-        <Text style={styles.forecastSub}>in 30 days</Text>
+        <Text style={styles.forecastSub}>{translate('market.common.inThirtyDays')}</Text>
         <View style={styles.confPill}>
           <Text style={styles.confText}>{data.forecastConfidence}% conf.</Text>
         </View>
@@ -74,17 +76,17 @@ const styles = StyleSheet.create({
     padding: 14,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  emoji: { fontSize: 16 },
-  cropName: { fontWeight: '500', fontSize: 12, color: market.n4 },
+  emoji: { fontSize: mTypography.subtitle },
+  cropName: { fontWeight: '500', fontSize: mTypography.caption, color: market.n4 },
   chip: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  chipText: { fontSize: 9, fontWeight: '700' },
-  price: { fontSize: 30, color: market.g1, fontWeight: '700', lineHeight: 32 },
-  unit: { fontSize: 14, color: market.n4, fontWeight: '400' },
+  chipText: { fontSize: mTypography.caption, fontWeight: '700' },
+  price: { fontSize: mTypography.display, color: market.g1, fontWeight: '700', lineHeight: 32 },
+  unit: { fontSize: mTypography.body, color: market.n4, fontWeight: '400' },
   subRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 },
-  subText: { fontSize: 11, color: market.n4 },
+  subText: { fontSize: mTypography.body, color: market.n4 },
   trendChip: { borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
-  trendChipText: { fontSize: 10, fontWeight: '700' },
-  changeText: { fontSize: 11, fontWeight: '600', marginTop: 3 },
+  trendChipText: { fontSize: mTypography.small, fontWeight: '700' },
+  changeText: { fontSize: mTypography.body, fontWeight: '600', marginTop: 3 },
   right: { alignItems: 'flex-end' },
   aiPill: {
     backgroundColor: market.aiPurpleBg,
@@ -95,9 +97,9 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginBottom: 5,
   },
-  aiPillText: { fontSize: 10, fontWeight: '600', color: market.aiPurpleText },
-  forecast: { fontSize: 16, fontWeight: '600' },
-  forecastSub: { fontSize: 10, color: market.n4 },
+  aiPillText: { fontSize: mTypography.small, fontWeight: '600', color: market.aiPurpleText },
+  forecast: { fontSize: mTypography.subtitle, fontWeight: '600' },
+  forecastSub: { fontSize: mTypography.small, color: market.n4 },
   confPill: {
     marginTop: 4,
     backgroundColor: market.aiPurpleBg,
@@ -107,5 +109,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  confText: { fontSize: 10, color: market.aiPurpleText, fontWeight: '600' },
+  confText: { fontSize: mTypography.small, color: market.aiPurpleText, fontWeight: '600' },
 });

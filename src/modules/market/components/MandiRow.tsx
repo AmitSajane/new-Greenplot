@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { market, mRadius } from '../theme/marketTokens';
+import { market, mTypography, mRadius } from '../theme/marketTokens';
 import { Mandi } from '../types';
 
 /** Single mandi price row with rank accent + today's change. */
@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  emoji: { fontSize: 17 },
-  name: { fontSize: 12, fontWeight: '600', color: market.n2 },
-  loc: { fontSize: 10, color: market.n4, marginTop: 1 },
+  emoji: { fontSize: mTypography.icon },
+  name: { fontSize: mTypography.caption, fontWeight: '600', color: market.n2 },
+  loc: { fontSize: mTypography.small, color: market.n4, marginTop: 1 },
   priceCol: { alignItems: 'flex-end' },
-  price: { fontSize: 15, fontWeight: '700', color: market.n1 },
-  change: { fontSize: 10, fontWeight: '600', marginTop: 1 },
+  price: { fontSize: mTypography.bodyStrong, fontWeight: '700', color: market.n1 },
+  change: { fontSize: mTypography.small, fontWeight: '600', marginTop: 1 },
 });

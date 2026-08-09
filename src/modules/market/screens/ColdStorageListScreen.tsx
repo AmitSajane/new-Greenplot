@@ -3,15 +3,17 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { MarketHeader } from '../components';
+import { useTranslation } from 'react-i18next';
+import ColdStorageAppHeader from '../components/ColdStorageAppHeader';
 import { market, mRadius } from '../theme/marketTokens';
 import { MarketStackParamList } from '../navigation/marketRoutes';
-import { DEFAULT_STORE_INTENT, MOCK_COLD_STORAGES } from '../mockData';
+import { DEFAULT_STORE_INTENT, MOCK_COLD_STORAGES } from '../data/coldStorages';
 import { ColdStorage } from '../types';
 
 type Nav = NativeStackNavigationProp<MarketStackParamList, 'ColdStorageList'>;
 
-const FILTERS = ['Nearest', 'Lowest price', 'Available now', 'Verified'] as const;
+const FILTERS = ['nearest', 'lowestPrice', 'availableNow', 'verified'] as const;
+const CATALOG_KEYS: Record<string, string> = { 'Pre-cooling': 'preCooling', '24×7 power': 'power', Insurance: 'insurance', 'Lowest price': 'lowestPrice', Sorting: 'sorting', 'Export grade': 'exportGrade', 'At best mandi': 'bestMandi', Reefer: 'reefer', Cheapest: 'cheapest', 'Coop run': 'coopRun' };
 
 function sortStorages(list: ColdStorage[], filter: number) {
   const copy = [...list];
@@ -28,6 +30,7 @@ function sortStorages(list: ColdStorage[], filter: number) {
 }
 
 function StorageCard({ storage, onPress }: { storage: ColdStorage; onPress: () => void }) {
+  const { t } = useTranslation();
   return (
     <TouchableOpacity style={styles.card} activeOpacity={0.85} onPress={onPress}>
       <View style={styles.cardTop}>
@@ -48,19 +51,19 @@ function StorageCard({ storage, onPress }: { storage: ColdStorage; onPress: () =
               {storage.rating} ({storage.reviews})
             </Text>
             <Text style={styles.dot}>·</Text>
-            <Text style={styles.metaText}>{storage.availableCapacityMT} MT free</Text>
+            <Text style={styles.metaText}>{t('market.storageFlow.mtFree', { count: storage.availableCapacityMT })}</Text>
           </View>
         </View>
         <View style={styles.priceCol}>
           <Text style={styles.price}>₹{storage.ratePerKgPerDay.toFixed(2)}</Text>
-          <Text style={styles.priceUnit}>/kg/day</Text>
+          <Text style={styles.priceUnit}>{t('market.storageFlow.perKgDay')}</Text>
         </View>
       </View>
 
       <View style={styles.highlightRow}>
         {storage.highlights.map(h => (
           <Text key={h} style={styles.highlight}>
-            {h}
+            {t(`market.storageFlow.catalog.${CATALOG_KEYS[h]}`)}
           </Text>
         ))}
       </View>
@@ -68,7 +71,7 @@ function StorageCard({ storage, onPress }: { storage: ColdStorage; onPress: () =
       <View style={styles.cardFooter}>
         <Text style={styles.footerHint}>{storage.openHours}</Text>
         <View style={styles.detailLink}>
-          <Text style={styles.detailLinkText}>View details</Text>
+          <Text style={styles.detailLinkText}>{t('market.storageFlow.viewDetails')}</Text>
           <Ionicons name="chevron-forward" size={13} color={market.g2} />
         </View>
       </View>
@@ -77,6 +80,7 @@ function StorageCard({ storage, onPress }: { storage: ColdStorage; onPress: () =
 }
 
 export default function ColdStorageListScreen() {
+  const { i18n, t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<MarketStackParamList, 'ColdStorageList'>>();
   const cropName = route.params?.cropName ?? DEFAULT_STORE_INTENT.cropName;
@@ -88,21 +92,17 @@ export default function ColdStorageListScreen() {
 
   return (
     <View style={styles.container}>
-      <MarketHeader
-        eyebrow={`🍅 ${cropName} · Store & sell later`}
-        title="Cold storage near you"
-        onBack={() => navigation.goBack()}
-      />
+      <ColdStorageAppHeader feature="storage" subtitle={cropName} />
 
       {/* Intent banner carried from the crash alert */}
       <View style={styles.banner}>
         <Ionicons name="snow" size={18} color={market.g2} />
         <View style={{ flex: 1 }}>
           <Text style={styles.bannerTitle}>
-            Storing {quantityKg.toLocaleString('en-IN')} kg {cropName}
+            {t('market.storageFlow.storing', { quantity: quantityKg.toLocaleString(i18n.language), crop: cropName })}
           </Text>
           <Text style={styles.bannerSub}>
-            Recommended {recommendedDays} days · price recovery expected to ₹26/kg
+            {t('market.storageFlow.recommended', { days: recommendedDays })}
           </Text>
         </View>
       </View>
@@ -115,13 +115,13 @@ export default function ColdStorageListScreen() {
       >
         {FILTERS.map((f, i) => (
           <Text key={f} onPress={() => setFilter(i)} style={[styles.chip, i === filter && styles.chipActive]}>
-            {f}
+            {t(`market.storageFlow.filters.${f}`)}
           </Text>
         ))}
       </ScrollView>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={styles.count}>{storages.length} cold storages available</Text>
+        <Text style={styles.count}>{t('market.storageFlow.availableCount', { count: storages.length })}</Text>
         {storages.map(s => (
           <StorageCard
             key={s.id}

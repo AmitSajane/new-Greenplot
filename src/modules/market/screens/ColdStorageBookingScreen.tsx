@@ -3,10 +3,12 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Card, MarketHeader, SectionLabel } from '../components';
+import { useTranslation } from 'react-i18next';
+import { Card, SectionLabel } from '../components';
+import ColdStorageAppHeader from '../components/ColdStorageAppHeader';
 import { market, mRadius } from '../theme/marketTokens';
 import { MarketStackParamList } from '../navigation/marketRoutes';
-import { DEFAULT_STORE_INTENT, MOCK_COLD_STORAGES } from '../mockData';
+import { DEFAULT_STORE_INTENT, MOCK_COLD_STORAGES } from '../data/coldStorages';
 
 type Nav = NativeStackNavigationProp<MarketStackParamList, 'ColdStorageBooking'>;
 
@@ -14,6 +16,7 @@ const DURATIONS = [7, 15, 30];
 const HANDLING_PER_KG = 0.3;
 
 export default function ColdStorageBookingScreen() {
+  const { i18n, t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<MarketStackParamList, 'ColdStorageBooking'>>();
   const storage = MOCK_COLD_STORAGES.find(s => s.id === route.params.storageId)!;
@@ -48,7 +51,7 @@ export default function ColdStorageBookingScreen() {
 
   return (
     <View style={styles.container}>
-      <MarketHeader eyebrow="Cold storage · Booking" title="Book storage" onBack={() => navigation.goBack()} />
+      <ColdStorageAppHeader feature="storageBooking" subtitle={storage.name} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {/* Storage summary */}
@@ -65,15 +68,15 @@ export default function ColdStorageBookingScreen() {
         </View>
 
         {/* Quantity */}
-        <SectionLabel label="Quantity to store" />
+        <SectionLabel label={t('market.storageFlow.quantityToStore')} />
         <Card>
           <View style={styles.stepperRow}>
             <TouchableOpacity style={styles.stepBtn} onPress={() => adjustQty(-100)}>
               <Ionicons name="remove" size={18} color={market.g2} />
             </TouchableOpacity>
             <View style={{ alignItems: 'center' }}>
-              <Text style={styles.qtyValue}>{quantity.toLocaleString('en-IN')}</Text>
-              <Text style={styles.qtyUnit}>kg of {DEFAULT_STORE_INTENT.cropName}</Text>
+              <Text style={styles.qtyValue}>{quantity.toLocaleString(i18n.language)}</Text>
+              <Text style={styles.qtyUnit}>{t('market.storageFlow.kgOfCrop', { crop: DEFAULT_STORE_INTENT.cropName })}</Text>
             </View>
             <TouchableOpacity style={styles.stepBtn} onPress={() => adjustQty(100)}>
               <Ionicons name="add" size={18} color={market.g2} />
@@ -83,7 +86,7 @@ export default function ColdStorageBookingScreen() {
 
         {/* Duration */}
         <View style={{ marginTop: 12 }}>
-          <SectionLabel label="Storage duration" />
+          <SectionLabel label={t('market.storageFlow.storageDuration')} />
           <View style={styles.durationRow}>
             {DURATIONS.map(d => {
               const active = d === days;
@@ -94,23 +97,23 @@ export default function ColdStorageBookingScreen() {
                   onPress={() => setDays(d)}
                 >
                   <Text style={[styles.durationValue, active && { color: '#fff' }]}>{d}</Text>
-                  <Text style={[styles.durationLabel, active && { color: 'rgba(255,255,255,0.8)' }]}>days</Text>
+                  <Text style={[styles.durationLabel, active && { color: 'rgba(255,255,255,0.8)' }]}>{t('market.storageFlow.days')}</Text>
                 </TouchableOpacity>
               );
             })}
           </View>
           <Text style={styles.recommend}>
-            ⏰ AI recommends {DEFAULT_STORE_INTENT.recommendedDays} days for best price recovery
+            {t('market.storageFlow.aiRecommends', { days: DEFAULT_STORE_INTENT.recommendedDays })}
           </Text>
         </View>
 
         {/* Start date (mock) */}
         <View style={{ marginTop: 12 }}>
-          <SectionLabel label="Drop-off date" />
+          <SectionLabel label={t('market.storageFlow.dropOffDate')} />
           <Card>
             <View style={styles.dateRow}>
               <Ionicons name="calendar" size={16} color={market.g3} />
-              <Text style={styles.dateText}>Tomorrow · 09 Jun 2026</Text>
+              <Text style={styles.dateText}>{t('market.storageFlow.tomorrow')}</Text>
               <Ionicons name="chevron-down" size={16} color={market.n5} style={{ marginLeft: 'auto' }} />
             </View>
           </Card>
@@ -118,27 +121,27 @@ export default function ColdStorageBookingScreen() {
 
         {/* Cost breakdown */}
         <View style={{ marginTop: 12 }}>
-          <SectionLabel label="Cost breakdown" />
+          <SectionLabel label={t('market.storageFlow.costBreakdown')} />
           <Card>
             <View style={styles.costRow}>
               <Text style={styles.costKey}>
-                Storage · {quantity.toLocaleString('en-IN')} kg × ₹{storage.ratePerKgPerDay.toFixed(2)} × {days}d
+                {t('market.storageFlow.storageCalculation', { quantity: quantity.toLocaleString(i18n.language), rate: storage.ratePerKgPerDay.toFixed(2), days })}
               </Text>
-              <Text style={styles.costVal}>₹{cost.storageCost.toLocaleString('en-IN')}</Text>
+              <Text style={styles.costVal}>₹{cost.storageCost.toLocaleString(i18n.language)}</Text>
             </View>
             <View style={styles.costRow}>
-              <Text style={styles.costKey}>Handling (one-time)</Text>
-              <Text style={styles.costVal}>₹{cost.handlingFee.toLocaleString('en-IN')}</Text>
+              <Text style={styles.costKey}>{t('market.storageFlow.handling')}</Text>
+              <Text style={styles.costVal}>₹{cost.handlingFee.toLocaleString(i18n.language)}</Text>
             </View>
             <View style={styles.costRow}>
-              <Text style={styles.costKey}>Insurance</Text>
+              <Text style={styles.costKey}>{t('market.storageFlow.insurance')}</Text>
               <Text style={[styles.costVal, cost.insuranceFee === 0 && { color: market.g3 }]}>
-                {cost.insuranceFee === 0 ? 'Included' : `₹${cost.insuranceFee.toLocaleString('en-IN')}`}
+                {cost.insuranceFee === 0 ? t('market.storageFlow.included') : `₹${cost.insuranceFee.toLocaleString(i18n.language)}`}
               </Text>
             </View>
             <View style={[styles.costRow, styles.totalRow]}>
-              <Text style={styles.totalKey}>Total payable</Text>
-              <Text style={styles.totalVal}>₹{cost.total.toLocaleString('en-IN')}</Text>
+              <Text style={styles.totalKey}>{t('market.storageFlow.totalPayable')}</Text>
+              <Text style={styles.totalVal}>₹{cost.total.toLocaleString(i18n.language)}</Text>
             </View>
           </Card>
         </View>
@@ -148,11 +151,10 @@ export default function ColdStorageBookingScreen() {
           <Ionicons name="trending-up" size={18} color={market.g2} />
           <View style={{ flex: 1 }}>
             <Text style={styles.valueTitle}>
-              Expected net gain: ₹{netGain.toLocaleString('en-IN')}
+              {t('market.storageFlow.expectedNetGain', { value: netGain.toLocaleString(i18n.language) })}
             </Text>
             <Text style={styles.valueSub}>
-              Price recovery ≈ ₹{expectedGain.toLocaleString('en-IN')} − storage ₹
-              {cost.total.toLocaleString('en-IN')}. Sell after {days} days at the recovered rate.
+              {t('market.storageFlow.recoveryExplanation', { gain: expectedGain.toLocaleString(i18n.language), cost: cost.total.toLocaleString(i18n.language), days })}
             </Text>
           </View>
         </View>
@@ -161,13 +163,13 @@ export default function ColdStorageBookingScreen() {
       {/* Sticky confirm */}
       <View style={styles.confirmBar}>
         <View>
-          <Text style={styles.confirmTotal}>₹{cost.total.toLocaleString('en-IN')}</Text>
+          <Text style={styles.confirmTotal}>₹{cost.total.toLocaleString(i18n.language)}</Text>
           <Text style={styles.confirmSub}>
-            {quantity.toLocaleString('en-IN')} kg · {days} days
+            {t('market.storageFlow.quantityDays', { quantity: quantity.toLocaleString(i18n.language), days })}
           </Text>
         </View>
         <TouchableOpacity style={styles.confirmBtn} activeOpacity={0.85} onPress={confirm}>
-          <Text style={styles.confirmBtnText}>Confirm booking</Text>
+          <Text style={styles.confirmBtnText}>{t('market.storageFlow.confirmBooking')}</Text>
         </TouchableOpacity>
       </View>
     </View>

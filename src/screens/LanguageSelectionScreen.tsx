@@ -9,7 +9,7 @@ import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
-const LANGUAGE_OPTIONS = ['en', 'kn', 'hi', 'mr'] as const;
+const LANGUAGE_OPTIONS = ['en', 'hi', 'kn', 'te', 'mr', 'ta'] as const;
 
 export default function LanguageSelectionScreen() {
   const navigation = useNavigation<any>();

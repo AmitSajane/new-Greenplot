@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { market, mRadius } from '../theme/marketTokens';
+import { market, mTypography, mRadius } from '../theme/marketTokens';
 import { AlertType } from '../types';
 
 interface Props {
@@ -43,6 +43,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     minWidth: 170,
   },
-  title: { fontSize: 11, fontWeight: '600', lineHeight: 15 },
-  sub: { fontSize: 10, lineHeight: 14, marginTop: 1 },
+  title: { fontSize: mTypography.body, fontWeight: '600', lineHeight: 15 },
+  sub: { fontSize: mTypography.small, lineHeight: 14, marginTop: 1 },
 });

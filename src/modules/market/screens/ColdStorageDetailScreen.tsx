@@ -3,10 +3,12 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { Card, MarketHeader, SectionLabel } from '../components';
+import { useTranslation } from 'react-i18next';
+import { Card, SectionLabel } from '../components';
+import ColdStorageAppHeader from '../components/ColdStorageAppHeader';
 import { market, mRadius } from '../theme/marketTokens';
 import { MarketStackParamList } from '../navigation/marketRoutes';
-import { MOCK_COLD_STORAGES } from '../mockData';
+import { MOCK_COLD_STORAGES } from '../data/coldStorages';
 
 type Nav = NativeStackNavigationProp<MarketStackParamList, 'ColdStorageDetail'>;
 
@@ -14,8 +16,10 @@ const REVIEWS = [
   { name: 'Mahesh P.', rating: 5, text: 'Stored 8 quintal tomato for 12 days, zero spoilage. Staff helped with loading.' },
   { name: 'Lakshmi B.', rating: 4, text: 'Fair pricing and clean chambers. Reefer pickup was on time.' },
 ];
+const FEATURE_KEYS: Record<string, string> = { 'Pre-cooling chamber': 'preCoolingChamber', '24×7 power backup': 'powerBackup', 'Insurance covered': 'insuranceCovered', 'Sorting & grading': 'sortingGrading', 'Loading dock + reefer': 'loadingReefer', 'IoT temp monitoring': 'tempMonitoring' };
 
 export default function ColdStorageDetailScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<Nav>();
   const route = useRoute<RouteProp<MarketStackParamList, 'ColdStorageDetail'>>();
   const storage = MOCK_COLD_STORAGES.find(s => s.id === route.params.storageId)!;
@@ -23,12 +27,7 @@ export default function ColdStorageDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <MarketHeader
-        eyebrow="Cold storage · Details"
-        title={storage.name}
-        badge={storage.verified ? 'Verified partner' : undefined}
-        onBack={() => navigation.goBack()}
-      />
+      <ColdStorageAppHeader feature="storageDetails" subtitle={storage.name} />
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
         {/* Quick stats */}
@@ -36,7 +35,7 @@ export default function ColdStorageDetailScreen() {
           <View style={styles.stat}>
             <Ionicons name="star" size={14} color={market.a4} />
             <Text style={styles.statValue}>{storage.rating}</Text>
-            <Text style={styles.statLabel}>{storage.reviews} reviews</Text>
+            <Text style={styles.statLabel}>{t('market.storageFlow.reviewCount', { count: storage.reviews })}</Text>
           </View>
           <View style={styles.stat}>
             <Ionicons name="navigate" size={14} color={market.b2} />
@@ -54,7 +53,7 @@ export default function ColdStorageDetailScreen() {
         <View style={styles.capWrap}>
           <Card>
             <View style={styles.capHead}>
-              <Text style={styles.capTitle}>Available capacity</Text>
+              <Text style={styles.capTitle}>{t('market.storageFlow.availableCapacity')}</Text>
               <Text style={styles.capValue}>
                 {storage.availableCapacityMT} / {storage.totalCapacityMT} MT
               </Text>
@@ -62,12 +61,12 @@ export default function ColdStorageDetailScreen() {
             <View style={styles.capTrack}>
               <View style={[styles.capFill, { width: `${usedPct}%` }]} />
             </View>
-            <Text style={styles.capNote}>{usedPct}% occupied · plenty of room for your stock</Text>
+            <Text style={styles.capNote}>{t('market.storageFlow.occupied', { percent: usedPct })}</Text>
           </Card>
         </View>
 
         {/* Features grid */}
-        <SectionLabel label="Facility features" />
+        <SectionLabel label={t('market.storageFlow.facilityFeatures')} />
         <View style={styles.featureGrid}>
           {storage.features.map(f => (
             <View
@@ -79,11 +78,11 @@ export default function ColdStorageDetailScreen() {
                 size={18}
                 color={f.available ? market.g3 : market.n5}
               />
-              <Text style={[styles.featureLabel, !f.available && { color: market.n5 }]}>{f.label}</Text>
+              <Text style={[styles.featureLabel, !f.available && { color: market.n5 }]}>{t(`market.storageFlow.catalog.${FEATURE_KEYS[f.label]}`)}</Text>
               {f.available ? (
                 <Ionicons name="checkmark-circle" size={14} color={market.g4} style={styles.featureTick} />
               ) : (
-                <Text style={styles.featureNa}>N/A</Text>
+                <Text style={styles.featureNa}>{t('market.storageFlow.notApplicable')}</Text>
               )}
             </View>
           ))}
@@ -91,20 +90,20 @@ export default function ColdStorageDetailScreen() {
 
         {/* Pricing */}
         <View style={{ marginTop: 4 }}>
-          <SectionLabel label="Pricing" />
+          <SectionLabel label={t('market.storageFlow.pricing')} />
           <Card>
             <View style={styles.priceRow}>
-              <Text style={styles.priceKey}>Storage rate</Text>
-              <Text style={styles.priceVal}>₹{storage.ratePerKgPerDay.toFixed(2)} / kg / day</Text>
+              <Text style={styles.priceKey}>{t('market.storageFlow.storageRate')}</Text>
+              <Text style={styles.priceVal}>₹{storage.ratePerKgPerDay.toFixed(2)} {t('market.storageFlow.perKgDay')}</Text>
             </View>
             <View style={styles.priceRow}>
-              <Text style={styles.priceKey}>Handling (one-time)</Text>
+              <Text style={styles.priceKey}>{t('market.storageFlow.handling')}</Text>
               <Text style={styles.priceVal}>₹0.30 / kg</Text>
             </View>
             <View style={[styles.priceRow, { borderBottomWidth: 0 }]}>
-              <Text style={styles.priceKey}>Insurance</Text>
+              <Text style={styles.priceKey}>{t('market.storageFlow.insurance')}</Text>
               <Text style={[styles.priceVal, { color: storage.features[2].available ? market.g3 : market.n4 }]}>
-                {storage.features[2].available ? 'Included' : 'Not available'}
+                {storage.features[2].available ? t('market.storageFlow.included') : t('market.common.unavailable')}
               </Text>
             </View>
           </Card>
@@ -112,7 +111,7 @@ export default function ColdStorageDetailScreen() {
 
         {/* Reviews */}
         <View style={{ marginTop: 12 }}>
-          <SectionLabel label="Farmer reviews" />
+          <SectionLabel label={t('market.storageFlow.farmerReviews')} />
           {REVIEWS.map(r => (
             <Card key={r.name} style={{ marginBottom: 8 }}>
               <View style={styles.reviewHead}>
@@ -123,7 +122,7 @@ export default function ColdStorageDetailScreen() {
                   ))}
                 </View>
               </View>
-              <Text style={styles.reviewText}>{r.text}</Text>
+              <Text style={styles.reviewText}>{t(`market.storageFlow.reviews.${r.name.startsWith('Mahesh') ? 'first' : 'second'}`)}</Text>
             </Card>
           ))}
         </View>
@@ -132,15 +131,15 @@ export default function ColdStorageDetailScreen() {
       {/* Sticky book bar */}
       <View style={styles.bookBar}>
         <View>
-          <Text style={styles.bookFrom}>From ₹{storage.ratePerKgPerDay.toFixed(2)}/kg/day</Text>
-          <Text style={styles.bookSub}>{storage.availableCapacityMT} MT free now</Text>
+          <Text style={styles.bookFrom}>{t('market.storageFlow.fromRate', { rate: storage.ratePerKgPerDay.toFixed(2) })}</Text>
+          <Text style={styles.bookSub}>{t('market.storageFlow.mtFreeNow', { count: storage.availableCapacityMT })}</Text>
         </View>
         <TouchableOpacity
           style={styles.bookBtn}
           activeOpacity={0.85}
           onPress={() => navigation.navigate('ColdStorageBooking', { storageId: storage.id })}
         >
-          <Text style={styles.bookBtnText}>Book this storage</Text>
+          <Text style={styles.bookBtnText}>{t('market.storageFlow.bookThisStorage')}</Text>
           <Ionicons name="arrow-forward" size={16} color="#fff" />
         </TouchableOpacity>
       </View>

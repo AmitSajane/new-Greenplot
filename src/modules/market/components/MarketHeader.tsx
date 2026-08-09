@@ -2,7 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { market, mRadius } from '../theme/marketTokens';
+import { market, mTypography, mRadius } from '../theme/marketTokens';
 
 interface Props {
   eyebrow?: string;
@@ -68,13 +68,13 @@ const styles = StyleSheet.create({
   back: { marginRight: 8, marginTop: 2 },
   eyebrow: {
     color: 'rgba(255,255,255,0.55)',
-    fontSize: 10,
+    fontSize: mTypography.small,
     fontWeight: '600',
     letterSpacing: 1,
     textTransform: 'uppercase',
     marginBottom: 3,
   },
-  title: { fontSize: 22, fontWeight: '700', color: '#fff', lineHeight: 26 },
+  title: { fontSize: mTypography.heading, fontWeight: '700', color: '#fff', lineHeight: 26 },
   badge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     marginTop: 6,
   },
-  badgeText: { fontSize: 10, fontWeight: '600', color: market.g6 },
+  badgeText: { fontSize: mTypography.small, fontWeight: '600', color: market.g6 },
   rightBox: {
     backgroundColor: 'rgba(255,255,255,0.12)',
     borderWidth: 1,
@@ -98,10 +98,10 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   rightLabel: {
-    fontSize: 9,
+    fontSize: mTypography.caption,
     color: 'rgba(255,255,255,0.55)',
     fontWeight: '600',
     marginBottom: 2,
   },
-  rightValue: { fontSize: 11, color: '#fff', fontWeight: '600' },
+  rightValue: { fontSize: mTypography.body, color: '#fff', fontWeight: '600' },
 });

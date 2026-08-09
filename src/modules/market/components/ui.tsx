@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View, ViewStyle } from 'react-native';
-import { market, mRadius } from '../theme/marketTokens';
+import { market, mTypography, mRadius } from '../theme/marketTokens';
+import { useTranslation } from 'react-i18next';
 
 /** White rounded card with subtle border — the base surface across screens. */
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -29,13 +30,14 @@ export function ChartCard({
   children: React.ReactNode;
   ai?: boolean;
 }) {
+  const { t } = useTranslation();
   return (
     <Card>
       <View style={styles.chartTitleRow}>
         <Text style={styles.chartTitle}>{title}</Text>
         {ai && (
           <View style={styles.aiPill}>
-            <Text style={styles.aiPillText}>✦ AI</Text>
+            <Text style={styles.aiPillText}>{t('market.common.ai')}</Text>
           </View>
         )}
       </View>
@@ -115,16 +117,16 @@ const styles = StyleSheet.create({
   },
   labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   label: {
-    fontSize: 10,
+    fontSize: mTypography.small,
     fontWeight: '600',
     color: market.n4,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  action: { fontSize: 10, fontWeight: '500', color: market.g3 },
+  action: { fontSize: mTypography.small, fontWeight: '500', color: market.g3 },
   chartTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  chartTitle: { fontSize: 12, fontWeight: '600', color: market.n2, marginBottom: 2 },
-  chartSub: { fontSize: 10, color: market.n4, marginBottom: 10 },
+  chartTitle: { fontSize: mTypography.caption, fontWeight: '600', color: market.n2, marginBottom: 2 },
+  chartSub: { fontSize: mTypography.small, color: market.n4, marginBottom: 10 },
   aiPill: {
     backgroundColor: market.aiPurpleBg,
     borderWidth: 1,
@@ -133,10 +135,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7,
     paddingVertical: 2,
   },
-  aiPillText: { fontSize: 9, fontWeight: '600', color: market.aiPurpleText },
+  aiPillText: { fontSize: mTypography.caption, fontWeight: '600', color: market.aiPurpleText },
   legItem: { flexDirection: 'row', alignItems: 'center', gap: 4, marginRight: 12 },
   legLine: { width: 16, height: 2, borderRadius: 1 },
-  legText: { fontSize: 10, color: market.n4 },
+  legText: { fontSize: mTypography.small, color: market.n4 },
   statTile: {
     flexBasis: '48%',
     flexGrow: 1,
@@ -147,13 +149,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
-  statLabel: { fontSize: 10, color: market.n4, fontWeight: '500', marginBottom: 3 },
-  statValue: { fontSize: 18, fontWeight: '700', color: market.n1 },
-  statSub: { fontSize: 10, marginTop: 2, color: market.n4 },
+  statLabel: { fontSize: mTypography.small, color: market.n4, fontWeight: '500', marginBottom: 3 },
+  statValue: { fontSize: mTypography.title, fontWeight: '700', color: market.n1 },
+  statSub: { fontSize: mTypography.small, marginTop: 2, color: market.n4 },
   progressRow: { marginBottom: 8 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
-  progressLabel: { fontSize: 11, fontWeight: '500', color: market.n2 },
-  progressValue: { fontSize: 11, fontWeight: '700' },
+  progressLabel: { fontSize: mTypography.body, fontWeight: '500', color: market.n2 },
+  progressValue: { fontSize: mTypography.body, fontWeight: '700' },
   progressTrack: { height: 5, backgroundColor: market.n7, borderRadius: 3, overflow: 'hidden' },
   progressFill: { height: 5, borderRadius: 3 },
 });

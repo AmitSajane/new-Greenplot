@@ -1,9 +1,9 @@
 /** Shared route param list for the Market Intelligence stack. */
 export type MarketStackParamList = {
   MarketHome: undefined;
-  PriceTrend: { cropId?: string } | undefined;
-  MandiList: { cropId?: string } | undefined;
-  DemandMap: { cropId?: string } | undefined;
+  PriceTrend: { cropId?: string; commodity?: string; state?: string; market?: string } | undefined;
+  MandiList: { cropId?: string; commodity?: string; state?: string; market?: string } | undefined;
+  DemandMap: { cropId?: string; commodity?: string; state?: string } | undefined;
   AIInsight: { cropId?: string } | undefined;
   Arrivals: { cropId?: string } | undefined;
   OversupplyAlert: { cropId?: string } | undefined;

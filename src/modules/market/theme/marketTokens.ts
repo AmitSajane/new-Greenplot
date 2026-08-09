@@ -1,3 +1,5 @@
+import { Dimensions, PixelRatio } from 'react-native';
+
 /**
  * Market module design tokens — ported from the AgriArambh Market Intelligence
  * Figma spec. Self-contained so the module's visual language stays consistent
@@ -73,6 +75,32 @@ export const mSpacing = {
   xl: 16,
   xxl: 24,
 };
+
+const BASE_SCREEN_WIDTH = 390;
+const screenWidth = Dimensions.get('window').width;
+const widthScale = Math.min(1.12, Math.max(0.92, screenWidth / BASE_SCREEN_WIDTH));
+const responsiveFont = (size: number) => PixelRatio.roundToNearestPixel(size * widthScale);
+
+/**
+ * Responsive Market typography scale.
+ *
+ * Values adapt gently to the device width. React Native applies the user's
+ * system font-size preference on top, so accessibility scaling remains intact.
+ */
+export const mTypography = {
+  chart: responsiveFont(10),
+  caption: responsiveFont(12),
+  small: responsiveFont(13),
+  body: responsiveFont(14),
+  bodyStrong: responsiveFont(15),
+  subtitle: responsiveFont(16),
+  icon: responsiveFont(17),
+  title: responsiveFont(18),
+  titleLarge: responsiveFont(20),
+  heading: responsiveFont(22),
+  displaySmall: responsiveFont(24),
+  display: responsiveFont(30),
+} as const;
 
 export const mShadow = {
   card: {
