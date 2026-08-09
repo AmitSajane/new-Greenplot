@@ -11,7 +11,12 @@ interface TileProps {
 const SnapTile = React.memo(({ item, onAction }: TileProps) => {
   const handlePress = useCallback(() => onAction(item.action), [onAction, item.action]);
   return (
-    <TouchableOpacity style={s.snapTile} activeOpacity={0.8} onPress={handlePress}>
+    <TouchableOpacity
+      style={[s.snapTile, item.disabled && { opacity: 0.75 }]}
+      activeOpacity={item.disabled ? 1 : 0.8}
+      onPress={item.disabled ? undefined : handlePress}
+      disabled={item.disabled}
+    >
       <Text style={s.snapEmoji}>{item.emoji}</Text>
       <Text style={[s.snapValue, item.tone === 'amber' && { color: '#B87214' }]}>{item.value}</Text>
       <Text style={s.snapLabel}>{item.label}</Text>
