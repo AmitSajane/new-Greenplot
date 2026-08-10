@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { PostComment } from '../../constants/communityData';
@@ -118,6 +118,10 @@ export const CommentsModal = React.memo(
 
     return (
       <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
+        {/* RN's Modal presents in its own native window, outside the app's
+            root SafeAreaProvider — insets aren't measured there without a
+            fresh provider re-established inside the modal itself. */}
+        <SafeAreaProvider>
         <SafeAreaView style={s.safeAreaModal} edges={['top']}>
           <View style={s.commentsHeader}>
             <TouchableOpacity onPress={onClose} hitSlop={8}>
@@ -178,6 +182,7 @@ export const CommentsModal = React.memo(
             </SafeAreaView>
           </KeyboardAvoidingView>
         </SafeAreaView>
+        </SafeAreaProvider>
       </Modal>
     );
   },

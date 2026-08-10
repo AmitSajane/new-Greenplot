@@ -1,4 +1,5 @@
 import { useMemo, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { OwnerHomeStackParamList } from '../../../navigation/OwnerHomeStack';
@@ -191,12 +192,15 @@ export function useOwnerHome() {
 
   const tools: ToolItem[] = useMemo(
     () => [
+      { key: 'add', label: 'Add land', icon: 'add-circle', tone: 'neutral', onPress: () => navigation.navigate('AddFarm') },
       { key: 'satellite', label: 'Satellite', icon: 'globe', tone: 'green', onPress: () => navigation.navigate('SatelliteMap') },
-      { key: 'labor', label: 'Labor', icon: 'people', tone: 'blue', onPress: () => navigation.navigate('LaborConnect') },
       { key: 'soilAdvisory', label: 'Soil advisory', icon: 'leaf', tone: 'green', onPress: () => navigation.navigate('SoilAdvisory') },
       { key: 'mandi', label: 'Mandi prices', icon: 'pricetags', tone: 'amber', onPress: () => navigation.navigate('MandiPrices') },
-      { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => navigation.navigate('OwnerWorkReport') },
-      { key: 'add', label: 'Add land', icon: 'add-circle', tone: 'neutral', onPress: () => navigation.navigate('AddFarm') },
+      // { key: 'labor', label: 'Labor', icon: 'people', tone: 'blue', onPress: () => navigation.navigate('LaborConnect') },
+      { key: 'labor', label: 'Labor', icon: 'people', tone: 'blue', onPress: () => { Alert.alert("Labor Connect is coming soon!"); } },
+
+      // { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => navigation.navigate('OwnerWorkReport') },
+      { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => { Alert.alert("Work Report is coming soon!"); } },
     ],
     [navigation, goTab],
   );
