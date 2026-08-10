@@ -35,6 +35,7 @@ export interface FarmListing {
   plotGeoJSON?: any;
   areaAcres?: number;
   currentCrop?: string;
+  waterSource?: string;
   irrigationSchedule?: string;
   pesticideSchedule?: string;
   expectedHarvest?: string;

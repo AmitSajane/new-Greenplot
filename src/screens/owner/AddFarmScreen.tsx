@@ -49,6 +49,14 @@ const SOIL_TYPES = [
   'Laterite Soil',
 ];
 
+const WATER_SOURCE_OPTIONS = [
+  'Borewell',
+  'Well',
+  'River Pipeline',
+  'Canals',
+  'Depend on Rain',
+];
+
 const TENURE_OPTIONS = ['1 year', '2 years', '3 years', '5 years', '10 years', '15 years'];
 
 const LEASE_TYPE_OPTIONS = [
@@ -97,6 +105,8 @@ export default function AddFarmScreen() {
   const [village, setVillage] = useState('');
   const [location, setLocation] = useState('');
   const [soilType, setSoilType] = useState('');
+  const [waterSource, setWaterSource] = useState('');
+  const [showWaterSourcePicker, setShowWaterSourcePicker] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showDistrictPicker, setShowDistrictPicker] = useState(false);
   const [showTalukPicker, setShowTalukPicker] = useState(false);
@@ -157,6 +167,7 @@ export default function AddFarmScreen() {
     setTitle(listing.title || '');
     setAcres(listing.acres || '');
     setSoilType(listing.soilType || '');
+    setWaterSource(listing.waterSource || '');
     setState(listing.state || '');
     setDistrict(listing.district || '');
     setTaluk(listing.taluk || '');
@@ -339,6 +350,9 @@ export default function AddFarmScreen() {
       listingData.crops = selectedCrops;
       listingData.currentCrop = selectedCrops[0];
     }
+    if (waterSource) {
+      listingData.waterSource = waterSource;
+    }
     if (irrigationSchedule) {
       listingData.irrigationSchedule = irrigationSchedule;
     }
@@ -370,7 +384,8 @@ export default function AddFarmScreen() {
       newLandId = await addListing(listingData);
     } catch (e) {
       setSubmitting(false);
-      Alert.alert('Could not publish', 'Please check your connection and try again.');
+      const reason = e instanceof Error ? e.message : (e as { message?: string })?.message;
+      Alert.alert('Could not publish', reason || 'Please check your connection and try again.');
       return;
     }
     setSubmitting(false);
@@ -464,8 +479,8 @@ export default function AddFarmScreen() {
     ) => {
       const upload =
         kind === 'photo' && base64
-          ? storageApi.uploadImage(base64, mime || 'image/jpeg', user?.id || 'anon')
-          : storageApi.uploadFromUri(uri, mime || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), user?.id || 'anon');
+          ? storageApi.uploadImage(base64, mime || 'image/jpeg', user?.id || 'anon', 'land-images')
+          : storageApi.uploadFromUri(uri, mime || (kind === 'video' ? 'video/mp4' : 'image/jpeg'), user?.id || 'anon', 'land-images');
 
       const handleResult = (url: string | null) => {
         if (url) {
@@ -740,6 +755,11 @@ export default function AddFarmScreen() {
               <Text style={styles.label}>Soil Type *</Text>
               {renderDropdown(soilType, 'Select Soil Type', () => setShowSoilPicker(true))}
             </View>
+          </View>
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Water Source</Text>
+            {renderDropdown(waterSource, 'Select Water Source', () => setShowWaterSourcePicker(true))}
           </View>
 
           {/* PIN-code quick fill */}
@@ -1067,6 +1087,7 @@ export default function AddFarmScreen() {
       {renderPickerModal(showHobliPicker, hobliOptions, handleHobliSelect, () => setShowHobliPicker(false))}
       {renderPickerModal(showVillagePicker, villageOptions, handleVillageSelect, () => setShowVillagePicker(false))}
       {renderPickerModal(showSoilPicker, SOIL_TYPES, setSoilType, () => setShowSoilPicker(false))}
+      {renderPickerModal(showWaterSourcePicker, WATER_SOURCE_OPTIONS, setWaterSource, () => setShowWaterSourcePicker(false))}
       {renderPickerModal(showTenurePicker, TENURE_OPTIONS, setTenure, () => setShowTenurePicker(false))}
       {renderPickerModal(showLeaseTypePicker, LEASE_TYPE_OPTIONS, setLeaseType, () => setShowLeaseTypePicker(false))}
     </SafeAreaView>

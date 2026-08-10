@@ -44,7 +44,9 @@ export default function MachineryScreen() {
         <Icon name="tractor-variant" size={48} color={colors.textMuted} />
         <Text style={styles.title}>Coming soon</Text>
         <Text style={styles.subtitle}>
-          Rent or list tractors, tillers, and other farm equipment right from the app.
+          Rent or list tractors, rotavators, and other implements, Harvesters, mini tractors, borewell machines, goods vehicles, and any other equipment right from the app.
+
+
         </Text>
       </View>
       <LanguagePickerModal visible={languageOpen} onClose={() => setLanguageOpen(false)} />

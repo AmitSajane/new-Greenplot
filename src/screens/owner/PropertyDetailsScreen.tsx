@@ -266,6 +266,9 @@ export default function PropertyDetailsScreen() {
           <Text style={styles.cardTitle}>Details</Text>
           <DetailRow icon="resize-outline" label="Area" value={property.acresLabel || `${property.acres} Acres`} />
           <DetailRow icon="leaf-outline" label="Soil" value={property.soilType} />
+          {property.waterSource && (
+            <DetailRow icon="water-outline" label="Water" value={property.waterSource} />
+          )}
           <DetailRow icon="calendar-outline" label="Tenure" value={property.tenure} />
           <DetailRow icon="cash-outline" label="Rent/Year" value={property.pricePerYear} />
           <TouchableOpacity

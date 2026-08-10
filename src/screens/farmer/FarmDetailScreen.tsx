@@ -104,6 +104,13 @@ export default function FarmDetailScreen() {
             <Text style={styles.detailValue}>{farm.soilType}</Text>
             <Text style={styles.detailLabel}>Soil Type</Text>
           </View>
+          {farm.waterSource && (
+            <View style={[styles.detailCard, shadow.card]}>
+              <Ionicons name="water-outline" size={24} color={colors.skyBlue} />
+              <Text style={styles.detailValue}>{farm.waterSource}</Text>
+              <Text style={styles.detailLabel}>Water Source</Text>
+            </View>
+          )}
           <View style={[styles.detailCard, shadow.card]}>
             <Ionicons name="calendar-outline" size={24} color={colors.warning} />
             <Text style={styles.detailValue}>{farm.tenure}</Text>
