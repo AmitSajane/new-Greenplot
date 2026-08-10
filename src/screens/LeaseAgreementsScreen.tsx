@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   FlatList,
   Image,
@@ -15,137 +15,90 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { useAuth } from '../context/AuthContext';
+import { useLeases } from '../context/LeaseContext';
+import { useFarmListings } from '../context/FarmListingsContext';
 
 type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'LeaseAgreements'>;
 
-type FilterType = 'All Agreements' | 'Active' | 'Pending' | 'Expired';
+type FilterType = 'All Agreements' | 'Active' | 'Pending';
 
-interface LeaseAgreement {
+interface LeaseAgreementItem {
   id: string;
-  landParcel: string;
-  tenant: string;
-  duration?: string;
-  endDate?: string;
-  status: 'Active' | 'Pending Signature' | 'Expired';
-  nextPaymentAmount?: string;
-  nextPaymentDue?: string;
-  imageUrl: string;
+  landId: string;
+  landTitle: string;
+  /** "Tenant: X" if I'm the owner here, "Owner: X" if I'm the farmer here. */
+  otherPartyLabel: string;
+  status: 'Active' | 'Pending Signature';
+  startDate?: string;
+  tenure?: string;
 }
 
-const LEASE_AGREEMENTS: LeaseAgreement[] = [
-  {
-    id: '1',
-    landParcel: '5 Acres in Ramgarh',
-    tenant: 'Rajesh Kumar',
-    duration: '1 Year (Ends Dec \'24)',
-    status: 'Active',
-    nextPaymentAmount: '₹15,000',
-    nextPaymentDue: '15 Aug',
-    imageUrl:
-      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop',
-  },
-  {
-    id: '2',
-    landParcel: '12 Acres in Sitapur',
-    tenant: 'Suresh Patel',
-    duration: '3 Years',
-    status: 'Pending Signature',
-    imageUrl:
-      'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=400&h=300&fit=crop',
-  },
-  {
-    id: '3',
-    landParcel: '2 Acres in Bilaspur',
-    tenant: 'Anita Devi',
-    endDate: '10 Jan 2024',
-    status: 'Expired',
-    imageUrl: '',
-  },
-  {
-    id: '4',
-    landParcel: '5 Acres in Ramgarh',
-    tenant: 'Rajesh Kumar',
-    duration: '1 Year (Ends Dec \'24)',
-    status: 'Active',
-    nextPaymentAmount: '₹15,000',
-    nextPaymentDue: '15 Aug',
-    imageUrl:
-      'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=400&h=300&fit=crop',
-  },
-];
-
 export default function LeaseAgreementsScreen({ navigation }: Props) {
-  const [selectedFilter, setSelectedFilter] =
-    useState<FilterType>('All Agreements');
+  const { user } = useAuth();
+  const { activeLeases, agreements } = useLeases();
+  const { getListingById } = useFarmListings();
+  const [selectedFilter, setSelectedFilter] = useState<FilterType>('All Agreements');
 
-  const filters: FilterType[] = [
-    'All Agreements',
-    'Active',
-    'Pending',
-    'Expired',
-  ];
+  const filters: FilterType[] = ['All Agreements', 'Active', 'Pending'];
+
+  // Real leases/agreements involving the current user, either as owner or
+  // farmer — same "either party can see it" rule the RLS policies already use.
+  const items: LeaseAgreementItem[] = useMemo(() => {
+    const isMine = (p: { farmerId: string; ownerId: string }) =>
+      p.farmerId === user?.id || p.ownerId === user?.id;
+    const otherPartyLabel = (p: { farmerId: string; farmerName: string; ownerId: string; ownerName: string }) =>
+      p.farmerId === user?.id ? `Owner: ${p.ownerName}` : `Tenant: ${p.farmerName}`;
+
+    const active: LeaseAgreementItem[] = activeLeases
+      .filter(isMine)
+      .map((l) => ({
+        id: l.id,
+        landId: l.landId,
+        landTitle: l.landTitle,
+        otherPartyLabel: otherPartyLabel(l),
+        status: 'Active',
+        startDate: l.startDate,
+      }));
+
+    const pending: LeaseAgreementItem[] = agreements
+      .filter((a) => a.status === 'awaiting' && isMine(a))
+      .map((a) => ({
+        id: a.id,
+        landId: a.landId,
+        landTitle: a.landTitle,
+        otherPartyLabel: otherPartyLabel(a),
+        status: 'Pending Signature',
+        tenure: a.tenure,
+      }));
+
+    return [...active, ...pending];
+  }, [activeLeases, agreements, user?.id]);
 
   const getFilteredAgreements = () => {
-    if (selectedFilter === 'All Agreements') {
-      return LEASE_AGREEMENTS;
-    }
-    if (selectedFilter === 'Active') {
-      return LEASE_AGREEMENTS.filter((item) => item.status === 'Active');
-    }
-    if (selectedFilter === 'Pending') {
-      return LEASE_AGREEMENTS.filter(
-        (item) => item.status === 'Pending Signature',
-      );
-    }
-    if (selectedFilter === 'Expired') {
-      return LEASE_AGREEMENTS.filter((item) => item.status === 'Expired');
-    }
-    return LEASE_AGREEMENTS;
+    if (selectedFilter === 'Active') return items.filter((item) => item.status === 'Active');
+    if (selectedFilter === 'Pending') return items.filter((item) => item.status === 'Pending Signature');
+    return items;
   };
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'Active':
-        return {
-          label: 'ACTIVE',
-          bgColor: colors.success,
-          textColor: colors.surface,
-        };
-      case 'Pending Signature':
-        return {
-          label: 'PENDING SIG',
-          bgColor: colors.softOrange,
-          textColor: colors.warning,
-        };
-      case 'Expired':
-        return {
-          label: 'EXPIRED',
-          bgColor: '#F3F4F6',
-          textColor: colors.textSecondary,
-        };
-      default:
-        return {
-          label: status.toUpperCase(),
-          bgColor: colors.border,
-          textColor: colors.textSecondary,
-        };
+  const getStatusConfig = (status: LeaseAgreementItem['status']) => {
+    if (status === 'Active') {
+      return { label: 'ACTIVE', bgColor: colors.success, textColor: colors.surface };
     }
+    return { label: 'PENDING SIG', bgColor: colors.softOrange, textColor: colors.warning };
   };
 
-  const renderItem = ({ item }: { item: LeaseAgreement }) => {
+  const renderItem = ({ item }: { item: LeaseAgreementItem }) => {
     const statusConfig = getStatusConfig(item.status);
+    const imageUrl = getListingById(item.landId)?.imageUrl;
 
     return (
       <View style={styles.card}>
         <View style={styles.cardContent}>
           {/* Image Thumbnail */}
           <View style={styles.imageContainer}>
-            {item.imageUrl ? (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.cardImage}
-                resizeMode="cover"
-              />
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={styles.cardImage} resizeMode="cover" />
             ) : (
               <View style={styles.placeholderImage}>
                 <Icon name="landscape" size={32} color={colors.textMuted} />
@@ -157,151 +110,70 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
           <View style={styles.cardInfo}>
             <View style={styles.cardHeader}>
               <Text style={styles.landParcel} numberOfLines={1}>
-                {item.landParcel}
+                {item.landTitle}
               </Text>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor: statusConfig.bgColor,
-                  },
-                ]}
-              >
-                <Text
-                  style={[styles.statusText, { color: statusConfig.textColor }]}
-                >
+              <View style={[styles.statusBadge, { backgroundColor: statusConfig.bgColor }]}>
+                <Text style={[styles.statusText, { color: statusConfig.textColor }]}>
                   {statusConfig.label}
                 </Text>
               </View>
             </View>
 
-            {/* Tenant Info */}
             <View style={styles.infoRow}>
               <Icon name="person" size={16} color={colors.textSecondary} />
-              <Text style={styles.infoText}>Tenant: {item.tenant}</Text>
+              <Text style={styles.infoText}>{item.otherPartyLabel}</Text>
             </View>
 
-            {/* Duration/End Date */}
-            {item.status === 'Expired' ? (
-              <View style={styles.infoRow}>
-                <Icon
-                  name="event-busy"
-                  size={16}
-                  color={colors.textSecondary}
-                />
-                <Text style={styles.infoText}>Ended: {item.endDate}</Text>
-              </View>
+            {item.status === 'Active' ? (
+              item.startDate ? (
+                <View style={styles.infoRow}>
+                  <Icon name="event" size={16} color={colors.textSecondary} />
+                  <Text style={styles.infoText}>Since {item.startDate}</Text>
+                </View>
+              ) : null
             ) : (
               <View style={styles.infoRow}>
                 <Icon name="event" size={16} color={colors.textSecondary} />
-                <Text style={styles.infoText}>{item.duration}</Text>
+                <Text style={styles.infoText}>{item.tenure || '—'}</Text>
               </View>
             )}
-
-           
-           
-         
           </View>
-
         </View>
-         {/* Next Payment (for Active agreements) */}
-         {item.status === 'Active' && item.nextPaymentAmount && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.paymentRow}>
-                  <Icon
-                    name="attach-money"
-                    size={20}
-                    color={colors.warning}
-                    style={styles.paymentIcon}
-                  />
-                  <Text style={styles.paymentText}>
-                    Next Payment:{' '}
-                    <Text style={styles.paymentAmount}>
-                      {item.nextPaymentAmount}
-                    </Text>{' '}
-                    due{' '}
-                    <Text style={styles.paymentDue}>{item.nextPaymentDue}</Text>
-                  </Text>
-                </View>
-              </>
-            )}
 
         <View style={styles.actionsRow}>
-              {item.status === 'Active' && (
-                <>
-                  <TouchableOpacity
-                    style={styles.primaryButton}
-                    onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.primaryButtonText}>View Details</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => {}}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.secondaryButtonText}>Renew</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.terminateButton}
-                    onPress={() => {}}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.terminateButtonText}>Terminate</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-              {item.status === 'Pending Signature' && (
-                <>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => {}}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.secondaryButtonText}>View Draft</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.warningButton}
-                    onPress={() => {}}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.warningButtonText}>Remind</Text>
-                    <Icon
-                      name="arrow-forward"
-                      size={16}
-                      color={colors.surface}
-                      style={styles.buttonIcon}
-                    />
-                  </TouchableOpacity>
-                </>
-              )}
-              {item.status === 'Expired' && (
-                <>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
-                    activeOpacity={0.8}
-                  >
-                    <Text style={styles.secondaryButtonText}>View Details</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.secondaryButton}
-                    onPress={() => {}}
-                    activeOpacity={0.8}
-                  >
-                    <Icon
-                      name="archive"
-                      size={16}
-                      color={colors.textPrimary}
-                      style={styles.buttonIcon}
-                    />
-                    <Text style={styles.secondaryButtonText}>Archive</Text>
-                  </TouchableOpacity>
-                </>
-              )}
-            </View>
+          {item.status === 'Active' && (
+            <>
+              <TouchableOpacity
+                style={styles.primaryButton}
+                onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.primaryButtonText}>View Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.secondaryButton} onPress={() => {}} activeOpacity={0.8}>
+                <Text style={styles.secondaryButtonText}>Renew</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.terminateButton} onPress={() => {}} activeOpacity={0.8}>
+                <Text style={styles.terminateButtonText}>Terminate</Text>
+              </TouchableOpacity>
+            </>
+          )}
+          {item.status === 'Pending Signature' && (
+            <>
+              <TouchableOpacity
+                style={styles.secondaryButton}
+                onPress={() => navigation.navigate('AgreementDetails', { agreementId: item.id })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.secondaryButtonText}>View Draft</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.warningButton} onPress={() => {}} activeOpacity={0.8}>
+                <Text style={styles.warningButtonText}>Remind</Text>
+                <Icon name="arrow-forward" size={16} color={colors.surface} style={styles.buttonIcon} />
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
       </View>
     );
   };
@@ -326,19 +198,11 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
         {filters.map((filter) => (
           <TouchableOpacity
             key={filter}
-            style={[
-              styles.filterTab,
-              selectedFilter === filter && styles.filterTabActive,
-            ]}
+            style={[styles.filterTab, selectedFilter === filter && styles.filterTabActive]}
             onPress={() => setSelectedFilter(filter)}
             activeOpacity={0.8}
           >
-            <Text
-              style={[
-                styles.filterTabText,
-                selectedFilter === filter && styles.filterTabTextActive,
-              ]}
-            >
+            <Text style={[styles.filterTabText, selectedFilter === filter && styles.filterTabTextActive]}>
               {filter}
             </Text>
           </TouchableOpacity>
@@ -352,17 +216,15 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
         renderItem={renderItem}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Icon name="description" size={40} color={colors.textMuted} />
+            <Text style={styles.emptyText}>
+              {selectedFilter === 'All Agreements' ? 'No lease agreements yet.' : `No ${selectedFilter.toLowerCase()} agreements.`}
+            </Text>
+          </View>
+        }
       />
-
-      {/* Floating Action Button */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => {}}
-        activeOpacity={0.8}
-      >
-        <Icon name="add" size={24} color={colors.surface} />
-        <Text style={styles.fabText}>New Agreement</Text>
-      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -409,7 +271,16 @@ const styles = StyleSheet.create({
   },
   listContent: {
     padding: spacing.xl,
-    paddingBottom: spacing.xxl + 100, // Extra space for FAB
+    paddingBottom: spacing.xxl,
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xxl,
+    gap: spacing.sm,
+  },
+  emptyText: {
+    fontSize: 14,
+    color: colors.textMuted,
   },
   card: {
     backgroundColor: colors.surface,
@@ -481,51 +352,23 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     flex: 1,
   },
-  paymentRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-    paddingHorizontal:spacing.md
-  },
-  paymentIcon: {
-    marginRight: spacing.xs,
-  },
-  paymentText: {
-    fontSize: 14,
-    color: colors.textPrimary,
-    flex: 1,
-  },
-  paymentAmount: {
-    fontWeight: '700',
-    color: colors.textPrimary,
-  },
-  paymentDue: {
-    color: colors.warning,
-    fontWeight: '600',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.border,
-    marginVertical: spacing.sm,
-  },
   actionsRow: {
     flexDirection: 'row',
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
     gap: spacing.sm,
     flexWrap: 'wrap',
-    paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   primaryButton: {
     backgroundColor: colors.primaryDark,
     borderRadius: radius.md,
-    // paddingVertical: spacing.sm,
-    // paddingHorizontal: spacing.md,
     flex: 1,
     minWidth: 100,
     alignItems: 'center',
     flexDirection: 'row',
-    justifyContent:'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
   },
   primaryButtonText: {
     color: colors.surface,
@@ -580,27 +423,5 @@ const styles = StyleSheet.create({
   },
   buttonIcon: {
     marginLeft: spacing.xs,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xl,
-    alignSelf: 'center',
-    backgroundColor: colors.warning,
-    borderRadius: radius.pill,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  fabText: {
-    color: colors.surface,
-    fontSize: 16,
-    fontWeight: '700',
   },
 });

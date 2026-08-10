@@ -51,8 +51,11 @@ export default function PropertyDetailsScreen() {
 
   const property = getListingById(propertyId);
 
-  // This land's current tenant (if leased) → their active crop cycle, so the owner can view it.
-  const tenantFarmerId = activeLeases.find((l) => l.landId === propertyId)?.farmerId;
+  // This land's current active lease (if leased) → the tenant's crop cycle and the
+  // signed agreement, so the owner can view both.
+  const propertyLease = activeLeases.find((l) => l.landId === propertyId);
+  const tenantFarmerId = propertyLease?.farmerId;
+  const agreementId = propertyLease?.id;
   const cropCycleId = tenantFarmerId ? getCropCycleByLand(propertyId, tenantFarmerId)?.cropCycleId : undefined;
 
   const handleShare = async () => {
@@ -193,27 +196,47 @@ export default function PropertyDetailsScreen() {
             <View style={leaseOfferStyles.box}>
               <View style={leaseOfferStyles.head}>
                 <Text style={leaseOfferStyles.title}>Lease offers ({offers.length})</Text>
-                <TouchableOpacity
-                  onPress={() => navigation.navigate('AddLeaseOffer', { landId: propertyId, landTitle: property.title })}
-                  style={leaseOfferStyles.addBtn}
-                  activeOpacity={0.85}
-                >
-                  <Ionicons name="add" size={15} color="#fff" />
-                  <Text style={leaseOfferStyles.addText}>Add / manage</Text>
-                </TouchableOpacity>
+                {property.status === 'leased' ? (
+                  <Text style={leaseOfferStyles.lockedText}>Already leased</Text>
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('AddLeaseOffer', { landId: propertyId, landTitle: property.title })}
+                    style={leaseOfferStyles.addBtn}
+                    activeOpacity={0.85}
+                  >
+                    <Ionicons name="add" size={15} color="#fff" />
+                    <Text style={leaseOfferStyles.addText}>Add / manage</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               {offers.length === 0 ? (
-                <Text style={styles.noDataText}>No lease offers yet. Add one so farmers can apply.</Text>
+                <Text style={styles.noDataText}>
+                  {property.status === 'leased'
+                    ? 'This land is already leased — offers reopen once the current lease ends.'
+                    : 'No lease offers yet. Add one so farmers can apply.'}
+                </Text>
               ) : (
-                offers.map((o) => (
-                  <View key={o.id} style={leaseOfferStyles.row}>
-                    <Text style={leaseOfferStyles.emoji}>{LEASE_TYPE_MAP[o.typeId].emoji}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={leaseOfferStyles.name}>{LEASE_TYPE_MAP[o.typeId].name}</Text>
-                      <Text style={leaseOfferStyles.sum}>{summarizeOffer(o)}</Text>
-                    </View>
-                  </View>
-                ))
+                offers.map((o) => {
+                  const canViewAgreement = property.status === 'leased' && !!agreementId;
+                  return (
+                    <TouchableOpacity
+                      key={o.id}
+                      style={leaseOfferStyles.row}
+                      activeOpacity={canViewAgreement ? 0.7 : 1}
+                      disabled={!canViewAgreement}
+                      onPress={() => canViewAgreement && navigation.navigate('AgreementDetails', { agreementId: agreementId! })}
+                    >
+                      <Text style={leaseOfferStyles.emoji}>{LEASE_TYPE_MAP[o.typeId].emoji}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={leaseOfferStyles.name}>{LEASE_TYPE_MAP[o.typeId].name}</Text>
+                        <Text style={leaseOfferStyles.sum}>{summarizeOffer(o)}</Text>
+                      </View>
+                      {canViewAgreement && (
+                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })
               )}
             </View>
           </View>
@@ -566,6 +589,7 @@ const leaseOfferStyles = StyleSheet.create({
   title: { fontSize: 13, fontWeight: '800', color: colors.textPrimary },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#0F4A28', borderRadius: 20, paddingHorizontal: 11, paddingVertical: 6 },
   addText: { color: '#fff', fontSize: 11, fontWeight: '700' },
+  lockedText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F4F8F5', borderRadius: 10, padding: 10, marginBottom: 7 },
   emoji: { fontSize: 18 },
   name: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },

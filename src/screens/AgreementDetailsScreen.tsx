@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
+  Alert,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { useLeases } from '../context/LeaseContext';
+import { useFarmListings } from '../context/FarmListingsContext';
+import { profilesApi, FarmerProfile } from '../services/profilesApi';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'AgreementDetails'>;
@@ -28,12 +32,27 @@ function toInitials(name: string): string {
     .toUpperCase();
 }
 
+/** Opens the dialer for a stored phone number (+91), same convention as TenantsScreen. */
+function callNumber(phone: string) {
+  const digits = phone.replace(/\D/g, '').slice(-10);
+  Linking.openURL(`tel:+91${digits}`).catch(() => Alert.alert('Call', 'Unable to open the dialer.'));
+}
+
 export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const { agreementId } = route.params;
   const { getAgreementById, activeLeases } = useLeases();
+  const { getListingById } = useFarmListings();
   const agreement = getAgreementById(agreementId);
   const activeLease = activeLeases.find((l) => l.id === agreementId);
   const record = agreement || activeLease;
+
+  const [profilesById, setProfilesById] = useState<Record<string, FarmerProfile>>({});
+  useEffect(() => {
+    if (!record) return;
+    profilesApi.fetchFarmersByIds([record.farmerId, record.ownerId]).then((rows) => {
+      setProfilesById(Object.fromEntries(rows.map((r) => [r.id, r])));
+    });
+  }, [record?.farmerId, record?.ownerId]);
 
   if (!record) {
     return (
@@ -53,6 +72,9 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
   }
 
   const tenure = 'tenure' in record ? record.tenure : undefined;
+  const land = getListingById(record.landId);
+  const ownerProfile = profilesById[record.ownerId];
+  const farmerProfile = profilesById[record.farmerId];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -90,7 +112,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
           {/* Map Container */}
           <View style={styles.mapContainer}>
             <Image
-              source={require('../assets/images/landscape.jpg')}
+              source={land?.imageUrl ? { uri: land.imageUrl } : require('../assets/images/landscape.jpg')}
               style={styles.mapImage}
               resizeMode="cover"
             />
@@ -107,15 +129,15 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Survey No.</Text>
-              <Text style={styles.infoValue}>42/1 - B</Text>
+              <Text style={styles.infoValue}>{land?.surveyNumber || '—'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Total Area</Text>
-              <Text style={styles.infoValue}>2.5 Acres</Text>
+              <Text style={styles.infoValue}>{land ? land.acresLabel || `${land.acres} Acres` : '—'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Location</Text>
-              <Text style={styles.infoValue}>Ramgarh, Pune</Text>
+              <Text style={styles.infoValue}>{land ? `${land.location}, ${land.district}, ${land.state}` : '—'}</Text>
             </View>
           </View>
         </View>
@@ -129,11 +151,8 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
 
           <View style={styles.infoGrid}>
             <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Monthly Rent</Text>
+              <Text style={styles.infoLabel}>Rent Terms</Text>
               <Text style={styles.infoValue}>{record.termsSummary}</Text>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>Pre-paid</Text>
-              </View>
             </View>
 
             <View style={styles.infoItem}>
@@ -142,26 +161,6 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
               {!!record.startDate && (
                 <Text style={styles.termSubtext}>Since {record.startDate}</Text>
               )}
-            </View>
-
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Payment Freq.</Text>
-              <Text style={styles.infoValue}>Monthly</Text>
-              <Text style={styles.termSubtext}>Due on 5th</Text>
-            </View>
-
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Security Deposit</Text>
-              <Text style={styles.infoValue}>₹50,000</Text>
-              <View style={[styles.badge, styles.badgeSuccess]}>
-                <Text style={[styles.badgeText, styles.badgeTextSuccess]}>Paid</Text>
-              </View>
-            </View>
-
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Water Rights</Text>
-              <Text style={styles.infoValue}>Full Access</Text>
-              <Text style={styles.termSubtext}>Source: Canal Source</Text>
             </View>
           </View>
         </View>
@@ -186,8 +185,12 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
                 <Text style={styles.partyRole}>Lessor (Owner)</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.phoneButton}>
-              <Icon name="phone" size={20} color={colors.primary} />
+            <TouchableOpacity
+              style={styles.phoneButton}
+              disabled={!ownerProfile?.phone}
+              onPress={() => ownerProfile?.phone && callNumber(ownerProfile.phone)}
+            >
+              <Icon name="phone" size={20} color={ownerProfile?.phone ? colors.primary : colors.textMuted} />
             </TouchableOpacity>
           </View>
 
@@ -204,8 +207,12 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
                 <Text style={styles.partyRole}>Lessee (Tenant)</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.phoneButton}>
-              <Icon name="phone" size={20} color={colors.primary} />
+            <TouchableOpacity
+              style={styles.phoneButton}
+              disabled={!farmerProfile?.phone}
+              onPress={() => farmerProfile?.phone && callNumber(farmerProfile.phone)}
+            >
+              <Icon name="phone" size={20} color={farmerProfile?.phone ? colors.primary : colors.textMuted} />
             </TouchableOpacity>
           </View>
         </View>
@@ -216,22 +223,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             <Icon name="today" size={20} color={colors.primary} />
             <Text style={styles.sectionTitle}>Payment Schedule</Text>
           </View>
-
-          <View style={styles.paymentScheduleRow}>
-            <View>
-              <Text style={styles.paymentLabel}>Next Due Date</Text>
-              <Text style={styles.paymentDate}>05 Nov 2023</Text>
-            </View>
-            <View style={styles.paymentAmountContainer}>
-              <Text style={styles.paymentAmount}>₹15,000</Text>
-            </View>
-          </View>
-
-          <TouchableOpacity style={styles.viewScheduleLink}>
-            <Text style={styles.viewScheduleText}>
-              View Full Schedule & History →
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.comingSoon}>Coming soon</Text>
         </View>
 
         {/* Documents Section */}
@@ -387,24 +379,10 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
-  badge: {
-    alignSelf: 'flex-start',
-    marginTop: spacing.xs,
-    backgroundColor: colors.border,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: 2,
-    borderRadius: radius.sm,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: colors.textSecondary,
-  },
-  badgeSuccess: {
-    backgroundColor: colors.softGreen,
-  },
-  badgeTextSuccess: {
-    color: colors.success,
+  comingSoon: {
+    fontSize: 14,
+    color: colors.textMuted,
+    fontStyle: 'italic',
   },
   partyRow: {
     flexDirection: 'row',
@@ -456,38 +434,6 @@ const styles = StyleSheet.create({
   },
   phoneButton: {
     padding: spacing.sm,
-  },
-  paymentScheduleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing.md,
-  },
-  paymentLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  paymentDate: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  paymentAmountContainer: {
-    alignItems: 'flex-end',
-  },
-  paymentAmount: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#EF4444',
-  },
-  viewScheduleLink: {
-    marginTop: spacing.sm,
-  },
-  viewScheduleText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary,
   },
   documentsRow: {
     flexDirection: 'row',

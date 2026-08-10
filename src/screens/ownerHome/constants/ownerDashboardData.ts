@@ -19,10 +19,13 @@ export const OWNER_REVENUE = {
   payoutDate: 'Jun 15',
 };
 
+// pendingDues* kept for reference — the Pending dues tile is hidden until a
+// real payments-tracking flow exists (leases.next_payment is never populated
+// today). avgRentDisplay was removed here since it's now computed for real
+// from ownerListings' pricePerYear/acres instead of being a mock constant.
 export const OWNER_METRICS = {
   pendingDuesDisplay: '₹18,000',
   pendingDuesSub: '2 tenants overdue',
-  avgRentDisplay: '₹7,500',
 };
 
 export type PropertyStatus = 'leased' | 'vacant';
@@ -79,6 +82,12 @@ export function buildPropertySnapshots(listings: FarmListing[]): PropertySnapsho
 
 /** Parse "5" / "2.5 Acres" style strings to a number. */
 export function parseAcres(value: string): number {
+  const n = parseFloat(String(value).replace(/[^\d.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+/** Parse "₹10,000" / "10000" style strings to a number. */
+export function parsePrice(value: string): number {
   const n = parseFloat(String(value).replace(/[^\d.]/g, ''));
   return isNaN(n) ? 0 : n;
 }
