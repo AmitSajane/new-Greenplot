@@ -9,11 +9,11 @@ import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
 import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
 import {
-  OWNER_METRICS,
   OWNER_PORTFOLIO,
   OWNER_REVENUE,
   buildPropertySnapshots,
   parseAcres,
+  parsePrice,
   type PropertySnapshot,
 } from '../constants/ownerDashboardData';
 
@@ -94,7 +94,10 @@ export function useOwnerHome() {
 
   const portfolio = useMemo(() => {
     const lands = properties.length;
-    const leased = properties.filter(p => p.status === 'leased').length;
+    // Real lands.status, not properties[].status — buildPropertySnapshots derives
+    // that from a hardcoded demo-id lookup (PROPERTY_AUGMENT) that only covers 3
+    // fake ids, so it silently reads every real property as vacant.
+    const leased = ownerListings.filter(l => l.status === 'leased').length;
     const acres = ownerListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
     return {
       valueDisplay: OWNER_PORTFOLIO.valueDisplay,
@@ -108,17 +111,33 @@ export function useOwnerHome() {
 
   const metrics = useMemo(() => {
     const occupancyPct = portfolio.lands ? Math.round((portfolio.leased / portfolio.lands) * 100) : 0;
+
+    // Real average rent/acre across this owner's actually-leased land — weighted
+    // by acreage, not a flat average of per-listing rates.
+    const leasedListings = ownerListings.filter(l => l.status === 'leased');
+    const leasedAcres = leasedListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
+    const leasedRentTotal = leasedListings.reduce((sum, l) => sum + parsePrice(l.pricePerYear), 0);
+    const avgRentDisplay = leasedAcres > 0 ? `₹${Math.round(leasedRentTotal / leasedAcres).toLocaleString('en-IN')}` : '—';
+
     return {
       occupancyPct,
       occupancySub: `${portfolio.leased} of ${portfolio.lands} leased`,
       activeLeases: portfolio.leased,
-      activeLeasesSub: '1 renews soon',
-      pendingDuesDisplay: OWNER_METRICS.pendingDuesDisplay,
-      pendingDuesSub: OWNER_METRICS.pendingDuesSub,
-      avgRentDisplay: OWNER_METRICS.avgRentDisplay,
+      avgRentDisplay,
     };
-  }, [portfolio]);
+  }, [portfolio, ownerListings]);
 
+  // Only "Lease requests" is backed by real data. The other four (budget
+  // approvals, rent overdue, lease renewal, disease risk) are commented out
+  // rather than shown as fabricated numbers — see conversation notes:
+  // - approvals: BudgetApprovalsScreen has no real table behind it at all.
+  // - overdue/renewal: leases.next_payment / end_date exist in Supabase but
+  //   are never populated or read anywhere in the app (no payments flow,
+  //   no end_date set at lease creation) — always null today.
+  // - disease: crop_cycles.health_status IS real and populated, but the
+  //   owner-side query (cycles where ownerId === this owner and
+  //   health_status === 'pest_alert') isn't wired up yet.
+  // Re-enable each once its real data source is actually wired up.
   const actionItems: ActionItem[] = useMemo(
     () => [
       {
@@ -130,44 +149,44 @@ export function useOwnerHome() {
         actionLabel: 'Review',
         onPress: () => navigation.navigate('LeaseRequests'),
       },
-      {
-        id: 'approvals',
-        tone: 'amber',
-        icon: 'clipboard',
-        title: '3 budget approvals',
-        sub: 'Tenant crop-input requests',
-        actionLabel: 'Review',
-        onPress: () => navigation.navigate('BudgetApprovals'),
-      },
-      {
-        id: 'overdue',
-        tone: 'red',
-        icon: 'alert-circle',
-        title: 'Rent overdue · Paddy Land',
-        sub: '₹12,000 · 8 days late',
-        actionLabel: 'Remind',
-        onPress: () => goTab('MyProperties'),
-      },
-      {
-        id: 'renewal',
-        tone: 'blue',
-        icon: 'ribbon',
-        title: 'Lease renewal · Wheat Land',
-        sub: 'Expires in 14 days',
-        actionLabel: 'Renew',
-        onPress: () => navigation.navigate('LeaseAgreements'),
-      },
-      {
-        id: 'disease',
-        tone: 'green',
-        icon: 'bug',
-        title: 'Disease risk · Tomato field',
-        sub: 'Early blight detected · Bangalore N',
-        actionLabel: 'View',
-        onPress: () => navigation.navigate('MyCrops'),
-      },
+      // {
+      //   id: 'approvals',
+      //   tone: 'amber',
+      //   icon: 'clipboard',
+      //   title: '3 budget approvals',
+      //   sub: 'Tenant crop-input requests',
+      //   actionLabel: 'Review',
+      //   onPress: () => navigation.navigate('BudgetApprovals'),
+      // },
+      // {
+      //   id: 'overdue',
+      //   tone: 'red',
+      //   icon: 'alert-circle',
+      //   title: 'Rent overdue · Paddy Land',
+      //   sub: '₹12,000 · 8 days late',
+      //   actionLabel: 'Remind',
+      //   onPress: () => goTab('MyProperties'),
+      // },
+      // {
+      //   id: 'renewal',
+      //   tone: 'blue',
+      //   icon: 'ribbon',
+      //   title: 'Lease renewal · Wheat Land',
+      //   sub: 'Expires in 14 days',
+      //   actionLabel: 'Renew',
+      //   onPress: () => navigation.navigate('LeaseAgreements'),
+      // },
+      // {
+      //   id: 'disease',
+      //   tone: 'green',
+      //   icon: 'bug',
+      //   title: 'Disease risk · Tomato field',
+      //   sub: 'Early blight detected · Bangalore N',
+      //   actionLabel: 'View',
+      //   onPress: () => navigation.navigate('MyCrops'),
+      // },
     ],
-    [navigation, goTab, pendingLeaseRequests],
+    [navigation, pendingLeaseRequests],
   );
 
   const tools: ToolItem[] = useMemo(

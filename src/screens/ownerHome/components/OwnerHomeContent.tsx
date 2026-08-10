@@ -125,20 +125,11 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
               t="blue"
               value={String(vm.metrics.activeLeases)}
               label="Active leases"
-              sub={vm.metrics.activeLeasesSub}
-              subColor={tone.blue.fg}
               onPress={vm.onActiveLeasesPress}
             />
-            <MetricTile
-              icon="alert-circle"
-              t="red"
-              value={vm.metrics.pendingDuesDisplay}
-              valueColor={tone.red.fg}
-              label="Pending dues"
-              sub={vm.metrics.pendingDuesSub}
-              subColor={tone.red.fg}
-              onPress={vm.onDuesPress}
-            />
+            {/* Pending dues tile hidden — leases.next_payment is never populated
+                anywhere in the app (no real payments-tracking flow exists yet),
+                so there's no real number to show here. Re-add once that's built. */}
             <MetricTile
               icon="cash"
               t="amber"
@@ -315,8 +306,8 @@ interface MetricTileProps {
   value: string;
   valueColor?: string;
   label: string;
-  sub: string;
-  subColor: string;
+  sub?: string;
+  subColor?: string;
   onPress: () => void;
 }
 
@@ -329,7 +320,7 @@ const MetricTile: React.FC<MetricTileProps> = ({ icon, t, value, valueColor, lab
       </View>
       <Text style={[s.tileVal, valueColor ? { color: valueColor } : null]}>{value}</Text>
       <Text style={s.tileLabel}>{label}</Text>
-      <Text style={[s.tileSub, { color: subColor }]}>{sub}</Text>
+      {!!sub && <Text style={[s.tileSub, { color: subColor }]}>{sub}</Text>}
     </TouchableOpacity>
   );
 };

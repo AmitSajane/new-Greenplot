@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useDispatch } from 'react-redux';
 import { colors, spacing } from '../../../theme/tokens';
+import { ScreenHeader } from '../../../components/molecules/ScreenHeader';
 import { LaborDashboardCard } from '../components';
 import { LaborConnectStackParamList } from '../navigation/LaborConnectStack';
 import { fetchJobs, fetchApplications } from '../redux';
@@ -22,10 +23,11 @@ export default function LaborDashboardScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Labor Connect</Text>
-        <Text style={styles.subtitle}>Connect with farm workers</Text>
-      </View>
+      <ScreenHeader
+        title="Labor Connect"
+        subtitle="Connect with farm workers"
+        onBack={() => navigation.goBack()}
+      />
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -97,21 +99,6 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-  },
-  header: {
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.textPrimary,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textSecondary,
-    marginTop: spacing.xs,
   },
   scrollContent: {
     paddingHorizontal: spacing.xl,
