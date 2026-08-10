@@ -1,7 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../../navigation/FarmerHomeStack';
-import { MyLeasesStackParamList } from '../../../../navigation/MyLeasesStack';
 import { LeaseListItem, LeaseStatus } from '../../../../components/leases/LeaseCard';
 import { useLeases } from '../../../../context/LeaseContext';
 import { useAuth } from '../../../../context/AuthContext';
@@ -9,10 +8,7 @@ import { LEASE_TYPE_MAP } from '../../../../constants/leaseTypes';
 
 const DEFAULT_LEASE_IMAGE = require('../../../../assets/images/farm1.png');
 
-type Props = NativeStackScreenProps<
-  FarmerHomeStackParamList | MyLeasesStackParamList,
-  'MyActiveLeases'
->;
+type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'MyActiveLeases'>;
 
 export type LeaseFilterKey = 'All' | LeaseStatus;
 

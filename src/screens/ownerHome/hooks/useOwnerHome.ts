@@ -72,7 +72,7 @@ export function useOwnerHome() {
     [navigation, news],
   );
 
-  // Reach sibling tabs (MyProperties, Tenants, Market, Settings) from the home stack.
+  // Reach sibling tabs (MyProperties, Machinery, Market, Settings) from the home stack.
   const parent = useCallback(
     () =>
       (navigation as { getParent?: () => { navigate: (n: string, p?: object) => void } }).getParent?.(),
@@ -146,7 +146,7 @@ export function useOwnerHome() {
         title: 'Rent overdue · Paddy Land',
         sub: '₹12,000 · 8 days late',
         actionLabel: 'Remind',
-        onPress: () => goTab('Tenants'),
+        onPress: () => goTab('MyProperties'),
       },
       {
         id: 'renewal',
@@ -191,7 +191,7 @@ export function useOwnerHome() {
         title: 'Payment received · ₹45,000',
         sub: 'From Suresh M. · Wheat Land',
         time: '2h',
-        onPress: () => goTab('Tenants'),
+        onPress: () => goTab('MyProperties'),
       },
       {
         id: 'a2',
@@ -237,10 +237,10 @@ export function useOwnerHome() {
     onAvatar: useCallback(() => navigation.navigate('Settings'), [navigation]),
     onPortfolioPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onRevenuePress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onPayoutPress: useCallback(() => goTab('Tenants'), [goTab]),
+    onPayoutPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onOccupancyPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onActiveLeasesPress: useCallback(() => navigation.navigate('LeaseAgreements'), [navigation]),
-    onDuesPress: useCallback(() => goTab('Tenants'), [goTab]),
+    onDuesPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onAvgRentPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onActionViewAll: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),
     onPropertiesViewAll: useCallback(() => goTab('MyProperties'), [goTab]),
