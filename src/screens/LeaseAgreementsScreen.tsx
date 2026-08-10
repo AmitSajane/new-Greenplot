@@ -176,9 +176,7 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
               >
                 <Text style={styles.primaryButtonText}>View Details</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.secondaryButton} onPress={() => {}} activeOpacity={0.8}>
-                <Text style={styles.secondaryButtonText}>Renew</Text>
-              </TouchableOpacity>
+              {/* Renew is hidden for now — not ready yet. */}
               <TouchableOpacity style={styles.terminateButton} onPress={() => {}} activeOpacity={0.8}>
                 <Text style={styles.terminateButtonText}>Terminate</Text>
               </TouchableOpacity>
@@ -228,6 +226,7 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        style={styles.filterScrollView}
         contentContainerStyle={styles.filterContainer}
       >
         {filters.map((filter) => (
@@ -268,6 +267,14 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
+  },
+  // ScrollView always sets flexGrow:1 on itself internally (even when
+  // horizontal), so left unchecked this pill row competes with the FlatList
+  // below for vertical space and balloons to fill it on short lists —
+  // pinning it to its content height instead.
+  filterScrollView: {
+    flexGrow: 0,
+    flexShrink: 0,
   },
   filterContainer: {
     paddingHorizontal: spacing.xl,

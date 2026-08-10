@@ -1,12 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Android 11+ package-visibility: without this, SpeechRecognizer.isRecognitionAvailable()
-         always returns false even when a recognizer (e.g. Google's) is installed, and
-         @dev-amirzubair/react-native-voice's startListening() throws "Speech recognition is
-         not available on this device". -->
+    <!-- Android 11+ package-visibility: without these, PackageManager can't see the
+         speech recognizer or TTS engine even when they're installed (e.g. Google's),
+         and both android-tts's speak() and react-native-voice's startListening() fail
+         silently with "not bound to TTS engine" / "Speech recognition is not available". -->
     <queries>
         <intent>
             <action android:name="android.speech.RecognitionService" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>
     </queries>
 

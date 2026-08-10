@@ -74,8 +74,26 @@ export function useKisanMitra() {
     [navigation],
   );
 
+  // Read a message aloud in the right language (English voice if it's translated).
+  // `speakingId` tracks which bubble is actually playing right now, driven by
+  // the TTS engine's own start/finish/cancel events — not just "we asked it to".
+  // Declared above `respond` so a voice-originated question can trigger it
+  // directly once the reply lands, without needing a ref indirection.
+  const readAloud = useCallback(
+    (id: string, text: string, english: boolean, opts?: { silent?: boolean }) => {
+      speak(text, english ? 'en' : language, {
+        onStart: () => mounted.current && setSpeakingId(id),
+        onDone: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
+        onCancel: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
+      }).then(ok => {
+        if (!ok && !opts?.silent) Alert.alert('🔊', 'Voice output is not available on this device yet.');
+      });
+    },
+    [language],
+  );
+
   const respond = useCallback(
-    (args: { userText?: string; imageUri?: string; imageBase64?: string; imageMime?: string }) => {
+    (args: { userText?: string; imageUri?: string; imageBase64?: string; imageMime?: string; viaVoice?: boolean }) => {
       stopSpeaking();
       setIsThinking(true);
       setSuggestions([]);
@@ -86,10 +104,11 @@ export function useKisanMitra() {
 
       const finish = (text: string, textEn: string, suggestions: string[]) => {
         if (!mounted.current) return;
+        const id = makeId('a');
         setMessages(prev => [
           ...prev,
           {
-            id: makeId('a'),
+            id,
             role: 'assistant',
             text,
             textEn,
@@ -100,6 +119,9 @@ export function useKisanMitra() {
         ]);
         setSuggestions(suggestions.length ? suggestions : base.suggestions);
         setIsThinking(false);
+        // Voice in, voice out — a spoken question gets a spoken answer
+        // without waiting for a tap on the speaker icon.
+        if (args.viaVoice) readAloud(id, text, false, { silent: true });
       };
 
       const fallback = () => finish(base.text, base.textEn, base.suggestions);
@@ -129,15 +151,15 @@ export function useKisanMitra() {
       const t = setTimeout(fallback, 700);
       timers.current.push(t);
     },
-    [language, messages],
+    [language, messages, readAloud],
   );
 
   const sendText = useCallback(
-    (raw: string) => {
+    (raw: string, viaVoice?: boolean) => {
       const text = raw.trim();
       if (!text || isThinking) return;
       setMessages(prev => [...prev, { id: makeId('u'), role: 'user', text, createdAt: Date.now() }]);
-      respond({ userText: text });
+      respond({ userText: text, viaVoice });
     },
     [isThinking, respond],
   );
@@ -226,7 +248,7 @@ export function useKisanMitra() {
         listenHandled.current = true;
         clearListen();
         stopListening();
-        sendText(text);
+        sendText(text, true);
       },
       onError: reason => {
         if (listenHandled.current) return;
@@ -269,22 +291,6 @@ export function useKisanMitra() {
   const setFeedback = useCallback((id: string, value: 'up' | 'down') => {
     setMessages(prev => prev.map(m => (m.id === id ? { ...m, feedback: m.feedback === value ? undefined : value } : m)));
   }, []);
-
-  // Read a message aloud in the right language (English voice if it's translated).
-  // `speakingId` tracks which bubble is actually playing right now, driven by
-  // the TTS engine's own start/finish/cancel events — not just "we asked it to".
-  const readAloud = useCallback(
-    (id: string, text: string, english: boolean) => {
-      speak(text, english ? 'en' : language, {
-        onStart: () => mounted.current && setSpeakingId(id),
-        onDone: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
-        onCancel: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
-      }).then(ok => {
-        if (!ok) Alert.alert('🔊', 'Voice output is not available on this device yet.');
-      });
-    },
-    [language],
-  );
 
   const onAction = useCallback(
     (type: ActionType) => {
