@@ -21,7 +21,9 @@ import { useFarmListings } from '../context/FarmListingsContext';
 
 type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'LeaseAgreements'>;
 
-type FilterType = 'All Agreements' | 'Active' | 'Pending';
+// Matches MyPropertiesScreen's real status vocabulary ("Leased" for a signed,
+// ongoing lease) plus the two pre-lease stages this screen also covers.
+type FilterType = 'All Agreements' | 'Leased' | 'Pending Signature' | 'Pending Requests';
 
 interface LeaseAgreementItem {
   id: string;
@@ -29,39 +31,43 @@ interface LeaseAgreementItem {
   landTitle: string;
   /** "Tenant: X" if I'm the owner here, "Owner: X" if I'm the farmer here. */
   otherPartyLabel: string;
-  status: 'Active' | 'Pending Signature';
+  status: 'Leased' | 'Pending Signature' | 'Pending Request';
   startDate?: string;
   tenure?: string;
+  requestedOn?: string;
 }
 
 export default function LeaseAgreementsScreen({ navigation }: Props) {
   const { user } = useAuth();
-  const { activeLeases, agreements } = useLeases();
+  const { activeLeases, agreements, requests } = useLeases();
   const { getListingById } = useFarmListings();
   const [selectedFilter, setSelectedFilter] = useState<FilterType>('All Agreements');
 
-  const filters: FilterType[] = ['All Agreements', 'Active', 'Pending'];
+  const filters: FilterType[] = ['All Agreements', 'Leased', 'Pending Signature', 'Pending Requests'];
 
-  // Real leases/agreements involving the current user, either as owner or
-  // farmer — same "either party can see it" rule the RLS policies already use.
+  // Real leases/agreements/requests involving the current user, either as
+  // owner or farmer — same "either party can see it" rule the RLS policies
+  // already use. Three real pipeline stages: a farmer applies (LeaseRequest,
+  // 'pending') → owner approves (Agreement, 'awaiting' until both sign) →
+  // both sign (ActiveLease, and the land's own status flips to 'leased').
   const items: LeaseAgreementItem[] = useMemo(() => {
     const isMine = (p: { farmerId: string; ownerId: string }) =>
       p.farmerId === user?.id || p.ownerId === user?.id;
     const otherPartyLabel = (p: { farmerId: string; farmerName: string; ownerId: string; ownerName: string }) =>
       p.farmerId === user?.id ? `Owner: ${p.ownerName}` : `Tenant: ${p.farmerName}`;
 
-    const active: LeaseAgreementItem[] = activeLeases
+    const leased: LeaseAgreementItem[] = activeLeases
       .filter(isMine)
       .map((l) => ({
         id: l.id,
         landId: l.landId,
         landTitle: l.landTitle,
         otherPartyLabel: otherPartyLabel(l),
-        status: 'Active',
+        status: 'Leased',
         startDate: l.startDate,
       }));
 
-    const pending: LeaseAgreementItem[] = agreements
+    const pendingSignature: LeaseAgreementItem[] = agreements
       .filter((a) => a.status === 'awaiting' && isMine(a))
       .map((a) => ({
         id: a.id,
@@ -72,20 +78,35 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
         tenure: a.tenure,
       }));
 
-    return [...active, ...pending];
-  }, [activeLeases, agreements, user?.id]);
+    const pendingRequests: LeaseAgreementItem[] = requests
+      .filter((r) => r.status === 'pending' && isMine(r))
+      .map((r) => ({
+        id: r.id,
+        landId: r.landId,
+        landTitle: r.landTitle,
+        otherPartyLabel: otherPartyLabel(r),
+        status: 'Pending Request',
+        requestedOn: r.createdAt,
+      }));
+
+    return [...leased, ...pendingSignature, ...pendingRequests];
+  }, [activeLeases, agreements, requests, user?.id]);
 
   const getFilteredAgreements = () => {
-    if (selectedFilter === 'Active') return items.filter((item) => item.status === 'Active');
-    if (selectedFilter === 'Pending') return items.filter((item) => item.status === 'Pending Signature');
+    if (selectedFilter === 'Leased') return items.filter((item) => item.status === 'Leased');
+    if (selectedFilter === 'Pending Signature') return items.filter((item) => item.status === 'Pending Signature');
+    if (selectedFilter === 'Pending Requests') return items.filter((item) => item.status === 'Pending Request');
     return items;
   };
 
   const getStatusConfig = (status: LeaseAgreementItem['status']) => {
-    if (status === 'Active') {
-      return { label: 'ACTIVE', bgColor: colors.success, textColor: colors.surface };
+    if (status === 'Leased') {
+      return { label: 'LEASED', bgColor: colors.success, textColor: colors.surface };
     }
-    return { label: 'PENDING SIG', bgColor: colors.softOrange, textColor: colors.warning };
+    if (status === 'Pending Signature') {
+      return { label: 'PENDING SIG', bgColor: colors.softOrange, textColor: colors.warning };
+    }
+    return { label: 'NEW REQUEST', bgColor: colors.softBlue, textColor: colors.info };
   };
 
   const renderItem = ({ item }: { item: LeaseAgreementItem }) => {
@@ -124,24 +145,29 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
               <Text style={styles.infoText}>{item.otherPartyLabel}</Text>
             </View>
 
-            {item.status === 'Active' ? (
-              item.startDate ? (
-                <View style={styles.infoRow}>
-                  <Icon name="event" size={16} color={colors.textSecondary} />
-                  <Text style={styles.infoText}>Since {item.startDate}</Text>
-                </View>
-              ) : null
-            ) : (
+            {item.status === 'Leased' && item.startDate && (
+              <View style={styles.infoRow}>
+                <Icon name="event" size={16} color={colors.textSecondary} />
+                <Text style={styles.infoText}>Since {item.startDate}</Text>
+              </View>
+            )}
+            {item.status === 'Pending Signature' && (
               <View style={styles.infoRow}>
                 <Icon name="event" size={16} color={colors.textSecondary} />
                 <Text style={styles.infoText}>{item.tenure || '—'}</Text>
+              </View>
+            )}
+            {item.status === 'Pending Request' && item.requestedOn && (
+              <View style={styles.infoRow}>
+                <Icon name="event" size={16} color={colors.textSecondary} />
+                <Text style={styles.infoText}>Requested {item.requestedOn}</Text>
               </View>
             )}
           </View>
         </View>
 
         <View style={styles.actionsRow}>
-          {item.status === 'Active' && (
+          {item.status === 'Leased' && (
             <>
               <TouchableOpacity
                 style={styles.primaryButton}
@@ -172,6 +198,15 @@ export default function LeaseAgreementsScreen({ navigation }: Props) {
                 <Icon name="arrow-forward" size={16} color={colors.surface} style={styles.buttonIcon} />
               </TouchableOpacity>
             </>
+          )}
+          {item.status === 'Pending Request' && (
+            <TouchableOpacity
+              style={styles.primaryButton}
+              onPress={() => (navigation as any).navigate('LeaseRequests')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.primaryButtonText}>Review Request</Text>
+            </TouchableOpacity>
           )}
         </View>
       </View>

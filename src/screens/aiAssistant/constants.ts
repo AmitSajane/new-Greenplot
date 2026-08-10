@@ -63,6 +63,7 @@ interface UiStrings {
   verified: string;
   voiceSampleMessage: string;
   listening: string;
+  speaking: string;
 }
 
 const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
@@ -82,6 +83,7 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
     verified: 'Expert-verified',
     voiceSampleMessage: 'There are insects on my crop, what should I do?',
     listening: 'Listening… speak now',
+    speaking: 'Speaking…',
   },
   hi: {
     greeting: 'नमस्ते! 🙏 मैं किसान मित्र हूं, आपका खेती दोस्त। फसल, मंडी भाव या मौसम — कुछ भी पूछें।',
@@ -99,6 +101,7 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
     verified: 'विशेषज्ञ-सत्यापित',
     voiceSampleMessage: 'मेरी फसल में कीड़े लग गए हैं, क्या करूं?',
     listening: 'सुन रहे हैं… अब बोलें',
+    speaking: 'बोल रहे हैं…',
   },
   kn: {
     greeting: 'ನಮಸ್ಕಾರ! 🙏 ನಾನು ಕಿಸಾನ್ ಮಿತ್ರ, ನಿಮ್ಮ ಕೃಷಿ ಸ್ನೇಹಿತ. ಬೆಳೆ, ಮಾರುಕಟ್ಟೆ ಬೆಲೆ ಅಥವಾ ಹವಾಮಾನ — ಏನು ಬೇಕಾದರೂ ಕೇಳಿ.',
@@ -116,6 +119,7 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
     verified: 'ತಜ್ಞ-ಪರಿಶೀಲಿತ',
     voiceSampleMessage: 'ನನ್ನ ಬೆಳೆಯಲ್ಲಿ ಕೀಟಗಳಿವೆ, ಏನು ಮಾಡಲಿ?',
     listening: 'ಕೇಳುತ್ತಿದೆ… ಈಗ ಮಾತನಾಡಿ',
+    speaking: 'ಮಾತನಾಡುತ್ತಿದೆ…',
   },
 };
 

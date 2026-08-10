@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Animated, StyleSheet, Text, TouchableOpacity, View, Image } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { km } from '../kisanMitra.styles';
 import { ActionType, ChatMessage } from '../../../services/aiAssistantService';
@@ -15,11 +15,13 @@ interface Props {
   onAction: (type: ActionType) => void;
   onToggleTranslate: (id: string) => void;
   onFeedback: (id: string, value: 'up' | 'down') => void;
-  onReadAloud: (text: string, english: boolean) => void;
+  onReadAloud: (id: string, text: string, english: boolean) => void;
   onRegenerate: () => void;
+  /** True while this specific message is the one being read aloud. */
+  isSpeaking?: boolean;
 }
 
-function MessageBubbleBase({ message, ui, onAction, onToggleTranslate, onFeedback, onReadAloud, onRegenerate }: Props) {
+function MessageBubbleBase({ message, ui, onAction, onToggleTranslate, onFeedback, onReadAloud, onRegenerate, isSpeaking }: Props) {
   const isBot = message.role === 'assistant';
   const id = message.id;
 
@@ -27,9 +29,57 @@ function MessageBubbleBase({ message, ui, onAction, onToggleTranslate, onFeedbac
   const down = useCallback(() => onFeedback(id, 'down'), [onFeedback, id]);
   const translate = useCallback(() => onToggleTranslate(id), [onToggleTranslate, id]);
   const speakThis = useCallback(
-    () => onReadAloud(message.showEnglish ? message.textEn || message.text || '' : message.text || '', !!message.showEnglish),
-    [onReadAloud, message.showEnglish, message.textEn, message.text],
+    () => onReadAloud(id, message.showEnglish ? message.textEn || message.text || '' : message.text || '', !!message.showEnglish),
+    [onReadAloud, id, message.showEnglish, message.textEn, message.text],
   );
+
+  // Gentle pulse on the bot avatar while this message is actually playing.
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isSpeaking) {
+      pulse.stopAnimation();
+      pulse.setValue(1);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1.18, duration: 380, useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 380, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [isSpeaking, pulse]);
+
+  // Two rings expanding + fading out of the speaker icon, staggered, so it
+  // reads as sound waves leaving it rather than a single generic pulse.
+  const ring1 = useRef(new Animated.Value(0)).current;
+  const ring2 = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!isSpeaking) {
+      ring1.stopAnimation();
+      ring2.stopAnimation();
+      ring1.setValue(0);
+      ring2.setValue(0);
+      return;
+    }
+    ring1.setValue(0);
+    ring2.setValue(0);
+    const loop1 = Animated.loop(Animated.timing(ring1, { toValue: 1, duration: 1000, useNativeDriver: true }));
+    const loop2 = Animated.loop(Animated.timing(ring2, { toValue: 1, duration: 1000, useNativeDriver: true }));
+    loop1.start();
+    const delay = setTimeout(() => loop2.start(), 400);
+    return () => {
+      loop1.stop();
+      loop2.stop();
+      clearTimeout(delay);
+    };
+  }, [isSpeaking, ring1, ring2]);
+
+  const ringStyle = (v: Animated.Value) => ({
+    opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.5, 0] }),
+    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 2.4] }) }],
+  });
 
   // ── user message ──
   if (!isBot) {
@@ -67,9 +117,9 @@ function MessageBubbleBase({ message, ui, onAction, onToggleTranslate, onFeedbac
   return (
     <View>
       <View style={[km.msgRow, km.msgRowBot]}>
-        <View style={[km.mAv, km.mAvBot]}>
+        <Animated.View style={[km.mAv, km.mAvBot, { transform: [{ scale: pulse }] }]}>
           <Text style={km.mAvEmoji}>🌱</Text>
-        </View>
+        </Animated.View>
         <View style={[km.bubble, km.bubbleBot]}>
           <Text style={km.bubbleTextBot}>{display}</Text>
 
@@ -97,8 +147,14 @@ function MessageBubbleBase({ message, ui, onAction, onToggleTranslate, onFeedbac
           )}
 
           <View style={km.bMeta}>
-            <TouchableOpacity onPress={speakThis} hitSlop={6}>
-              <Ionicons name="volume-medium" size={15} color="#6B8074" />
+            <TouchableOpacity onPress={speakThis} hitSlop={6} style={km.speakerWrap}>
+              {isSpeaking && (
+                <>
+                  <Animated.View pointerEvents="none" style={[km.speakerRing, ringStyle(ring1)]} />
+                  <Animated.View pointerEvents="none" style={[km.speakerRing, ringStyle(ring2)]} />
+                </>
+              )}
+              <Ionicons name="volume-medium" size={15} color={isSpeaking ? '#1A6B3A' : '#6B8074'} />
             </TouchableOpacity>
             {canTranslate && (
               <TouchableOpacity style={km.bMetaLink} onPress={translate} hitSlop={6}>

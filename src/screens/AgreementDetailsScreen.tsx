@@ -17,6 +17,7 @@ import { colors, radius, spacing } from '../theme/tokens';
 import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { useLeases } from '../context/LeaseContext';
 import { useFarmListings } from '../context/FarmListingsContext';
+import { useAuth } from '../context/AuthContext';
 import { profilesApi, FarmerProfile } from '../services/profilesApi';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
@@ -40,11 +41,14 @@ function callNumber(phone: string) {
 
 export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const { agreementId } = route.params;
+  const { user } = useAuth();
   const { getAgreementById, activeLeases } = useLeases();
   const { getListingById } = useFarmListings();
   const agreement = getAgreementById(agreementId);
   const activeLease = activeLeases.find((l) => l.id === agreementId);
   const record = agreement || activeLease;
+  // Only the tenant pays rent — the land owner reviews the schedule, they don't pay.
+  const isFarmer = !!record && user?.id === record.farmerId;
 
   const [profilesById, setProfilesById] = useState<Record<string, FarmerProfile>>({});
   useEffect(() => {
@@ -79,7 +83,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, !isFarmer && styles.scrollContentNoFooter]}
         showsVerticalScrollIndicator={false}
       >
         <ScreenHeader
@@ -249,16 +253,17 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
         {/* <View style={styles.bottomSpacing} /> */}
       </ScrollView>
 
-      {/* Make Payment Button */}
-      <View style={styles.footer}>
-        <TouchableOpacity style={styles.paymentButton} activeOpacity={0.8}>
-          <Icon name="camera-alt" size={20} color={colors.surface} />
-          <Text style={styles.paymentButtonText}>Make Payment</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.moreButton} activeOpacity={0.8}>
-          <Icon name="more-vert" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
-      </View>
+      {/* Make Payment — tenant only. The owner reviews the Payment Schedule above instead;
+          with nothing left to show them, the footer bar itself is skipped, not just its
+          buttons, so scrolling doesn't leave a reserved blank gap where it would've been. */}
+      {isFarmer && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.paymentButton} activeOpacity={0.8}>
+            <Icon name="camera-alt" size={20} color={colors.surface} />
+            <Text style={styles.paymentButtonText}>Make Payment</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -270,6 +275,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 100,
+  },
+  scrollContentNoFooter: {
+    paddingBottom: spacing.xxl,
   },
   statusSection: {
     paddingHorizontal: spacing.xl,
@@ -487,11 +495,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.surface,
-  },
-  moreButton: {
-    padding: spacing.md,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 });
 

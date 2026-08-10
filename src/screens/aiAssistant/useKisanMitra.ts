@@ -18,9 +18,13 @@ import {
   teardownVoice,
 } from '../../services/voiceService';
 import { uiStrings } from './constants';
+import type { MediaSource } from '../hub/hooks/useCommunityHub';
 
-// Defensive optional require for the image picker (camera attach).
-let ImagePicker: { launchImageLibrary?: Function } | null;
+// Defensive optional require for the image picker — same pattern as useCommunityHub.ts,
+// callback-style (this file's existing calling convention, kept as-is).
+type PickerResult = { didCancel?: boolean; assets?: { uri?: string; base64?: string; type?: string }[] };
+type PickerFn = (options: Record<string, unknown>, callback: (res: PickerResult) => void) => void;
+let ImagePicker: { launchImageLibrary?: PickerFn; launchCamera?: PickerFn } | null;
 try {
   ImagePicker = require('react-native-image-picker');
 } catch {
@@ -43,6 +47,9 @@ export function useKisanMitra() {
   const [isThinking, setIsThinking] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [langPickerOpen, setLangPickerOpen] = useState(false);
+  const [mediaSheetOpen, setMediaSheetOpen] = useState(false);
+  // Id of the message currently being read aloud (null = nothing speaking).
+  const [speakingId, setSpeakingId] = useState<string | null>(null);
 
   const ui = useMemo(() => uiStrings(language), [language]);
 
@@ -143,31 +150,47 @@ export function useKisanMitra() {
     [respond],
   );
 
-  const pickImage = useCallback(() => {
-    if (!ImagePicker?.launchImageLibrary) {
-      Alert.alert('Camera', 'Image picker is not available in this build.');
-      return;
-    }
-    ImagePicker.launchImageLibrary(
-      // includeBase64 + resize → small enough to send to Gemini Vision quickly.
-      { mediaType: 'photo', selectionLimit: 1, includeBase64: true, maxWidth: 1280, maxHeight: 1280, quality: 0.7 },
-      (res: { didCancel?: boolean; assets?: { uri?: string; base64?: string; type?: string }[] }) => {
-        if (res.didCancel) return;
-        const a = res.assets?.[0];
-        if (a?.uri) sendImage(a.uri, a.base64, a.type);
-      },
-    );
-  }, [sendImage]);
+  const pickImageFromSource = useCallback(
+    (source: MediaSource) => {
+      const launch = source === 'camera-photo' ? ImagePicker?.launchCamera : ImagePicker?.launchImageLibrary;
+      if (!launch) {
+        Alert.alert('Camera', 'Camera/gallery access is not available on this device.');
+        return;
+      }
+      launch(
+        // includeBase64 + resize → small enough to send to Gemini Vision quickly.
+        { mediaType: 'photo', selectionLimit: 1, includeBase64: true, maxWidth: 1280, maxHeight: 1280, quality: 0.7 },
+        (res: { didCancel?: boolean; assets?: { uri?: string; base64?: string; type?: string }[] }) => {
+          if (res.didCancel) return;
+          const a = res.assets?.[0];
+          if (a?.uri) sendImage(a.uri, a.base64, a.type);
+        },
+      );
+    },
+    [sendImage],
+  );
 
-  // Fallback used when real speech-to-text is unavailable (e.g. simulator).
-  const sendVoiceMock = useCallback(() => {
-    const text = ui.voiceSampleMessage;
-    setMessages(prev => [
-      ...prev,
-      { id: makeId('u'), role: 'user', isVoice: true, voiceDuration: '0:06', text, createdAt: Date.now() },
-    ]);
-    respond({ userText: text });
-  }, [respond, ui.voiceSampleMessage]);
+  // Attach button opens a "Take Photo vs Choose from Gallery" chooser instead
+  // of jumping straight into the gallery picker, same UX as the Hub composer.
+  const pickImage = useCallback(() => setMediaSheetOpen(true), []);
+  const closeMediaSheet = useCallback(() => setMediaSheetOpen(false), []);
+  const onPickMediaSource = useCallback(
+    (source: MediaSource) => {
+      setMediaSheetOpen(false);
+      pickImageFromSource(source);
+    },
+    [pickImageFromSource],
+  );
+
+  // Real speech-to-text isn't available (native module missing/not rebuilt,
+  // or it failed to start) — say so honestly instead of faking a voice
+  // message with a fixed 6-second duration and a canned response.
+  const showVoiceUnavailable = useCallback(() => {
+    Alert.alert(
+      'Voice input unavailable',
+      "Voice input isn't available on this device right now. Please type your question instead.",
+    );
+  }, []);
 
   const clearListen = useCallback(() => {
     if (listenTimeout.current) {
@@ -189,8 +212,7 @@ export function useKisanMitra() {
     }
 
     if (!isSttAvailable()) {
-      // No native STT (e.g. simulator / not rebuilt) → demo-safe mock.
-      sendVoiceMock();
+      showVoiceUnavailable();
       return;
     }
 
@@ -218,10 +240,10 @@ export function useKisanMitra() {
     });
 
     if (!started) {
-      // Couldn't start (locale unsupported / module missing) → mock so demo flows.
+      // Couldn't start (locale unsupported / module missing).
       listenHandled.current = true;
       clearListen();
-      sendVoiceMock();
+      showVoiceUnavailable();
       return;
     }
 
@@ -232,7 +254,7 @@ export function useKisanMitra() {
       clearListen();
       stopListening();
     }, LISTEN_TIMEOUT_MS);
-  }, [isThinking, isListening, language, clearListen, sendText, sendVoiceMock]);
+  }, [isThinking, isListening, language, clearListen, sendText, showVoiceUnavailable]);
 
   const regenerate = useCallback(() => {
     const lastUser = [...messages].reverse().find(m => m.role === 'user');
@@ -249,9 +271,15 @@ export function useKisanMitra() {
   }, []);
 
   // Read a message aloud in the right language (English voice if it's translated).
+  // `speakingId` tracks which bubble is actually playing right now, driven by
+  // the TTS engine's own start/finish/cancel events — not just "we asked it to".
   const readAloud = useCallback(
-    (text: string, english: boolean) => {
-      speak(text, english ? 'en' : language).then(ok => {
+    (id: string, text: string, english: boolean) => {
+      speak(text, english ? 'en' : language, {
+        onStart: () => mounted.current && setSpeakingId(id),
+        onDone: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
+        onCancel: () => mounted.current && setSpeakingId(prev => (prev === id ? null : prev)),
+      }).then(ok => {
         if (!ok) Alert.alert('🔊', 'Voice output is not available on this device yet.');
       });
     },
@@ -289,11 +317,16 @@ export function useKisanMitra() {
     suggestions,
     isThinking,
     isListening,
+    isSpeaking: speakingId !== null,
+    speakingMessageId: speakingId,
     showWelcome: messages.length === 0,
     langPickerOpen,
+    mediaSheetOpen,
 
     sendText,
     pickImage,
+    onPickMediaSource,
+    closeMediaSheet,
     onMic,
     regenerate,
     toggleTranslate,

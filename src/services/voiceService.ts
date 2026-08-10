@@ -1,6 +1,9 @@
 /**
  * Voice service — Text-to-Speech (react-native-tts) + Speech-to-Text
- * (@react-native-voice/voice), wrapped defensively.
+ * (@dev-amirzubair/react-native-voice — a New Architecture / TurboModule
+ * compatible fork of @react-native-voice/voice, same API; the original
+ * package returns a null native module under this project's New Architecture
+ * build and every call silently fails), wrapped defensively.
  *
  * Every call is guarded so the app NEVER crashes if the native module isn't
  * linked yet (e.g. before a rebuild, or on a simulator with no mic). Callers
@@ -18,7 +21,7 @@ try {
   Tts = null;
 }
 try {
-  Voice = require('@react-native-voice/voice').default ?? require('@react-native-voice/voice');
+  Voice = require('@dev-amirzubair/react-native-voice').default ?? require('@dev-amirzubair/react-native-voice');
 } catch {
   Voice = null;
 }
@@ -54,11 +57,58 @@ async function ensureTtsReady(): Promise<void> {
   ttsReady = true;
 }
 
-/** Speak text in the user's preferred language; falls back to English voice. */
-export async function speak(text: string, language: Language): Promise<boolean> {
+export interface SpeakHandlers {
+  onStart?: () => void;
+  onDone?: () => void;
+  onCancel?: () => void;
+}
+
+// react-native-tts exposes speech progress as global engine events, not a
+// per-call callback — so we keep a single "who's listening right now" ref
+// that speak()/stopSpeaking() update, and one set of listeners bound once.
+let ttsListenersBound = false;
+let currentSpeakHandlers: SpeakHandlers | null = null;
+
+// A throw inside a native-event callback isn't caught by any surrounding
+// try/catch in the code that registered it (it runs on its own tick via the
+// bridge), so each handler gets its own guard rather than relying on
+// bindTtsListenersOnce()'s try/catch, which only covers registration.
+function safeCall(fn?: () => void): void {
+  try {
+    fn?.();
+  } catch {
+    /* never let a UI handler crash the TTS event bridge */
+  }
+}
+
+function bindTtsListenersOnce(): void {
+  if (ttsListenersBound || !isTtsAvailable() || typeof Tts.addEventListener !== 'function') return;
+  try {
+    Tts.addEventListener('tts-start', () => safeCall(currentSpeakHandlers?.onStart));
+    Tts.addEventListener('tts-finish', () => {
+      safeCall(currentSpeakHandlers?.onDone);
+      currentSpeakHandlers = null;
+    });
+    Tts.addEventListener('tts-cancel', () => {
+      safeCall(currentSpeakHandlers?.onCancel);
+      currentSpeakHandlers = null;
+    });
+    ttsListenersBound = true;
+  } catch {
+    /* event API not supported on this platform/version — caller just won't see start/stop */
+  }
+}
+
+/**
+ * Speak text in the user's preferred language; falls back to English voice.
+ * Optional `handlers` let the UI react to real playback start/finish/cancel
+ * (e.g. to animate an avatar while speech is actually playing).
+ */
+export async function speak(text: string, language: Language, handlers?: SpeakHandlers): Promise<boolean> {
   if (!isTtsAvailable() || !text) return false;
   try {
     await ensureTtsReady();
+    bindTtsListenersOnce();
     try {
       await Tts.stop();
     } catch {
@@ -79,7 +129,13 @@ export async function speak(text: string, language: Language): Promise<boolean> 
     } catch {
       /* optional */
     }
-    Tts.speak(text);
+    currentSpeakHandlers = handlers ?? null;
+    // Tts.speak() returns a promise on some platforms — left un-awaited (we
+    // don't want callers blocked until playback finishes), so any rejection
+    // needs its own .catch or React Native surfaces it as an uncaught error.
+    Promise.resolve(Tts.speak(text)).catch(() => {
+      currentSpeakHandlers = null;
+    });
     return true;
   } catch {
     return false;
@@ -89,10 +145,14 @@ export async function speak(text: string, language: Language): Promise<boolean> 
 export function stopSpeaking(): void {
   if (!isTtsAvailable()) return;
   try {
-    Tts.stop();
+    Promise.resolve(Tts.stop()).catch(() => {});
   } catch {
     /* ignore */
   }
+  // Belt-and-braces: some platforms/versions don't fire 'tts-cancel' on a
+  // manual stop, so tell whoever's listening directly too.
+  currentSpeakHandlers?.onCancel?.();
+  currentSpeakHandlers = null;
 }
 
 // ── Speech-to-Text ──────────────────────────────────────────────────────────

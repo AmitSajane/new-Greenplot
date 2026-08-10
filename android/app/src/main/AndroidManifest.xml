@@ -1,5 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Android 11+ package-visibility: without this, SpeechRecognizer.isRecognitionAvailable()
+         always returns false even when a recognizer (e.g. Google's) is installed, and
+         @dev-amirzubair/react-native-voice's startListening() throws "Speech recognition is
+         not available on this device". -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
+    </queries>
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

@@ -14,6 +14,8 @@ import {
   TypingIndicator,
   WelcomeState,
 } from './aiAssistant/components';
+import { MediaSourceSheet } from './hub/components/community/MediaSourceSheet';
+import { PHOTO_SOURCES } from './hub/constants/mediaSources';
 
 export default function AIAssistantScreen() {
   const navigation = useNavigation<{ goBack: () => void }>();
@@ -39,9 +41,10 @@ export default function AIAssistantScreen() {
         onFeedback={vm.setFeedback}
         onReadAloud={vm.readAloud}
         onRegenerate={vm.regenerate}
+        isSpeaking={vm.speakingMessageId === item.id}
       />
     ),
-    [vm.ui, vm.onAction, vm.toggleTranslate, vm.setFeedback, vm.readAloud, vm.regenerate],
+    [vm.ui, vm.onAction, vm.toggleTranslate, vm.setFeedback, vm.readAloud, vm.regenerate, vm.speakingMessageId],
   );
 
   const keyExtractor = useCallback((item: ChatMessage) => item.id, []);
@@ -49,7 +52,9 @@ export default function AIAssistantScreen() {
   return (
     <View style={km.safe}>
       <ChatHeader
-        statusText={vm.isListening ? vm.ui.listening : vm.isThinking ? vm.ui.typing : vm.ui.online}
+        statusText={
+          vm.isSpeaking ? vm.ui.speaking : vm.isListening ? vm.ui.listening : vm.isThinking ? vm.ui.typing : vm.ui.online
+        }
         languageLabel={languageLabel}
         onBack={() => navigation.goBack()}
         onLangPress={vm.openLangPicker}
@@ -107,6 +112,15 @@ export default function AIAssistantScreen() {
         title="Choose language · भाषा चुनें"
         onChoose={vm.chooseLanguage}
         onClose={vm.closeLangPicker}
+      />
+
+      <MediaSourceSheet
+        visible={vm.mediaSheetOpen}
+        title="Add a photo"
+        subtitle="Take a new photo or choose one from your gallery"
+        sources={PHOTO_SOURCES}
+        onPick={vm.onPickMediaSource}
+        onClose={vm.closeMediaSheet}
       />
     </View>
   );

@@ -99,6 +99,11 @@ export const km = StyleSheet.create({
 
   // Bubble meta (translate / read-aloud / verified)
   bMeta: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8, paddingTop: 8, borderTopWidth: 1, borderTopColor: '#F4F8F5' },
+  speakerWrap: { width: 22, height: 22, alignItems: 'center', justifyContent: 'center' },
+  speakerRing: {
+    position: 'absolute', width: 15, height: 15, borderRadius: 8,
+    borderWidth: 1.3, borderColor: '#1A6B3A',
+  },
   bMetaLink: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   bMetaLinkText: { fontSize: 10, color: '#1A6B3A', fontWeight: '600' },
   verified: { marginLeft: 'auto', flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#E4F4EC', borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2 },
