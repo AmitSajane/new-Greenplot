@@ -297,10 +297,21 @@ export default function AddFarmScreen() {
     if (submitting) return;
     const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
     const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
-    const missingCommon = !title || !acres || !state || !district || !soilType;
-    const missingLeaseFields = !selfFarmed && (!tenure || !pricePerYear || !leaseType);
-    if (missingCommon || missingLeaseFields) {
-      Alert.alert('Missing Fields', 'Please select State, District and fill other required fields.');
+
+    const missingFields: string[] = [];
+    if (!title) missingFields.push('Title');
+    if (!acres) missingFields.push('Acres');
+    if (!state) missingFields.push('State');
+    if (!district) missingFields.push('District');
+    if (!soilType) missingFields.push('Soil Type');
+    if (!selfFarmed) {
+      if (!tenure) missingFields.push('Tenure');
+      if (!leaseType) missingFields.push('Lease Type');
+      if (!pricePerYear) missingFields.push('Price per Year');
+    }
+
+    if (missingFields.length > 0) {
+      Alert.alert('Missing Fields', `Please fill the following required fields:\n\n${missingFields.join(', ')}`);
       return;
     }
     if (mediaItems.some(m => m.uploading)) {
