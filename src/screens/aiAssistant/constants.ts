@@ -11,9 +11,6 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'kn', label: 'ಕನ್ನಡ' },
   { code: 'hi', label: 'हिन्दी' },
   { code: 'en', label: 'English' },
-  { code: 'mr', label: 'मराठी' },
-  { code: 'te', label: 'తెలుగు' },
-  { code: 'bn', label: 'বাংলা' },
 ];
 
 export interface QuickStart {
@@ -66,14 +63,15 @@ interface UiStrings {
   speaking: string;
 }
 
-const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
+type UiStringsBase = Omit<UiStrings, 'welcomeTitle'>;
+
+const STRINGS: Record<'en' | 'hi' | 'kn', UiStringsBase> = {
   en: {
     greeting: "Namaste! 🙏 I'm Kisan Mitra, your farming friend. Ask me anything about your crops, mandi prices or weather.",
     online: 'Online · your farming friend',
     typing: 'Typing…',
     placeholder: 'Ask anything…',
     followupsLabel: 'Suggested follow-ups',
-    welcomeTitle: 'Namaste, Rajesh! 🙏',
     welcomeSub: "I'm Kisan Mitra — here to help with your crops, mandi, weather and schemes. Ask me anything!",
     voiceTitle: "Can't type? Just speak 🎙️",
     voiceSub: 'Ask by voice — in Kannada, Hindi or Marathi',
@@ -91,7 +89,6 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
     typing: 'लिख रहे हैं…',
     placeholder: 'कुछ भी पूछें…',
     followupsLabel: 'सुझाए गए सवाल',
-    welcomeTitle: 'नमस्ते, राजेश! 🙏',
     welcomeSub: 'मैं किसान मित्र हूं — फसल, मंडी, मौसम और योजनाओं में मदद के लिए। कुछ भी पूछें!',
     voiceTitle: 'टाइप नहीं कर सकते? बस बोलें 🎙️',
     voiceSub: 'बोलकर पूछें — कन्नड़, हिंदी या मराठी में',
@@ -109,7 +106,6 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
     typing: 'ಟೈಪ್ ಮಾಡುತ್ತಿದೆ…',
     placeholder: 'ಏನು ಬೇಕಾದರೂ ಕೇಳಿ…',
     followupsLabel: 'ಸೂಚಿಸಿದ ಪ್ರಶ್ನೆಗಳು',
-    welcomeTitle: 'ನಮಸ್ಕಾರ, ರಾಜೇಶ್! 🙏',
     welcomeSub: 'ನಾನು ಕಿಸಾನ್ ಮಿತ್ರ — ಬೆಳೆ, ಮಾರುಕಟ್ಟೆ, ಹವಾಮಾನ ಮತ್ತು ಯೋಜನೆಗಳಲ್ಲಿ ಸಹಾಯಕ್ಕಾಗಿ. ಏನು ಬೇಕಾದರೂ ಕೇಳಿ!',
     voiceTitle: 'ಟೈಪ್ ಮಾಡಲಾಗದೇ? ಮಾತನಾಡಿ 🎙️',
     voiceSub: 'ಧ್ವನಿಯಲ್ಲಿ ಕೇಳಿ — ಕನ್ನಡ, ಹಿಂದಿ ಅಥವಾ ಮರಾಠಿಯಲ್ಲಿ',
@@ -123,9 +119,26 @@ const STRINGS: Record<'en' | 'hi' | 'kn', UiStrings> = {
   },
 };
 
-/** UI strings for a language (Hindi/Kannada localized; others fall back to English). */
-export function uiStrings(language: Language): UiStrings {
-  if (language === 'hi') return STRINGS.hi;
-  if (language === 'kn') return STRINGS.kn;
-  return STRINGS.en;
+// Generic fallback used only when the user's name isn't available (e.g. not
+// signed in yet) — the greeting itself is built from the real logged-in
+// user's name, not a fixed placeholder.
+const GREETING_FALLBACK_NAME: Record<'en' | 'hi' | 'kn', string> = {
+  en: 'Farmer',
+  hi: 'किसान',
+  kn: 'ರೈತರೇ',
+};
+
+function welcomeTitleFor(lang: 'en' | 'hi' | 'kn', name?: string): string {
+  const who = name?.trim() || GREETING_FALLBACK_NAME[lang];
+  if (lang === 'hi') return `नमस्ते, ${who}! 🙏`;
+  if (lang === 'kn') return `ನಮಸ್ಕಾರ, ${who}! 🙏`;
+  return `Namaste, ${who}! 🙏`;
+}
+
+/** UI strings for a language (Hindi/Kannada localized; others fall back to
+ *  English). `userName` personalizes the welcome greeting — falls back to a
+ *  generic per-language word (e.g. "Farmer") when unavailable. */
+export function uiStrings(language: Language, userName?: string): UiStrings {
+  const lang = language === 'hi' ? 'hi' : language === 'kn' ? 'kn' : 'en';
+  return { ...STRINGS[lang], welcomeTitle: welcomeTitleFor(lang, userName) };
 }

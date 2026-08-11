@@ -144,11 +144,6 @@ export const km = StyleSheet.create({
 
   // Input bar
   inputBar: { borderTopWidth: 1, borderTopColor: BORDER, backgroundColor: '#fff', paddingHorizontal: 10, paddingTop: 9, paddingBottom: 10 },
-  langStripContent: { gap: 6, paddingBottom: 9 },
-  langPill: { paddingHorizontal: 11, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#C8D8CC', backgroundColor: '#fff' },
-  langPillActive: { backgroundColor: '#0F4A28', borderColor: '#0F4A28' },
-  langPillText: { fontSize: 11, fontWeight: '600', color: TEXT2 },
-  langPillTextActive: { color: '#fff' },
   inRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   inBtn: { width: 34, height: 34, borderRadius: 11, backgroundColor: '#F4F8F5', alignItems: 'center', justifyContent: 'center' },
   inMic: { backgroundColor: '#1A6B3A' },

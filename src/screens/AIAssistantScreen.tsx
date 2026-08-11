@@ -95,9 +95,6 @@ export default function AIAssistantScreen() {
           placeholder={vm.ui.placeholder}
           listeningLabel={vm.ui.listening}
           listening={vm.isListening}
-          languages={LANGUAGES}
-          currentLanguage={vm.language}
-          onChooseLanguage={vm.chooseLanguage}
           onSend={vm.sendText}
           onMic={vm.onMic}
           onAttach={vm.pickImage}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useAuth } from '../../context/AuthContext';
 import {
   ActionType,
   ChatMessage,
@@ -40,6 +41,7 @@ const LISTEN_TIMEOUT_MS = 8000;
 
 export function useKisanMitra() {
   const navigation = useNavigation() as unknown as Nav;
+  const { user } = useAuth();
 
   const [language, setLanguage] = useState<Language>('kn'); // Karnataka-first default
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -51,7 +53,7 @@ export function useKisanMitra() {
   // Id of the message currently being read aloud (null = nothing speaking).
   const [speakingId, setSpeakingId] = useState<string | null>(null);
 
-  const ui = useMemo(() => uiStrings(language), [language]);
+  const ui = useMemo(() => uiStrings(language, user?.name), [language, user?.name]);
 
   // Timers + listen guards (cleared on unmount → no state-after-unmount leaks).
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
