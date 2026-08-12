@@ -38,7 +38,20 @@ interface AuthContextType {
   onboard: (input: OnboardInput) => Promise<AuthResult>;
   /** Returning user: log in with phone only (profile already exists). */
   loginWithPhone: (phone: string) => Promise<AuthResult>;
+  /** Edit an already-registered profile (name/location/WhatsApp/photo) —
+   *  reuses the same save path as onboarding, merged over the current user
+   *  so fields you don't pass keep their existing value. */
+  updateProfile: (updates: ProfileUpdate) => Promise<AuthResult>;
   logout: () => void;
+}
+
+export interface ProfileUpdate {
+  name?: string;
+  location?: string;
+  district?: string;
+  state?: string;
+  hasWhatsapp?: boolean;
+  avatarUrl?: string;
 }
 
 export interface OnboardInput {
@@ -49,6 +62,9 @@ export interface OnboardInput {
   district?: string;
   state?: string;
   hasWhatsapp?: boolean;
+  /** True when the user checked "I agree to the Terms & Conditions and
+   *  Privacy Policy" on the registration screen. */
+  acceptedTermsAndPolicies?: boolean;
 }
 
 /** Phone is the real identifier; we back it with a synthetic email Supabase never shows. */
@@ -70,6 +86,8 @@ type ProfileRow = {
   district?: string | null;
   state?: string | null;
   has_whatsapp?: boolean | null;
+  accepted_terms_and_policies?: string | null;
+  avatar_url?: string | null;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,7 +106,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, role, phone, location, district, state, has_whatsapp')
+      .select('id, name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
       .in('phone', variants)
       .limit(1);
 
@@ -101,7 +119,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const { data, error } = await supabase
       .from('profiles')
-      .select('id, name, role, phone, location, district, state, has_whatsapp')
+      .select('id, name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
       .eq('id', id)
       .maybeSingle();
 
@@ -122,6 +140,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         p_district: profile.district || null,
         p_state: profile.state || null,
         p_has_whatsapp: profile.has_whatsapp ?? true,
+        p_accepted_terms_and_policies: profile.accepted_terms_and_policies || null,
+        p_avatar_url: profile.avatar_url || null,
       };
 
       const rpcResult = await supabase.rpc('save_own_profile', payload);
@@ -139,6 +159,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             district: payload.p_district,
             state: payload.p_state,
             has_whatsapp: payload.p_has_whatsapp,
+            accepted_terms_and_policies: payload.p_accepted_terms_and_policies,
+            avatar_url: payload.p_avatar_url,
           },
           { onConflict: 'id' },
         );
@@ -158,7 +180,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const profileResult = await supabase
       .from('profiles')
-      .select('name, role, phone, location, district, state, has_whatsapp')
+      .select('name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
       .eq('id', uid)
       .single();
 
@@ -204,6 +226,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       district: profile.district || undefined,
       state: profile.state || undefined,
       hasWhatsapp: profile.has_whatsapp ?? undefined,
+      acceptedTermsAndPoliciesAt: profile.accepted_terms_and_policies || undefined,
+      avatarUrl: profile.avatar_url || undefined,
     });
   }, [saveOwnProfile]);
 
@@ -328,7 +352,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const digits = cleanPhone(input.phone);
       if (!isValidIndianMobileNumber(input.phone)) return { success: false, error: 'Enter a valid Indian mobile number.' };
       if (!input.name.trim()) return { success: false, error: 'Please enter your name.' };
+      if (!input.acceptedTermsAndPolicies) {
+        return { success: false, error: 'Please agree to the Terms & Conditions and Privacy Policy to continue.' };
+      }
 
+      const acceptedTermsAndPoliciesAt = new Date().toISOString();
       const profileFields = {
         name: input.name.trim(),
         role: input.role,
@@ -337,6 +365,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         district: input.district || null,
         state: input.state || null,
         has_whatsapp: input.hasWhatsapp ?? true,
+        accepted_terms_and_policies: acceptedTermsAndPoliciesAt,
       };
 
       // ── Mock mode (no backend): persist locally ──
@@ -355,6 +384,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           district: input.district,
           state: input.state,
           hasWhatsapp: profileFields.has_whatsapp,
+          acceptedTermsAndPoliciesAt,
         };
         registerUser(newUser);
         setUser(newUser);
@@ -385,6 +415,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               district: profileFields.district,
               state: profileFields.state,
               has_whatsapp: profileFields.has_whatsapp,
+              accepted_terms_and_policies: profileFields.accepted_terms_and_policies,
             },
           },
         });
@@ -467,6 +498,44 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [findProfileByPhone, loadUserFromSession],
   );
 
+  // ── Edit an already-registered profile ──────────────────────────────────────
+  // Merges the given updates over the CURRENT user (not a partial DB patch) —
+  // saveOwnProfile expects a full row, so anything not passed here keeps its
+  // existing value instead of being wiped to null/default.
+  const updateProfile = useCallback(
+    async (updates: ProfileUpdate): Promise<AuthResult> => {
+      if (!user) return { success: false, error: 'Not signed in.' };
+      const merged: User = { ...user, ...updates };
+
+      if (!supabase) {
+        setUser(merged);
+        return { success: true };
+      }
+
+      setIsLoading(true);
+      try {
+        const profileError = await saveOwnProfile({
+          id: merged.id,
+          name: merged.name,
+          role: merged.role,
+          phone: merged.phoneNumber,
+          location: merged.location || null,
+          district: merged.district || null,
+          state: merged.state || null,
+          has_whatsapp: merged.hasWhatsapp ?? true,
+          accepted_terms_and_policies: merged.acceptedTermsAndPoliciesAt || null,
+          avatar_url: merged.avatarUrl || null,
+        });
+        if (profileError) return { success: false, error: profileError };
+        setUser(merged);
+        return { success: true };
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [user, saveOwnProfile],
+  );
+
   const logout = useCallback(() => {
     if (supabase) supabase.auth.signOut();
     setUser(null);
@@ -487,6 +556,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signUpWithPhone,
         onboard,
         loginWithPhone,
+        updateProfile,
         logout,
       }}
     >

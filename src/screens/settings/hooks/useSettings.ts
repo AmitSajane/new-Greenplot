@@ -29,12 +29,30 @@ export function useSettings() {
     [settingsNav]
   );
 
+  const onWebsitePress = useCallback(
+    (title: string, url: string) => settingsNav.navigate('SettingsWebView', { title, url }),
+    [settingsNav]
+  );
+
+  const onLegalPress = useCallback(
+    (document: 'privacy' | 'terms') => settingsNav.navigate('LegalDocument', { document }),
+    [settingsNav]
+  );
+
+  const onEditProfilePress = useCallback(
+    () => settingsNav.navigate('EditProfile'),
+    [settingsNav]
+  );
+
   const onBack = useCallback(() => settingsNav.getParent()?.goBack(), [settingsNav]);
 
   return {
     user,
     onLogout: handleLogout,
     onLanguagePress,
+    onWebsitePress,
+    onLegalPress,
+    onEditProfilePress,
     onBack,
   };
 }

@@ -7,15 +7,30 @@ import { SettingsViewModel } from '../hooks/useSettings';
 import { settingsStyles as styles } from '../styles/settings.styles';
 import { ScreenHeader } from '../../../components/molecules/ScreenHeader';
 
-const PREFERENCE_ITEMS = [
+type PreferenceItem =
+  | { icon: string; label: string; url: string }
+  | { icon: string; label: string; document: 'privacy' | 'terms' }
+  | { icon: string; label: string; route: 'editProfile' }
+  | { icon: string; label: string };
+
+const PREFERENCE_ITEMS: PreferenceItem[] = [
   { icon: 'notifications', label: 'Notifications' },
   { icon: 'help', label: 'Help & Support' },
-  { icon: 'edit', label: 'Edit profile' },
-  { icon: 'privacy-tip', label: 'Privacy policy' },
+  { icon: 'edit', label: 'Edit profile', route: 'editProfile' },
+  { icon: 'privacy-tip', label: 'Privacy policy', document: 'privacy' },
+  { icon: 'gavel', label: 'Terms & Conditions', document: 'terms' },
   { icon: 'description', label: 'Consent logs' },
-] as const;
+];
 
-export const SettingsContent: React.FC<SettingsViewModel> = ({ user, onLogout, onLanguagePress, onBack }) => (
+export const SettingsContent: React.FC<SettingsViewModel> = ({
+  user,
+  onLogout,
+  onLanguagePress,
+  onWebsitePress,
+  onLegalPress,
+  onEditProfilePress,
+  onBack,
+}) => (
   <SafeAreaView style={styles.safeArea}>
     <ScreenHeader title="Settings" onBack={onBack} titleSize={20} />
     <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -49,7 +64,20 @@ export const SettingsContent: React.FC<SettingsViewModel> = ({ user, onLogout, o
           <Text style={styles.sectionTitle}>Preferences</Text>
         </View>
         {PREFERENCE_ITEMS.map((item) => (
-          <TouchableOpacity key={item.label} style={styles.settingItem} activeOpacity={0.7}>
+          <TouchableOpacity
+            key={item.label}
+            style={styles.settingItem}
+            activeOpacity={0.7}
+            onPress={
+              'url' in item
+                ? () => onWebsitePress(item.label, item.url)
+                : 'document' in item
+                  ? () => onLegalPress(item.document)
+                  : 'route' in item
+                    ? onEditProfilePress
+                    : undefined
+            }
+          >
             <Icon name={item.icon} size={24} color={colors.textSecondary} />
             <Text style={styles.settingText}>{item.label}</Text>
             <Icon name="chevron-right" size={24} color={colors.textMuted} />

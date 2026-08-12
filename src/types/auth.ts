@@ -12,6 +12,11 @@ export interface User {
   state?: string;
   /** True if the phone number is reachable on WhatsApp. */
   hasWhatsapp?: boolean;
+  /** When the user accepted the Terms & Conditions + Privacy Policy (combined,
+   *  one checkbox at registration). Undefined/null if never accepted. */
+  acceptedTermsAndPoliciesAt?: string;
+  /** Public URL of the user's uploaded profile photo, if any. */
+  avatarUrl?: string;
 }
 
 export interface AuthState {

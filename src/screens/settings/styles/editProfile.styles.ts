@@ -1,0 +1,96 @@
+import { StyleSheet } from 'react-native';
+import { colors, radius, spacing } from '../../../theme/tokens';
+
+export const editProfileStyles = StyleSheet.create({
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: spacing.xl, paddingBottom: spacing.xxl },
+
+  field: { marginBottom: spacing.lg },
+  label: { fontSize: 13, fontWeight: '800', color: colors.textPrimary, marginBottom: spacing.sm },
+  input: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: 15,
+    color: colors.textPrimary,
+  },
+  readOnlyField: {
+    backgroundColor: colors.background,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  readOnlyText: { fontSize: 15, color: colors.textSecondary },
+  readOnlyHint: { fontSize: 11, color: colors.textMuted, marginTop: 4 },
+
+  // Same GPS-button / detected-location-card look as ProfileOnboardingScreen's
+  // location step, ported over so editing here matches registration exactly.
+  locBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.primary,
+    borderStyle: 'dashed',
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+  },
+  locBtnText: { color: colors.primary, fontWeight: '800', fontSize: 15 },
+  locDetected: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.softGreen,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    padding: spacing.lg,
+  },
+  locName: { fontSize: 15, fontWeight: '800', color: colors.textPrimary },
+  locSub: { fontSize: 12, color: colors.textSecondary, marginTop: 1 },
+  locEdit: { color: colors.primary, fontWeight: '800', fontSize: 13 },
+
+  toggleRow: {
+    backgroundColor: colors.surface,
+    borderWidth: 1.5,
+    borderColor: colors.border,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.xl,
+  },
+  check: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkOn: { backgroundColor: colors.primary },
+  toggleText: { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  wa: { color: colors.primary, fontWeight: '800' },
+
+  saveButton: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
+    alignItems: 'center',
+  },
+  saveButtonDisabled: { backgroundColor: colors.textMuted },
+  saveButtonText: { color: colors.surface, fontSize: 16, fontWeight: '700' },
+});

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -16,7 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ import { forwardGeocode, reverseGeocodeDetailed } from '../utils/geo/geocoding';
 import { AVAILABLE_LANGUAGES, loadLanguage } from '../localization/i18n';
 import { useTranslation } from 'react-i18next';
 import { isValidIndianMobileNumber, sanitizeIndianMobileInput } from '../utils/validation';
+import { LEGAL_CONTENT } from '../constants/legalContent';
 
 const sanitizeName = (value: string) => value.replace(/[^\p{L}\p{M}\s]/gu, '');
 
@@ -44,6 +46,17 @@ export default function ProfileOnboardingScreen() {
   const [locationVerified, setLocationVerified] = useState(false);
   const [locating, setLocating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [legalModalOpen, setLegalModalOpen] = useState(false);
+  // Gate: the checkbox stays disabled until the user has opened the combined
+  // Terms & Privacy page at least once — set true the moment they open it,
+  // reading isn't force-tracked beyond that (no scroll-to-bottom requirement).
+  const [hasViewedLegal, setHasViewedLegal] = useState(false);
+
+  const openLegalModal = useCallback(() => {
+    setHasViewedLegal(true);
+    setLegalModalOpen(true);
+  }, []);
 
   const handleNameChange = useCallback((value: string) => {
     setName(sanitizeName(value));
@@ -113,6 +126,7 @@ export default function ProfileOnboardingScreen() {
     if (!cleanName) return Alert.alert('Name', 'Please enter your name.');
     if (cleanName !== name) setName(cleanName);
     if (!role) return Alert.alert('Role', 'Please choose Farmer or Land Owner.');
+    if (!agreedToTerms) return Alert.alert('Terms & Conditions', 'Please agree to the Terms & Conditions and Privacy Policy to continue.');
     setSubmitting(true);
     let profileLocation = location;
     let profileDistrict = district;
@@ -147,6 +161,7 @@ export default function ProfileOnboardingScreen() {
       district: profileDistrict,
       state: profileState,
       hasWhatsapp,
+      acceptedTermsAndPolicies: agreedToTerms,
     });
     setSubmitting(false);
     if (!res.success) Alert.alert('Could not continue', res.error || 'Please try again.');
@@ -161,6 +176,7 @@ export default function ProfileOnboardingScreen() {
     state,
     locationVerified,
     hasWhatsapp,
+    agreedToTerms,
     getGpsLocation,
     onboard,
     loginWithPhone,
@@ -297,6 +313,26 @@ export default function ProfileOnboardingScreen() {
               </>
             )}
 
+            {!isLogin && (
+              <View style={styles.termsRow}>
+                <TouchableOpacity
+                  style={[styles.check, agreedToTerms && styles.checkOn, !hasViewedLegal && styles.checkDisabled]}
+                  activeOpacity={0.7}
+                  onPress={() => setAgreedToTerms(v => !v)}
+                  disabled={!hasViewedLegal}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: agreedToTerms, disabled: !hasViewedLegal }}
+                >
+                  {agreedToTerms && <Ionicons name="checkmark" size={16} color="#fff" />}
+                </TouchableOpacity>
+                <Text style={styles.termsText}>
+                  I agree to the{' '}
+                  <Text style={styles.wa} onPress={openLegalModal}>Terms & Conditions and Privacy Policy</Text>
+                  {!hasViewedLegal && <Text style={styles.termsHint}> — open to enable</Text>}
+                </Text>
+              </View>
+            )}
+
             {/* CTA */}
             <TouchableOpacity style={[styles.cta, busy && { opacity: 0.7 }]} onPress={onContinue} disabled={busy} activeOpacity={0.9}>
               {busy ? <ActivityIndicator color="#fff" /> : <Text style={styles.ctaText}>{isLogin ? 'Log in →' : 'Continue →'}</Text>}
@@ -313,6 +349,34 @@ export default function ProfileOnboardingScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={legalModalOpen} animationType="slide" onRequestClose={() => setLegalModalOpen(false)}>
+        {/* Modal presents in its own native window, outside the app's root
+            SafeAreaProvider — a fresh one is needed here for real insets. */}
+        <SafeAreaProvider>
+          <SafeAreaView style={styles.legalSafe} edges={['top', 'bottom']}>
+            <View style={styles.legalHeader}>
+              <TouchableOpacity onPress={() => setLegalModalOpen(false)} hitSlop={8}>
+                <Ionicons name="arrow-back" size={22} color="#0D1509" />
+              </TouchableOpacity>
+              <Text style={styles.legalHeaderTitle}>Terms & Conditions and Privacy Policy</Text>
+            </View>
+            <ScrollView contentContainerStyle={styles.legalScroll}>
+              {(['terms', 'privacy'] as const).map((doc, i) => (
+                <View key={doc} style={i > 0 && styles.legalDocDivider}>
+                  <Text style={styles.legalDocTitle}>{LEGAL_CONTENT[doc].title}</Text>
+                  {LEGAL_CONTENT[doc].sections.map(section => (
+                    <View key={section.heading} style={styles.legalSection}>
+                      <Text style={styles.legalHeading}>{section.heading}</Text>
+                      <Text style={styles.legalBody}>{section.body}</Text>
+                    </View>
+                  ))}
+                </View>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        </SafeAreaProvider>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -356,6 +420,22 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: '#1A6B3A' },
   toggleText: { fontSize: 14, color: '#3A5040', fontWeight: '600' },
   wa: { color: '#1A6B3A', fontWeight: '800' },
+  // Same checkbox visual language as toggleRow above, but top-aligned since
+  // this sentence wraps to 2 lines (unlike the short single-line WhatsApp text).
+  termsRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, marginTop: 18 },
+  termsText: { flex: 1, fontSize: 14, color: '#3A5040', fontWeight: '600', lineHeight: 20 },
+  checkDisabled: { opacity: 0.4 },
+  termsHint: { color: '#9EB8A8', fontWeight: '600', fontSize: 12.5 },
+
+  legalSafe: { flex: 1, backgroundColor: '#F4F8F5' },
+  legalHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E6EFE9', backgroundColor: '#fff' },
+  legalHeaderTitle: { flex: 1, fontSize: 16, fontWeight: '800', color: '#0D1509' },
+  legalScroll: { padding: 18, paddingBottom: 36 },
+  legalDocDivider: { marginTop: 8, paddingTop: 24, borderTopWidth: 1, borderTopColor: '#E6EFE9' },
+  legalDocTitle: { fontSize: 19, fontWeight: '800', color: '#0D1509', marginBottom: 14 },
+  legalSection: { marginBottom: 18 },
+  legalHeading: { fontSize: 16, fontWeight: '700', color: '#0D1509', marginBottom: 6 },
+  legalBody: { fontSize: 14, color: '#3A5040', lineHeight: 21 },
 
   locBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1A6B3A', borderStyle: 'dashed', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 14 },
   locBtnText: { color: '#0F4A28', fontWeight: '800', fontSize: 15 },
