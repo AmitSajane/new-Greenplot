@@ -41,7 +41,8 @@ const agreementToApp = (r: any): Agreement => ({
 const leaseToApp = (r: any): ActiveLease => ({
   id: r.id, landId: r.land_id, landTitle: r.land_title || '', offerId: r.offer_id, typeId: r.type_id, typeName: r.type_name || '',
   termsSummary: r.terms_summary || '', farmerId: r.farmer_id, farmerName: r.farmer_name || '', ownerId: r.owner_id, ownerName: r.owner_name || '',
-  startDate: r.start_date || '', status: 'active', createdAt: r.created_at,
+  startDate: r.start_date || '', rent: r.rent || undefined, nextPayment: r.next_payment || undefined,
+  status: 'active', createdAt: r.created_at,
 });
 
 const today = () => new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -54,11 +55,21 @@ export interface LeaseSnapshot {
 }
 
 export const leaseApi = {
-  /** Load everything once (initial hydrate). */
+  /** Load everything once (initial hydrate).
+   *
+   * `lease_offers` is the one publicly-readable table here (RLS: select
+   * using (true)) — every farmer browsing needs to see every owner's
+   * offers, so it grows with the whole app's total offers, not just one
+   * user's own, and is capped for the same reason `landsApi.fetchLands`
+   * is. The other three (requests/agreements/leases) are already RLS-scoped
+   * to `auth.uid() in (farmer_id, owner_id)`, so the database only ever
+   * returns rows the current user is a party to — their size scales with
+   * one person's own activity, not total app growth, so no cap is needed
+   * there. */
   async fetchAll(): Promise<LeaseSnapshot> {
     const c = db();
     const [offers, requests, agreements, leases] = await Promise.all([
-      c.from('lease_offers').select('*').order('created_at', { ascending: false }),
+      c.from('lease_offers').select('*').order('created_at', { ascending: false }).limit(500),
       c.from('lease_requests').select('*').order('created_at', { ascending: false }),
       c.from('lease_agreements').select('*').order('created_at', { ascending: false }),
       c.from('leases').select('*').order('created_at', { ascending: false }),

@@ -1,20 +1,54 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, View, Text, StyleSheet, TouchableOpacity, FlatList } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../theme/tokens';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { useAuth } from '../context/AuthContext';
+import { AppNotification, notificationsApi } from '../services/notificationsApi';
 
-const MOCK_NOTIFICATIONS = [
-  { id: '1', type: 'lease', title: 'Lease request', body: 'Ramesh Kumar requested to lease your 5-acre plot.', time: '2h ago', read: false },
-  { id: '2', type: 'job', title: 'Job application', body: '3 workers applied for Harvesting job.', time: '5h ago', read: false },
-  { id: '3', type: 'disease', title: 'Disease alert', body: 'Early blight risk in tomato field – Bangalore North.', time: '1d ago', read: true },
-  { id: '4', type: 'payment', title: 'Payment received', body: '₹4,950 received for labor payment.', time: '2d ago', read: true },
-];
+function relativeTime(createdAt: string): string {
+  const timestamp = new Date(createdAt).getTime();
+  if (!Number.isFinite(timestamp)) return '';
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+}
 
 export default function NotificationsCenterScreen() {
   const navigation = useNavigation<any>();
+  const { user, authReady } = useAuth();
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadNotifications = useCallback(async () => {
+    if (!authReady) return;
+    if (!user?.id) {
+      setNotifications([]);
+      setLoading(false);
+      return;
+    }
+    try {
+      setNotifications(await notificationsApi.fetchForUser(user.id));
+    } catch {
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [authReady, user?.id]);
+
+  useEffect(() => {
+    if (!authReady) return;
+    loadNotifications();
+    return user?.id ? notificationsApi.subscribe(user.id, loadNotifications) : undefined;
+  }, [authReady, loadNotifications, user?.id]);
 
   const getIcon = (type: string) => {
     if (type === 'lease') return 'document-text-outline';
@@ -28,9 +62,20 @@ export default function NotificationsCenterScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScreenHeader title="Notifications" onBack={() => navigation.goBack()} titleWeight="700" />
       <FlatList
-        data={MOCK_NOTIFICATIONS}
+        data={notifications}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={
+          loading ? (
+            <ActivityIndicator color={colors.primary} size="large" />
+          ) : (
+            <View style={styles.empty}>
+              <Ionicons name="notifications-outline" size={40} color={colors.textMuted} />
+              <Text style={styles.emptyTitle}>No notifications</Text>
+              <Text style={styles.emptyBody}>New updates will appear here.</Text>
+            </View>
+          )
+        }
         renderItem={({ item }) => (
           <TouchableOpacity style={[styles.card, !item.read && styles.cardUnread]} activeOpacity={0.8}>
             <View style={styles.iconWrap}>
@@ -39,7 +84,7 @@ export default function NotificationsCenterScreen() {
             <View style={styles.cardBody}>
               <Text style={styles.cardTitle}>{item.title}</Text>
               <Text style={styles.cardBodyText}>{item.body}</Text>
-              <Text style={styles.time}>{item.time}</Text>
+              <Text style={styles.time}>{relativeTime(item.createdAt)}</Text>
             </View>
           </TouchableOpacity>
         )}
@@ -50,7 +95,10 @@ export default function NotificationsCenterScreen() {
 
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: colors.background },
-  list: { padding: spacing.lg },
+  list: { padding: spacing.lg, flexGrow: 1 },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyTitle: { marginTop: spacing.md, fontSize: 18, fontWeight: '700', color: colors.textPrimary },
+  emptyBody: { marginTop: spacing.xs, fontSize: 14, color: colors.textSecondary },
   card: {
     flexDirection: 'row',
     backgroundColor: colors.surface,

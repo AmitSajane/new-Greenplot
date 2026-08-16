@@ -70,8 +70,15 @@ const toRow = (l: Partial<FarmListing>) => {
 };
 
 export const landsApi = {
+  // `lands` is publicly readable (RLS: select using (true)) — every farmer's
+  // and owner's app fetches this same table, so its size grows with the
+  // WHOLE app's total listings, not just one user's own. Capped so that
+  // growth doesn't turn into an ever-larger download for everyone; the
+  // owner's own "My Properties" view still works fine underneath this
+  // (client-side filtered from the same result) as long as no single owner
+  // exceeds the cap themselves, which real-world usage is nowhere near.
   async fetchLands(): Promise<FarmListing[]> {
-    const { data } = await db().from('lands').select('*').order('created_at', { ascending: false });
+    const { data } = await db().from('lands').select('*').order('created_at', { ascending: false }).limit(500);
     return (data || []).map(landToApp);
   },
 

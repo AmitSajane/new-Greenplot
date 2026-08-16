@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import { Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { colors, radius, spacing } from '../theme/tokens';
+import { colors, spacing } from '../theme/tokens';
 import { HubStackParamList } from '../navigation/HubStack';
 import { latestNews } from '../constants/hubMockData';
+import { GUIDES, SPOTLIGHT } from './hub/constants/communityData';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 
 type Props = NativeStackScreenProps<HubStackParamList, 'NewsDetail'>;
@@ -12,10 +13,35 @@ type Props = NativeStackScreenProps<HubStackParamList, 'NewsDetail'>;
 export default function NewsDetailScreen({ route, navigation }: Props) {
   const { id } = route.params;
 
-  const article = useMemo(
-    () => latestNews.find((item) => item.id === id),
-    [id],
-  );
+  const article = useMemo(() => {
+    const news = latestNews.find(item => item.id === id);
+    if (news) return news;
+
+    if (id === 'spotlight') {
+      return {
+        id,
+        title: SPOTLIGHT.title,
+        category: 'Farmer story',
+        timeAgo: SPOTLIGHT.location,
+        imageUrl: SPOTLIGHT.image,
+        summary: `${SPOTLIGHT.summary} — ${SPOTLIGHT.author}`,
+        content: SPOTLIGHT.content,
+      };
+    }
+
+    const guide = GUIDES.find(item => item.id === id);
+    return guide
+      ? {
+          id: guide.id,
+          title: guide.title,
+          category: 'Guide',
+          timeAgo: `${guide.readMins} min read`,
+          imageUrl: guide.image,
+          summary: guide.summary,
+          content: guide.content,
+        }
+      : undefined;
+  }, [id]);
 
   if (!article) {
     return (
@@ -23,7 +49,7 @@ export default function NewsDetailScreen({ route, navigation }: Props) {
         <View style={styles.emptyState}>
           <Text style={styles.emptyTitle}>Article not found</Text>
           <Text style={styles.emptySubtitle}>
-            The news item you are looking for is not available anymore.
+            This article is not available anymore.
           </Text>
         </View>
       </SafeAreaView>
@@ -125,8 +151,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-
-
-
 
 

@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Image, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { hubStyles as s } from '../../styles/hub.styles';
 import { useAuth } from '../../../../context/AuthContext';
@@ -177,6 +177,7 @@ export const PostComposerModal = React.memo(
     onSubmit,
   }: Props) => {
     const { user } = useAuth();
+    const insets = useSafeAreaInsets();
     const [sourceSheetVisible, setSourceSheetVisible] = useState(false);
     const postable = categories.filter(c => c.key !== 'all');
     const isBlog = draft.postType === 'blog';
@@ -213,8 +214,11 @@ export const PostComposerModal = React.memo(
 
     return (
       <>
-        <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-        <SafeAreaView style={s.safeAreaModal} edges={['top']}>
+        <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onClose}>
+        <SafeAreaView
+          style={[s.safeAreaModal, { paddingTop: insets.top }]}
+          edges={['left', 'right', 'bottom']}
+        >
           <View style={s.composerHeader}>
             <TouchableOpacity onPress={onClose} disabled={submitting} hitSlop={8}>
               <Ionicons name="arrow-back" size={20} color="#1C2E18" />
