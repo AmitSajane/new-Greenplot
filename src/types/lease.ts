@@ -37,6 +37,9 @@ export interface Agreement {
   ownerName: string;
   ownerSigned: boolean;
   farmerSigned: boolean;
+  /** Public URL of the farmer's drawn signature (set when they sign). */
+  farmerSignatureUrl?: string;
+  farmerSignedAt?: string;
   status: 'awaiting' | 'active' | 'cancelled';
   createdAt: string;
   startDate?: string;

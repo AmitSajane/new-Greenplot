@@ -36,6 +36,7 @@ const agreementToApp = (r: any): Agreement => ({
   typeName: r.type_name || '', termsSummary: r.terms_summary || '', fullTerms: r.full_terms || [], tenure: r.tenure || '', availableFrom: r.available_from || '',
   farmerId: r.farmer_id, farmerName: r.farmer_name || '', ownerId: r.owner_id, ownerName: r.owner_name || '',
   ownerSigned: !!r.owner_signed, farmerSigned: !!r.farmer_signed, status: r.status, startDate: r.start_date || undefined, createdAt: r.created_at,
+  farmerSignatureUrl: r.farmer_signature_url || undefined, farmerSignedAt: r.farmer_signed_at || undefined,
 });
 const leaseToApp = (r: any): ActiveLease => ({
   id: r.id, landId: r.land_id, landTitle: r.land_title || '', offerId: r.offer_id, typeId: r.type_id, typeName: r.type_name || '',
@@ -112,8 +113,9 @@ export const leaseApi = {
     });
   },
 
-  /** Farmer signs → if both signed, the agreement goes active + a lease row is created. */
-  async signAgreementAsFarmer(agreementId: string): Promise<void> {
+  /** Farmer signs (drawn signature already uploaded → `signatureUrl`) → if
+   *  both signed, the agreement goes active + a lease row is created. */
+  async signAgreementAsFarmer(agreementId: string, signatureUrl: string): Promise<void> {
     const c = db();
     const { data: ag } = await c.from('lease_agreements').select('*').eq('id', agreementId).single();
     if (!ag || ag.farmer_signed) return;
@@ -121,6 +123,8 @@ export const leaseApi = {
     const startDate = today();
     await c.from('lease_agreements').update({
       farmer_signed: true,
+      farmer_signature_url: signatureUrl,
+      farmer_signed_at: new Date().toISOString(),
       status: bothSigned ? 'active' : 'awaiting',
       start_date: bothSigned ? startDate : null,
     }).eq('id', agreementId);

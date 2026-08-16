@@ -42,10 +42,19 @@ function callNumber(phone: string) {
 export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const { agreementId } = route.params;
   const { user } = useAuth();
-  const { getAgreementById, activeLeases } = useLeases();
+  const { agreements, getAgreementById, activeLeases } = useLeases();
   const { getListingById } = useFarmListings();
-  const agreement = getAgreementById(agreementId);
   const activeLease = activeLeases.find((l) => l.id === agreementId);
+  // `agreementId` is sometimes actually an ActiveLease id (LeaseAgreementsScreen's
+  // "View Details" for a Leased card passes the lease row's own id, not the
+  // originating lease_agreements row's id — they're separate DB rows/UUIDs).
+  // When that direct lookup misses, recover the real Agreement via the
+  // offerId + farmerId both rows carry, so signature data still resolves.
+  const agreement =
+    getAgreementById(agreementId) ||
+    (activeLease
+      ? agreements.find((a) => a.offerId === activeLease.offerId && a.farmerId === activeLease.farmerId)
+      : undefined);
   const record = agreement || activeLease;
   // Only the tenant pays rent — the land owner reviews the schedule, they don't pay.
   const isFarmer = !!record && user?.id === record.farmerId;
@@ -219,6 +228,27 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
               <Icon name="phone" size={20} color={farmerProfile?.phone ? colors.primary : colors.textMuted} />
             </TouchableOpacity>
           </View>
+
+          {!!agreement?.farmerSignatureUrl && (
+            <View style={styles.signatureBlock}>
+              <Text style={styles.signatureLabel}>Farmer's signature</Text>
+              <Image
+                source={{ uri: agreement.farmerSignatureUrl }}
+                style={styles.signatureImg}
+                resizeMode="contain"
+              />
+              {!!agreement.farmerSignedAt && (
+                <Text style={styles.signatureDate}>
+                  Signed{' '}
+                  {new Date(agreement.farmerSignedAt).toLocaleDateString('en-IN', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Payment Schedule Section */}
@@ -442,6 +472,28 @@ const styles = StyleSheet.create({
   },
   phoneButton: {
     padding: spacing.sm,
+  },
+  signatureBlock: {
+    marginTop: spacing.xs,
+    padding: spacing.md,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+  },
+  signatureLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.textSecondary,
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
+  signatureImg: {
+    width: '100%',
+    height: 60,
+  },
+  signatureDate: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: spacing.xs,
   },
   documentsRow: {
     flexDirection: 'row',

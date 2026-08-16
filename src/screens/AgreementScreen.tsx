@@ -1,5 +1,5 @@
-import React, { useCallback } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -7,20 +7,30 @@ import { useLeases } from '../context/LeaseContext';
 import { useAuth } from '../context/AuthContext';
 import { LEASE_TYPE_MAP } from '../constants/leaseTypes';
 import { colors } from '../theme/tokens';
+import { supabase } from '../services/supabase';
+import { storageApi } from '../services/storageApi';
+import { SignaturePadModal } from '../components/organisms/SignaturePadModal';
 
 type ParamList = { AgreementSign: { agreementId: string } };
 
 const G = colors.deepGreen;
 
-function SignatureBlock({ name, role, signed }: { name: string; role: string; signed: boolean }) {
+function SignatureBlock({ name, role, signed, signatureUrl }: { name: string; role: string; signed: boolean; signatureUrl?: string }) {
   return (
     <View style={[styles.signBox, signed && styles.signBoxDone]}>
       <Text style={styles.signRole}>{role}</Text>
       {signed ? (
-        <View style={styles.signedRow}>
-          <Ionicons name="checkmark-circle" size={18} color={G.g3} />
-          <Text style={styles.signedName}>{name}</Text>
-        </View>
+        signatureUrl ? (
+          <View>
+            <Image source={{ uri: signatureUrl }} style={styles.signatureImg} resizeMode="contain" />
+            <Text style={styles.signedName}>{name}</Text>
+          </View>
+        ) : (
+          <View style={styles.signedRow}>
+            <Ionicons name="checkmark-circle" size={18} color={G.g3} />
+            <Text style={styles.signedName}>{name}</Text>
+          </View>
+        )
       ) : (
         <Text style={styles.pendingName}>Awaiting signature</Text>
       )}
@@ -37,21 +47,51 @@ export default function AgreementScreen() {
   const agreement = getAgreementById(route.params.agreementId);
   const isOwnerViewer = (user as { role?: string })?.role === 'owner';
 
+  const [padOpen, setPadOpen] = useState(false);
+  const [signing, setSigning] = useState(false);
+
   const onSign = useCallback(() => {
     if (!agreement) return;
-    Alert.alert('Sign this agreement?', 'By signing, you accept the lease terms shown above.', [
+    Alert.alert('Sign this agreement?', 'By signing, you draw your signature to accept the lease terms shown above.', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Accept & Sign',
-        onPress: () => {
-          signAgreementAsFarmer(agreement.id);
-          Alert.alert('Lease booked ✓', 'Both parties have signed. Your lease is now active!', [
-            { text: 'View my lease', onPress: () => navigation.navigate('MyActiveLeases') },
-          ]);
-        },
-      },
+      { text: 'Continue', onPress: () => setPadOpen(true) },
     ]);
-  }, [agreement, signAgreementAsFarmer, navigation]);
+  }, [agreement]);
+
+  const closePad = useCallback(() => {
+    if (signing) return; // don't let a stray tap dismiss mid-upload
+    setPadOpen(false);
+  }, [signing]);
+
+  // Farmer finished drawing → `dataUri` is a full "data:image/png;base64,…"
+  // from the signature pad. Upload it (Supabase mode) or keep it as-is (mock
+  // mode, nowhere to upload to) then record the signature on the agreement.
+  const handleSignatureCaptured = useCallback(
+    async (dataUri: string) => {
+      if (!agreement) return;
+      setSigning(true);
+      try {
+        let signatureUrl = dataUri;
+        if (supabase) {
+          const base64 = dataUri.replace(/^data:image\/\w+;base64,/, '');
+          const result = await storageApi.uploadBase64Detailed(base64, 'image/png', user?.id || '', 'signatures');
+          if ('error' in result) {
+            Alert.alert('Could not save signature', result.error);
+            return;
+          }
+          signatureUrl = result.url;
+        }
+        signAgreementAsFarmer(agreement.id, signatureUrl);
+        setPadOpen(false);
+        Alert.alert('Lease booked ✓', 'Both parties have signed. Your lease is now active!', [
+          { text: 'View my lease', onPress: () => navigation.navigate('MyActiveLeases') },
+        ]);
+      } finally {
+        setSigning(false);
+      }
+    },
+    [agreement, signAgreementAsFarmer, navigation, user?.id],
+  );
 
   if (!agreement) {
     return (
@@ -123,7 +163,12 @@ export default function AgreementScreen() {
         <Text style={styles.sectionLabel}>Signatures</Text>
         <View style={styles.signRow}>
           <SignatureBlock name={agreement.ownerName} role="Owner" signed={agreement.ownerSigned} />
-          <SignatureBlock name={agreement.farmerName} role="Farmer" signed={agreement.farmerSigned} />
+          <SignatureBlock
+            name={agreement.farmerName}
+            role="Farmer"
+            signed={agreement.farmerSigned}
+            signatureUrl={agreement.farmerSignatureUrl}
+          />
         </View>
 
         {/* Action */}
@@ -149,6 +194,14 @@ export default function AgreementScreen() {
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      <SignaturePadModal
+        visible={padOpen}
+        title={`Sign for ${agreement.landTitle}`}
+        saving={signing}
+        onCancel={closePad}
+        onSave={handleSignatureCaptured}
+      />
     </SafeAreaView>
   );
 }
@@ -180,6 +233,7 @@ const styles = StyleSheet.create({
   signRole: { fontSize: 10, fontWeight: '700', color: G.n4, textTransform: 'uppercase', marginBottom: 6 },
   signedRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   signedName: { fontSize: 13, fontWeight: '800', color: G.g2 },
+  signatureImg: { width: '100%', height: 40, marginBottom: 4 },
   pendingName: { fontSize: 12, color: G.a3, fontWeight: '600' },
   signBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: G.g2, borderRadius: 12, paddingVertical: 15, marginTop: 16 },
   signBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },

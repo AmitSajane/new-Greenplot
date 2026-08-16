@@ -39,7 +39,9 @@ interface LeaseContextType {
 
   agreements: Agreement[];
   getAgreementById: (id: string) => Agreement | undefined;
-  signAgreementAsFarmer: (agreementId: string) => void;
+  /** `signatureUrl` is the farmer's drawn signature — already uploaded (Supabase
+   *  mode) or a local data URI (mock mode) — required, no signing without one. */
+  signAgreementAsFarmer: (agreementId: string, signatureUrl: string) => void;
 
   activeLeases: ActiveLease[];
   /** True when backed by Supabase (live, multi-device). */
@@ -183,15 +185,15 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
   const getAgreementById = useCallback((id: string) => agreements.find(a => a.id === id), [agreements]);
 
   const signAgreementAsFarmer = useCallback(
-    (agreementId: string) => {
+    (agreementId: string, signatureUrl: string) => {
       if (supabase) {
-        leaseApi.signAgreementAsFarmer(agreementId).then(refetch).catch(() => {});
+        leaseApi.signAgreementAsFarmer(agreementId, signatureUrl).then(refetch).catch(() => {});
         return;
       }
       setAgreements(prev =>
         prev.map(a => {
           if (a.id !== agreementId || a.farmerSigned) return a;
-          const signed = { ...a, farmerSigned: true };
+          const signed = { ...a, farmerSigned: true, farmerSignatureUrl: signatureUrl, farmerSignedAt: nowIso() };
           if (signed.ownerSigned && signed.farmerSigned) {
             signed.status = 'active';
             signed.startDate = today();
