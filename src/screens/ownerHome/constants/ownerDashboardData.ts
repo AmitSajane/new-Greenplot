@@ -1,23 +1,5 @@
-/**
- * Mock dashboard data for the redesigned Owner Home screen.
- * Headline finance numbers are mock (no backend yet); the property snapshot is
- * built from the real FarmListings so every card opens a working detail screen.
- */
+/** Dashboard data helpers for the redesigned Owner Home screen. */
 import type { FarmListing } from '../../../context/FarmListingsContext';
-
-export const OWNER_PORTFOLIO = {
-  valueDisplay: '₹48.5 L',
-  changePct: 8.2,
-};
-
-export const OWNER_REVENUE = {
-  thisMonthDisplay: '₹1,24,500',
-  changePct: 12,
-  /** 6-week trend used for the sparkline (relative heights). */
-  sparkline: [40, 55, 48, 70, 62, 90],
-  payoutAmountDisplay: '₹45,000',
-  payoutDate: 'Jun 15',
-};
 
 // pendingDues* kept for reference — the Pending dues tile is hidden until a
 // real payments-tracking flow exists (leases.next_payment is never populated
@@ -87,7 +69,22 @@ export function parseAcres(value: string): number {
 }
 
 /** Parse "₹10,000" / "10000" style strings to a number. */
-export function parsePrice(value: string): number {
-  const n = parseFloat(String(value).replace(/[^\d.]/g, ''));
-  return isNaN(n) ? 0 : n;
+export function parsePrice(value?: string): number {
+  const normalized = String(value ?? '').trim().toLowerCase().replace(/,/g, '');
+  const n = parseFloat(normalized.replace(/[^\d.]/g, ''));
+  if (isNaN(n)) return 0;
+  if (/\b(?:crore|cr)\b/.test(normalized)) return n * 10_000_000;
+  if (/\b(?:lakh|lac|l)\b/.test(normalized)) return n * 100_000;
+  if (/\b(?:thousand|k)\b/.test(normalized)) return n * 1_000;
+  return n;
+}
+
+export function formatRupees(value: number): string {
+  return `₹${Math.round(value).toLocaleString('en-IN')}`;
+}
+
+export function formatCompactRupees(value: number): string {
+  if (value >= 10_000_000) return `₹${Number((value / 10_000_000).toFixed(1))} Cr`;
+  if (value >= 100_000) return `₹${Number((value / 100_000).toFixed(1))} L`;
+  return formatRupees(value);
 }

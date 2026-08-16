@@ -55,6 +55,9 @@ export interface ActiveLease {
   ownerId: string;
   ownerName: string;
   startDate: string;
+  /** Scheduled rent and due date from the leases table (when configured). */
+  rent?: string;
+  nextPayment?: string;
   status: 'active';
   createdAt: string;
 }

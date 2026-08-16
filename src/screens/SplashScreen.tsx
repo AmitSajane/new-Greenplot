@@ -3,20 +3,24 @@ import { View, Text, StyleSheet } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { AuthStackParamList } from '../navigation/AuthStack';
 
-type Props = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
+type NavigationProps = NativeStackScreenProps<AuthStackParamList, 'Splash'>;
+type Props = Partial<Pick<NavigationProps, 'navigation'>> & {
+  /** AppNavigator owns routing when the splash is used as the global launch gate. */
+  autoNavigate?: boolean;
+};
 
-export default function SplashScreen({ navigation }: Props) {
+export default function SplashScreen({ navigation, autoNavigate = true }: Props) {
   useEffect(() => {
+    if (!autoNavigate || !navigation) return;
     const t = setTimeout(() => {
-      // Optional: go to Language selection first, then Welcome. For now direct to Welcome.
-      navigation.replace('LanguageSelection');
+      navigation.replace('ProfileSetup');
     }, 1200);
     return () => clearTimeout(t);
-  }, [navigation]);
+  }, [autoNavigate, navigation]);
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>GreenPlot</Text>
+      <Text style={styles.title}>AgriArambh</Text>
       <Text style={styles.subtitle}>Loading…</Text>
     </View>
   );

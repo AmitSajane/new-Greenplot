@@ -1,17 +1,15 @@
-import React from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
-import AuthStack from './AuthStack';
 import FarmerTabNavigator from './FarmerTabNavigator';
 import OwnerTabNavigator from './OwnerTabNavigator';
 import ProfileOnboardingScreen from '../screens/ProfileOnboardingScreen';
+import SplashScreen from '../screens/SplashScreen';
 import { useAuth } from '../context/AuthContext';
 
 export type RootStackParamList = {
   LanguageSelection: undefined;
-  Auth: undefined;
   Onboarding: undefined;
   Main: undefined;
 };
@@ -33,34 +31,27 @@ function MainNavigator() {
 
 export default function AppNavigator() {
   const { isAuthenticated, realAuth, authReady } = useAuth();
+  const [splashComplete, setSplashComplete] = useState(false);
 
-  if (realAuth && !authReady) {
-    // Saved session is still being restored — wait instead of treating the
-    // user as logged out, or an already-authenticated farmer/owner would
-    // briefly (or fully) see Onboarding again on every app reopen.
-    return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator size="large" />
-      </View>
-    );
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashComplete(true), 1200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Keep the branded splash visible for at least 1.2 seconds and, in live
+  // mode, until the saved Supabase session has been restored. This prevents
+  // logged-in users from briefly seeing onboarding during startup.
+  if (!splashComplete || (realAuth && !authReady)) {
+    return <SplashScreen autoNavigate={false} />;
   }
 
   return (
     <NavigationContainer>
       <RootStack.Navigator screenOptions={{ headerShown: false }}>
-        {realAuth ? (
-          // Live mode (Supabase): real login gate, then the app.
-          isAuthenticated ? (
-            <RootStack.Screen name="Main" component={MainNavigator} />
-          ) : (
-            <RootStack.Screen name="Onboarding" component={ProfileOnboardingScreen} />
-          )
+        {isAuthenticated ? (
+          <RootStack.Screen name="Main" component={MainNavigator} />
         ) : (
-          // Mock mode (no backend): existing onboarding/profile flow.
-          <>
-            <RootStack.Screen name="Auth" component={AuthStack} />
-            <RootStack.Screen name="Main" component={MainNavigator} />
-          </>
+          <RootStack.Screen name="Onboarding" component={ProfileOnboardingScreen} />
         )}
       </RootStack.Navigator>
     </NavigationContainer>

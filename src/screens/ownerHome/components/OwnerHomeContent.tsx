@@ -41,10 +41,6 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
             <Text style={s.portLabel}>Total portfolio value</Text>
             <Text style={s.portVal}>{vm.portfolio.valueDisplay}</Text>
-            <View style={s.portChip}>
-              <Ionicons name="trending-up" size={12} color="#CFEFDB" />
-              <Text style={s.portChipText}>+{vm.portfolio.changePct}% this year</Text>
-            </View>
             <View style={s.portStats}>
               {[
                 ['Lands', vm.portfolio.lands],
@@ -75,27 +71,14 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
               <View>
                 <Text style={s.revLabel}>Revenue · this month</Text>
                 <Text style={s.revVal}>{vm.revenue.thisMonthDisplay}</Text>
-                <Text style={s.revChip}>▲ {vm.revenue.changePct}% vs last month</Text>
-              </View>
-              <View style={s.spark}>
-                {vm.revenue.sparkline.map((h, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      s.sparkBar,
-                      { height: `${h}%` },
-                      i === vm.revenue.sparkline.length - 1 && s.sparkBarHi,
-                    ]}
-                  />
-                ))}
               </View>
             </TouchableOpacity>
             <TouchableOpacity style={s.payoutRow} onPress={vm.onPayoutPress} activeOpacity={0.8}>
               <Ionicons name="calendar" size={16} color="#B87214" />
               <Text style={s.payoutText}>
-                Next payout{' '}
-                <Text style={{ fontWeight: '800', color: '#0D1509' }}>{vm.revenue.payoutAmountDisplay}</Text>
-                {' '}· due {vm.revenue.payoutDate}
+                {vm.revenue.payoutAmountDisplay && vm.revenue.payoutDate ? (
+                  <>Next payout{' '}<Text style={{ fontWeight: '800', color: '#0D1509' }}>{vm.revenue.payoutAmountDisplay}</Text>{' '}· due {vm.revenue.payoutDate}</>
+                ) : 'No payout scheduled'}
               </Text>
               <Text style={s.payoutGo}>Details ›</Text>
             </TouchableOpacity>

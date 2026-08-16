@@ -10,9 +10,9 @@ import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
 import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
 import {
-  OWNER_PORTFOLIO,
-  OWNER_REVENUE,
   buildPropertySnapshots,
+  formatCompactRupees,
+  formatRupees,
   parseAcres,
   parsePrice,
   type PropertySnapshot,
@@ -52,7 +52,7 @@ export function useOwnerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { ownerListings } = useFarmListings();
-  const { requests } = useLeases();
+  const { requests, activeLeases } = useLeases();
   const pendingLeaseRequests = requests.filter(r => r.status === 'pending').length;
 
   // Live agriculture news + in-app readers (shared with Farmer Home).
@@ -100,15 +100,40 @@ export function useOwnerHome() {
     // fake ids, so it silently reads every real property as vacant.
     const leased = ownerListings.filter(l => l.status === 'leased').length;
     const acres = ownerListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
+    // The land model has no appraisal field. lastYearEarnings is the only
+    // persisted monetary value that represents each property's contribution.
+    const totalValue = ownerListings.reduce((sum, l) => sum + parsePrice(l.lastYearEarnings), 0);
     return {
-      valueDisplay: OWNER_PORTFOLIO.valueDisplay,
-      changePct: OWNER_PORTFOLIO.changePct,
+      valueDisplay: formatCompactRupees(totalValue),
       lands,
       leased,
       vacant: lands - leased,
       acresDisplay: acres % 1 === 0 ? String(acres) : acres.toFixed(1),
     };
   }, [properties, ownerListings]);
+
+  const revenue = useMemo(() => {
+    // pricePerYear is stored per listing. Monthly revenue is its annual value
+    // divided by 12, limited to lands currently marked as leased.
+    const annualRent = ownerListings
+      .filter(l => l.status === 'leased')
+      .reduce((sum, l) => sum + parsePrice(l.pricePerYear), 0);
+
+    // A payout is only shown when an active lease has both backend fields.
+    const next = activeLeases
+      .filter(l => l.ownerId === user?.id && l.rent && l.nextPayment)
+      .map(l => ({ ...l, dueAt: new Date(`${l.nextPayment}T00:00:00`).getTime() }))
+      .filter(l => Number.isFinite(l.dueAt) && l.dueAt >= new Date().setHours(0, 0, 0, 0))
+      .sort((a, b) => a.dueAt - b.dueAt)[0];
+
+    return {
+      thisMonthDisplay: formatRupees(annualRent / 12),
+      payoutAmountDisplay: next ? formatRupees(parsePrice(next.rent)) : null,
+      payoutDate: next
+        ? new Date(next.dueAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
+        : null,
+    };
+  }, [activeLeases, ownerListings, user?.id]);
 
   const metrics = useMemo(() => {
     const occupancyPct = portfolio.lands ? Math.round((portfolio.leased / portfolio.lands) * 100) : 0;
@@ -202,7 +227,7 @@ export function useOwnerHome() {
       // { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => navigation.navigate('OwnerWorkReport') },
       { key: 'work', label: 'Work report', icon: 'document-text', tone: 'purple', onPress: () => { Alert.alert("Work Report is coming soon!"); } },
     ],
-    [navigation, goTab],
+    [navigation],
   );
 
   const activities: ActivityItem[] = useMemo(
@@ -243,7 +268,7 @@ export function useOwnerHome() {
     locationLabel: user?.location?.trim() || '',
     hasNotifications: true,
     portfolio,
-    revenue: OWNER_REVENUE,
+    revenue,
     metrics,
     actionItems,
     properties,
