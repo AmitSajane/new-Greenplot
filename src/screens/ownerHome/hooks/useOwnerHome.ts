@@ -89,15 +89,12 @@ export function useOwnerHome() {
   );
 
   const properties: PropertySnapshot[] = useMemo(
-    () => buildPropertySnapshots(ownerListings),
-    [ownerListings],
+    () => buildPropertySnapshots(ownerListings, activeLeases),
+    [ownerListings, activeLeases],
   );
 
   const portfolio = useMemo(() => {
     const lands = properties.length;
-    // Real lands.status, not properties[].status — buildPropertySnapshots derives
-    // that from a hardcoded demo-id lookup (PROPERTY_AUGMENT) that only covers 3
-    // fake ids, so it silently reads every real property as vacant.
     const leased = ownerListings.filter(l => l.status === 'leased').length;
     const acres = ownerListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
     // The land model has no appraisal field. lastYearEarnings is the only

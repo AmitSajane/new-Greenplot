@@ -1,5 +1,6 @@
 /** Dashboard data helpers for the redesigned Owner Home screen. */
 import type { FarmListing } from '../../../context/FarmListingsContext';
+import type { ActiveLease } from '../../../types/lease';
 
 // pendingDues* kept for reference — the Pending dues tile is hidden until a
 // real payments-tracking flow exists (leases.next_payment is never populated
@@ -12,18 +13,6 @@ export const OWNER_METRICS = {
 
 export type PropertyStatus = 'leased' | 'vacant';
 
-/** Per-listing demo lease info, keyed by FarmListing id. */
-export const PROPERTY_AUGMENT: Record<
-  string,
-  { status: PropertyStatus; tenant?: string; emoji: string; nextPayment?: string; views?: number }
-> = {
-  'initial-1': { status: 'leased', tenant: 'Suresh M.', emoji: '🌾', nextPayment: 'Jun 15' },
-  'initial-3': { status: 'leased', tenant: 'Anil K.', emoji: '🌱', nextPayment: 'Jul 02' },
-  'initial-2': { status: 'vacant', emoji: '🟫', views: 12 },
-};
-
-const DEFAULT_AUGMENT = { status: 'vacant' as PropertyStatus, emoji: '🟩', views: 5 };
-
 export interface PropertySnapshot {
   id: string;
   name: string;
@@ -31,32 +20,37 @@ export interface PropertySnapshot {
   status: PropertyStatus;
   meta: string;
   rentDisplay?: string;
-  nextPayment?: string;
+  /** Real lease start date (from the matching ActiveLease) — only set when leased. */
+  since?: string;
   ctaLabel?: string;
 }
 
-/** Build property cards from real listings so taps resolve in PropertyDetails. */
-export function buildPropertySnapshots(listings: FarmListing[]): PropertySnapshot[] {
+/** Build property cards from real listings + real active leases, so taps resolve
+ *  in PropertyDetails AND the status/tenant/rent shown actually matches the
+ *  listing's real `status` — previously this read a hardcoded demo-id lookup
+ *  table that only covered 3 fake seed ids, so every real property silently
+ *  showed as "vacant" with a "List now" CTA no matter its true status. */
+export function buildPropertySnapshots(listings: FarmListing[], activeLeases: ActiveLease[]): PropertySnapshot[] {
   return listings.map(l => {
-    const aug = PROPERTY_AUGMENT[l.id] ?? DEFAULT_AUGMENT;
     const acres = l.acresLabel || `${l.acres} acres`;
-    if (aug.status === 'leased') {
+    if (l.status === 'leased') {
+      const lease = activeLeases.find(al => al.landId === l.id);
       return {
         id: l.id,
         name: l.title,
-        emoji: aug.emoji,
+        emoji: '🌾',
         status: 'leased',
-        meta: `${acres} · ${l.lastYearCrop ?? l.currentCrop ?? 'Crop'} · Tenant: ${aug.tenant}`,
+        meta: `${acres} · ${l.lastYearCrop ?? l.currentCrop ?? 'Crop'}${lease ? ` · Tenant: ${lease.farmerName}` : ''}`,
         rentDisplay: `${l.pricePerYear}/yr`,
-        nextPayment: aug.nextPayment,
+        since: lease?.startDate,
       };
     }
     return {
       id: l.id,
       name: l.title,
-      emoji: aug.emoji,
+      emoji: '🟩',
       status: 'vacant',
-      meta: `${acres} · ${aug.views ?? 0} views this week`,
+      meta: `${acres} · Available to lease`,
       ctaLabel: 'List now',
     };
   });

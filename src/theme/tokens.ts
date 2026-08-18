@@ -16,6 +16,7 @@ export const colors = {
   softOrange: '#FEF1E5',
   softBlue: '#E7F0FF',
   skyBlue: '#87CEEB',
+  map: '#168C7A',
 
   // Secondary palette used by the lease/agreement screens (AgreementScreen,
   // AddLeaseOfferScreen, LeaseRequestsScreen, SupabaseAuthScreen,

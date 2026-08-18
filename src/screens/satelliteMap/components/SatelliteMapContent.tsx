@@ -1,9 +1,11 @@
 import React from 'react';
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Ionicons from 'react-native-vector-icons/Ionicons';
 import { MapFloatingButton } from '../../../components/satelliteMap';
 import { SatelliteMapViewModel } from '../hooks/useSatelliteMapScreen';
 import { satelliteMapStyles as styles } from '../styles/satelliteMap.styles';
+import { colors } from '../../../theme/tokens';
 import { SatelliteMapHeader } from './SatelliteMapHeader';
 import { SatelliteMapCanvas } from './SatelliteMapCanvas';
 import { SatelliteMapSearchBar } from './SatelliteMapSearchBar';
@@ -17,6 +19,12 @@ export const SatelliteMapContent: React.FC<SatelliteMapViewModel> = (vm) => (
       onBack={vm.onBack}
       onToggleLayerPanel={vm.onToggleLayerPanel}
     />
+    {!!vm.locationNotice && (
+      <View style={styles.locationNotice}>
+        <Ionicons name="information-circle" size={16} color={colors.warning} />
+        <Text style={styles.locationNoticeText}>{vm.locationNotice}</Text>
+      </View>
+    )}
     <View style={styles.mapContainer}>
       <SatelliteMapCanvas
         isLoading={vm.isLoading}

@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   viewMapButton: {
-    backgroundColor: colors.secondary,
+    backgroundColor: colors.map,
     borderRadius: radius.md,
     paddingVertical: spacing.lg,
     flexDirection: 'row',

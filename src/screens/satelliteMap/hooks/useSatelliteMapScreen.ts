@@ -7,7 +7,7 @@ import { useSatelliteMap, MOCK_TIMELAPSE_DATES } from '../../../context/Satellit
 import { calculatePolygonAreaAcres, formatAcresGuntas, LngLat } from '../../../utils/geo';
 import { calculatePolygonCentroid, estimateZoomForPolygon } from '../../../utils/geo/polygonCentroid';
 import { getCurrentCoords } from '../../../utils/geo/location';
-import { forwardGeocodeMultiple, GeoPlace, reverseGeocodeDetailed } from '../../../utils/geo/geocoding';
+import { forwardGeocode, forwardGeocodeMultiple, GeoPlace, reverseGeocodeDetailed } from '../../../utils/geo/geocoding';
 import { getNDVITileUrl } from '../../../services/satelliteMapService';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
 
@@ -48,6 +48,10 @@ export function useSatelliteMapScreen() {
   } = useSatelliteMap();
 
   const [isLoading, setIsLoading] = useState(true);
+  // Set when an existing farm has no drawn boundary yet — tells the viewer the
+  // map is centered on the land's entered village, not an exact plotted farm
+  // (and, if even that can't be resolved, that it's not the farm's location at all).
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const [showLayerPanel, setShowLayerPanel] = useState(true);
   const [drawMode, setDrawMode] = useState(false);
   const [drawnPoints, setDrawnPoints] = useState<LngLat[]>([]);
@@ -133,28 +137,48 @@ export function useSatelliteMapScreen() {
   useEffect(() => {
     const initialize = async () => {
       setIsLoading(true);
+      setLocationNotice(null);
       await loadPlotData();
       // If navigated with a farmId, load its GeoJSON and focus map
       let focusedOnPlot = false;
-      if (farmIdFromRoute) {
-        const listing = getListingById(farmIdFromRoute);
-        if (listing?.plotGeoJSON) {
-          setPlotGeoJSON(listing.plotGeoJSON);
-          // Determine centroid and appropriate zoom
-          const firstFeature = listing.plotGeoJSON.features?.[0];
-          const coords = firstFeature?.geometry?.coordinates?.[0] || [];
-          if (Array.isArray(coords) && coords.length > 0) {
-            const centroid = calculatePolygonCentroid(coords as any);
-            setMapCenter(centroid);
-            const zoom = estimateZoomForPolygon(coords as any);
-            setZoomLevel(zoom);
-            focusedOnPlot = true;
-          }
+      const listing = farmIdFromRoute ? getListingById(farmIdFromRoute) : undefined;
+      if (listing?.plotGeoJSON) {
+        setPlotGeoJSON(listing.plotGeoJSON);
+        // Determine centroid and appropriate zoom
+        const firstFeature = listing.plotGeoJSON.features?.[0];
+        const coords = firstFeature?.geometry?.coordinates?.[0] || [];
+        if (Array.isArray(coords) && coords.length > 0) {
+          const centroid = calculatePolygonCentroid(coords as any);
+          setMapCenter(centroid);
+          const zoom = estimateZoomForPolygon(coords as any);
+          setZoomLevel(zoom);
+          focusedOnPlot = true;
         }
       }
       if (!isMountedRef.current) return;
-      // New-farm flow (no existing plot) → center on the farmer's current GPS.
-      if (!focusedOnPlot) await fetchUserLocation();
+
+      if (!focusedOnPlot && farmIdFromRoute) {
+        // Viewing an existing land with no drawn boundary — center on the
+        // village/district the owner entered instead of the viewer's own GPS,
+        // which has nothing to do with where this land actually is.
+        const addressQuery = listing ? [listing.location, listing.district, listing.state].filter(Boolean).join(', ') : '';
+        const place = addressQuery ? await forwardGeocode(addressQuery).catch(() => null) : null;
+        if (!isMountedRef.current) return;
+        if (place) {
+          setMapCenter([place.lon, place.lat]);
+          setZoomLevel(13); // village-level, not the tight "your own field" zoom
+          setLocationNotice(
+            `No exact boundary added yet — showing an approximate location for ${listing!.location}${listing!.district ? `, ${listing!.district}` : ''}.`,
+          );
+        } else {
+          await fetchUserLocation();
+          if (!isMountedRef.current) return;
+          setLocationNotice("This land's location isn't available yet — showing your current location instead.");
+        }
+      } else if (!focusedOnPlot) {
+        // New-farm flow (no farmId at all) → center on the farmer's current GPS.
+        await fetchUserLocation();
+      }
       if (!isMountedRef.current) return;
       setIsLoading(false);
     };
@@ -276,6 +300,7 @@ export function useSatelliteMapScreen() {
 
   return {
     isLoading,
+    locationNotice,
     showLayerPanel,
     drawMode,
     drawnPoints,

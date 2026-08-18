@@ -195,7 +195,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
                   {p.status === 'leased' ? (
                     <>
                       <Text style={s.propRent}>{p.rentDisplay}</Text>
-                      <Text style={s.propNext}>Next: {p.nextPayment}</Text>
+                      {!!p.since && <Text style={s.propNext}>Since {p.since}</Text>}
                     </>
                   ) : (
                     <Text style={s.propCta}>{p.ctaLabel} ›</Text>
