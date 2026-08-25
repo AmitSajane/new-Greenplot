@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -159,11 +159,18 @@ export default function AddFarmScreen() {
   const editListingId: string | undefined = route?.params?.editListingId;
   const isEditMode = !!editListingId;
 
-  // Edit mode: pre-fill every field from the existing listing.
+  // Edit mode: pre-fill every field from the existing listing. `listings` can
+  // still be empty the instant this screen mounts (fetched async), so this
+  // must re-run once the data arrives rather than only on mount — guarded by
+  // a ref so it prefills exactly once per editListingId and never re-fires
+  // later and clobbers fields the farmer is actively editing.
+  const prefilledForRef = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!editListingId) return;
+    if (prefilledForRef.current === editListingId) return;
     const listing = getListingById(editListingId) as any;
-    if (!listing) return;
+    if (!listing) return; // listings not loaded yet — effect re-runs when it changes
+    prefilledForRef.current = editListingId;
     setTitle(listing.title || '');
     setAcres(listing.acres || '');
     setSoilType(listing.soilType || '');
@@ -192,8 +199,7 @@ export default function AddFarmScreen() {
       );
     }
     if (listing.verified) setFraudBadge('verified');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editListingId]);
+  }, [editListingId, getListingById]);
 
   // Hobli/Village (optional) still come from the older curated dataset.
   const statesData = locationHierarchy.states;
@@ -474,11 +480,15 @@ export default function AddFarmScreen() {
 
   const newId = () => `m-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+  // Total attempts (first try + auto-retries) before a photo is flagged as failed.
+  const MAX_UPLOAD_ATTEMPTS = 3;
+
   // Runs (or re-runs) the actual upload for a media item already in state.
   // The very first attempt right after app start can race the auth session
   // still being restored, which the storage policy correctly rejects — so on
-  // a first failure we silently retry once (session is ready by then) before
-  // ever showing the user an error.
+  // a failure we silently retry a few times, with backoff, before ever
+  // showing the user an error (a single 1.2s retry wasn't enough slack for
+  // slower networks / a slower session restore).
   const runUpload = useCallback(
     (
       id: string,
@@ -486,7 +496,7 @@ export default function AddFarmScreen() {
       uri: string,
       base64: string | undefined,
       mime: string | undefined,
-      isAutoRetry = false,
+      attempt = 0,
     ) => {
       const upload =
         kind === 'photo' && base64
@@ -500,8 +510,8 @@ export default function AddFarmScreen() {
           );
           return;
         }
-        if (!isAutoRetry) {
-          setTimeout(() => runUpload(id, kind, uri, base64, mime, true), 1200);
+        if (attempt < MAX_UPLOAD_ATTEMPTS - 1) {
+          setTimeout(() => runUpload(id, kind, uri, base64, mime, attempt + 1), 1200 * (attempt + 1));
           return;
         }
         setMediaItems(prev => prev.map(m => (m.id === id ? { ...m, uploading: false, error: true } : m)));

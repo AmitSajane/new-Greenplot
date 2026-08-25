@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -15,10 +15,10 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../../theme/tokens';
 import { workJobApi } from '../services/workJobApi';
-import { MOCK_CROP_CYCLES } from '../mockData/cropCycles';
 import { WorkType } from '../types';
 import { requirePermission } from '../../../middleware/permissions/checkRolePermission';
 import { useAuth } from '../../../context/AuthContext';
+import { useCropCycles } from '../../../context/CropCycleContext';
 
 const WORK_TYPES: WorkType[] = [
   'Harvesting',
@@ -44,6 +44,11 @@ export default function CreateWorkScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<CreateWorkRoute>();
   const { user } = useAuth();
+  const { cropCycles } = useCropCycles();
+  const myCropCycles = useMemo(
+    () => cropCycles.filter((c) => c.farmerId === user?.id && c.status === 'active'),
+    [cropCycles, user?.id],
+  );
   const cropCycleId = route.params?.cropCycleId;
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -93,7 +98,7 @@ export default function CreateWorkScreen() {
     if (!validate()) return;
     setLoading(true);
     try {
-      const crop = MOCK_CROP_CYCLES.find((c) => c.cropCycleId === form.cropCycleId);
+      const crop = myCropCycles.find((c) => c.cropCycleId === form.cropCycleId);
       if (!crop) {
         Alert.alert('Error', 'Selected crop/land not found.');
         return;
@@ -101,7 +106,7 @@ export default function CreateWorkScreen() {
       await workJobApi.createJob({
         cropCycleId: form.cropCycleId,
         landId: crop.landId,
-        farmerId: 'F001',
+        farmerId: user?.id || '',
         workType: form.workType as WorkType,
         description: form.description.trim(),
         workersNeeded: parseInt(form.workersNeeded, 10),
@@ -151,22 +156,26 @@ export default function CreateWorkScreen() {
         {errors.workType ? <Text style={styles.error}>{errors.workType}</Text> : null}
 
         <Text style={styles.label}>Select Crop / Land *</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
-          {MOCK_CROP_CYCLES.map((c) => (
-            <TouchableOpacity
-              key={c.cropCycleId}
-              style={[styles.chip, form.cropCycleId === c.cropCycleId && styles.chipSelected]}
-              onPress={() => update('cropCycleId', c.cropCycleId)}
-            >
-              <Text
-                style={[styles.chipText, form.cropCycleId === c.cropCycleId && styles.chipTextSelected]}
-                numberOfLines={1}
+        {myCropCycles.length > 0 ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroll}>
+            {myCropCycles.map((c) => (
+              <TouchableOpacity
+                key={c.cropCycleId}
+                style={[styles.chip, form.cropCycleId === c.cropCycleId && styles.chipSelected]}
+                onPress={() => update('cropCycleId', c.cropCycleId)}
               >
-                {c.plotName} ({c.cropName})
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  style={[styles.chipText, form.cropCycleId === c.cropCycleId && styles.chipTextSelected]}
+                  numberOfLines={1}
+                >
+                  {c.plotName} ({c.cropName})
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.hint}>No active crops yet — add one from My Crops & Plots first.</Text>
+        )}
         {errors.cropCycleId ? <Text style={styles.error}>{errors.cropCycleId}</Text> : null}
 
         <Text style={styles.label}>Description *</Text>
@@ -320,6 +329,7 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 13, color: colors.textPrimary },
   chipTextSelected: { color: colors.surface },
+  hint: { fontSize: 13, color: colors.textMuted, marginBottom: spacing.xs },
   timeScroll: { marginBottom: spacing.sm },
   timeChip: {
     paddingHorizontal: spacing.sm,

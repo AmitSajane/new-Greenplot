@@ -16,7 +16,7 @@ export type MyCropsStackParamList = {
   CreateWork: { cropCycleId?: string };
   WorkList: undefined;
   WorkDetails: { jobId: string };
-  AddLand: { selfFarmed: true; acres?: string; plotGeoJSON?: any; location?: string; district?: string; state?: string } | undefined;
+  AddLand: { selfFarmed: true; editListingId?: string; acres?: string; plotGeoJSON?: any; location?: string; district?: string; state?: string } | undefined;
   SatelliteMap: { returnTo?: string } | undefined;
   NotificationsCenter: undefined;
   Settings: undefined;

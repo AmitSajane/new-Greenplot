@@ -191,6 +191,11 @@ export default function MyCropsScreen() {
   // than duplicating that intake logic here.
   const openLandSheet = () => navigation.navigate('AddLand', { selfFarmed: true });
 
+  // Editing reuses the same screen in edit mode, mirroring the owner's
+  // MyPropertiesScreen -> AddFarm edit entry point.
+  const openEditLandSheet = (landId: string) =>
+    navigation.navigate('AddLand', { selfFarmed: true, editListingId: landId });
+
   // ── plot card (shared between own-land and leased-land tabs) ─────────────
   const renderPlotCard = (opts: {
     landId: string;
@@ -201,6 +206,7 @@ export default function MyCropsScreen() {
     ownerId: string;
     ownerLabel: string;
     imageUrl?: string;
+    onEditPress?: () => void;
   }) => {
     const crop = user ? getCropCycleByLand(opts.landId, user.id) : undefined;
     const statusMeta = crop ? STATUS_META[crop.healthStatus ?? 'healthy'] : null;
@@ -221,8 +227,20 @@ export default function MyCropsScreen() {
             <Text style={styles.plotLandlord}>{opts.metaLine1}</Text>
             <Text style={styles.plotLeaseMeta}>{opts.metaLine2}</Text>
           </View>
-          <View style={styles.areaPill}>
-            <Text style={styles.areaPillText}>{opts.areaAcres.toFixed(1)} Acres</Text>
+          <View style={styles.plotHeaderActions}>
+            <View style={styles.areaPill}>
+              <Text style={styles.areaPillText}>{opts.areaAcres.toFixed(1)} Acres</Text>
+            </View>
+            {opts.onEditPress && (
+              <TouchableOpacity
+                style={styles.editLandBtn}
+                onPress={opts.onEditPress}
+                accessibilityRole="button"
+                accessibilityLabel={`Edit ${opts.plotName}`}
+              >
+                <Icon name="pencil-outline" size={15} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -438,6 +456,7 @@ export default function MyCropsScreen() {
               ownerId: land.ownerId,
               ownerLabel: 'Owned by you',
               imageUrl: land.imageUrl || undefined,
+              onEditPress: () => openEditLandSheet(land.id),
             }),
           )}
 
@@ -878,6 +897,11 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontWeight: '600',
   },
+  plotHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   areaPill: {
     backgroundColor: '#E9F2FF',
     borderRadius: radius.pill,
@@ -888,6 +912,16 @@ const styles = StyleSheet.create({
   areaPillText: {
     color: '#2D6CDF',
     fontWeight: '800',
+  },
+  editLandBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 999,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 
   cropPanel: {

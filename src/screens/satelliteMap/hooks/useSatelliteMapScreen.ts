@@ -255,7 +255,15 @@ export function useSatelliteMapScreen() {
           {
             text: 'Use This Boundary',
             onPress: () =>
-              (navigation as { navigate?: (name: string, params?: object) => void }).navigate?.(
+              // Pop back to the existing AddLand/AddFarm screen instance (rather than
+              // navigate, which under React Navigation v7 would push a brand-new one
+              // and lose params like `selfFarmed` plus any already-entered form data)
+              // and merge the drawn boundary onto its existing params.
+              (
+                navigation as {
+                  popTo?: (name: string, params?: object, options?: { merge?: boolean }) => void;
+                }
+              ).popTo?.(
                 returnTo,
                 {
                   acres: areaAcres.toFixed(2),
@@ -263,7 +271,8 @@ export function useSatelliteMapScreen() {
                   location: geo.label,
                   district: geo.district,
                   state: geo.state,
-                }
+                },
+                { merge: true }
               ),
           },
           { text: 'Close', style: 'cancel' },

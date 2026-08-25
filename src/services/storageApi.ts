@@ -64,9 +64,16 @@ export const storageApi = {
       const { error } = await supabase.storage
         .from(bucket)
         .upload(path, base64ToBytes(base64).buffer, { contentType: mime || 'image/jpeg', upsert: true });
-      if (error) return null;
+      if (error) {
+        // Swallowed to the caller (keeps the local URI as a fallback), but log the
+        // real reason (e.g. an RLS rejection while the auth session is still
+        // restoring) so upload failures are diagnosable instead of just "no image".
+        console.warn('[storageApi] uploadImage failed:', error.message);
+        return null;
+      }
       return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-    } catch {
+    } catch (e) {
+      console.warn('[storageApi] uploadImage threw:', e instanceof Error ? e.message : e);
       return null;
     }
   },
@@ -80,9 +87,13 @@ export const storageApi = {
       const { error } = await supabase.storage
         .from(bucket)
         .upload(path, blob, { contentType: mime || blob.type || 'video/mp4', upsert: true });
-      if (error) return null;
+      if (error) {
+        console.warn('[storageApi] uploadFromUri failed:', error.message);
+        return null;
+      }
       return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
-    } catch {
+    } catch (e) {
+      console.warn('[storageApi] uploadFromUri threw:', e instanceof Error ? e.message : e);
       return null;
     }
   },
