@@ -42,7 +42,9 @@ interface AuthContextType {
    *  reuses the same save path as onboarding, merged over the current user
    *  so fields you don't pass keep their existing value. */
   updateProfile: (updates: ProfileUpdate) => Promise<AuthResult>;
-  logout: () => void;
+  /** Waits for Supabase to fully tear down the session before clearing local
+   *  user state — see the comment on the implementation for why. */
+  logout: () => Promise<void>;
 }
 
 export interface ProfileUpdate {
@@ -536,8 +538,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [user, saveOwnProfile],
   );
 
-  const logout = useCallback(() => {
-    if (supabase) supabase.auth.signOut();
+  // Awaits signOut() before clearing local user state. Previously this fired
+  // signOut() without waiting and cleared the user immediately — if a login
+  // for a DIFFERENT account started before that signOut had actually
+  // finished on Supabase's side, the two session writes could race, leaving
+  // a stale/broken session behind that then broke a later login for the
+  // FIRST account (looked like "Account not found" even though the account
+  // and profile were both fine). Awaiting it closes that race.
+  const logout = useCallback(async () => {
+    if (supabase) await supabase.auth.signOut();
     setUser(null);
   }, []);
 
