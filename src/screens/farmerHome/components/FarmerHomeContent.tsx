@@ -36,7 +36,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   const onSettings = useCallback(() => onAction('settings'), [onAction]);
   const onLanguage = useCallback(() => setLangOpen(true), []);
   const onNotifications = useCallback(() => onAction('notifications'), [onAction]);
-  const onWeather = useCallback(() => onAction('satellite'), [onAction]);
+  const onWeather = useCallback(() => onAction('weather'), [onAction]);
   const onAi = useCallback(() => onAction(vm.aiAdvisory.action), [onAction, vm.aiAdvisory.action]);
   const onMarket = useCallback(() => onAction('market'), [onAction]);
   const onMandi = useCallback(() => onAction('mandiCompare'), [onAction]);

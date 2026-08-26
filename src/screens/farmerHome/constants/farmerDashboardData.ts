@@ -12,6 +12,7 @@ export type FarmerAction =
   | 'crops'
   | 'tasks'
   | 'satellite'
+  | 'weather'
   | 'labor'
   | 'soil'
   | 'market'

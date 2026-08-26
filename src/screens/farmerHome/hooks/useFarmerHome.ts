@@ -77,6 +77,8 @@ export function useFarmerHome() {
           return navigation.navigate('LaborConnect');
         case 'satellite':
           return navigation.navigate('SatelliteMap');
+        case 'weather':
+          return navigation.navigate('WeatherDetail');
         case 'soil':
           return navigation.navigate('SoilTest');
         case 'soilAdvisory':

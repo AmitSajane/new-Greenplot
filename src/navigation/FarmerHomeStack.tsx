@@ -14,6 +14,7 @@ import LeaseApplicationScreen from '../screens/LeaseApplicationScreen';
 import LeaseStatusScreen from '../screens/LeaseStatusScreen';
 import AIAssistantScreen from '../screens/AIAssistantScreen';
 import SatelliteMapScreen from '../screens/satelliteMap';
+import WeatherDetailScreen from '../screens/WeatherDetailScreen';
 import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
 import SoilTestScreen from '../screens/SoilTestScreen';
@@ -44,6 +45,7 @@ export type FarmerHomeStackParamList = {
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
   AIAssistant: undefined;
   SatelliteMap: { farmId?: string; returnTo?: string } | undefined;
+  WeatherDetail: undefined;
   LaborConnect: undefined;
   SoilTest: undefined;
   Article: { url: string; title?: string };
@@ -135,6 +137,13 @@ export default function FarmerHomeStack() {
         component={SatelliteMapScreen}
         options={{
           title: 'Satellite Monitoring',
+        }}
+      />
+      <Stack.Screen
+        name="WeatherDetail"
+        component={WeatherDetailScreen}
+        options={{
+          title: 'Weather & Farm Advisory',
         }}
       />
       <Stack.Screen
