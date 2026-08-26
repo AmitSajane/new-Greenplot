@@ -278,7 +278,7 @@ export function useOwnerHome() {
 
     // Handlers
     onBell: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),
-    onWeatherPress: useCallback(() => navigation.navigate('SatelliteMap'), [navigation]),
+    onWeatherPress: useCallback(() => navigation.navigate('WeatherDetail'), [navigation]),
     onAvatar: useCallback(() => navigation.navigate('Settings'), [navigation]),
     onPortfolioPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onRevenuePress: useCallback(() => goTab('MyProperties'), [goTab]),

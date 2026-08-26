@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { WeatherInfo } from '../screens/farmerHome/constants/farmerDashboardData';
 import { fetchWeatherByLocation } from '../services/weatherApi';
 
@@ -8,12 +8,16 @@ interface WeatherState {
   error: string | null;
 }
 
-export default function useWeather(location: string): WeatherState {
+export default function useWeather(location: string): WeatherState & { refresh: () => void } {
   const [state, setState] = useState<WeatherState>({
     weather: null,
     loading: false,
     error: null,
   });
+  // Bumped by `refresh()` to force a refetch even when `location` hasn't
+  // changed (e.g. the profile location is fixed but the user still wants
+  // the latest reading).
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const query = location.trim();
@@ -38,7 +42,10 @@ export default function useWeather(location: string): WeatherState {
     return () => {
       active = false;
     };
-  }, [location]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, reloadKey]);
 
-  return state;
+  const refresh = useCallback(() => setReloadKey(k => k + 1), []);
+
+  return { ...state, refresh };
 }

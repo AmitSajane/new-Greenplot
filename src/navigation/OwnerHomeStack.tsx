@@ -11,6 +11,7 @@ import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import AIAssistantScreen from '../screens/AIAssistantScreen';
 import SatelliteMapScreen from '../screens/satelliteMap';
+import WeatherDetailScreen from '../screens/WeatherDetailScreen';
 import LaborConnectStack from '../modules/labor/navigation/LaborConnectStack';
 import OwnerWorkReportScreen from '../screens/owner/OwnerWorkReportScreen';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
@@ -55,6 +56,7 @@ export type OwnerHomeStackParamList = {
   AgreementDetails: { agreementId: string };
   AIAssistant: undefined;
   SatelliteMap: { returnTo?: string } | undefined;
+  WeatherDetail: undefined;
   LaborConnect: undefined;
   OwnerWorkReport: undefined;
   SchemesNewsList:
@@ -135,6 +137,13 @@ export default function OwnerHomeStack() {
         component={SatelliteMapScreen}
         options={{
           title: 'Satellite Monitoring',
+        }}
+      />
+      <Stack.Screen
+        name="WeatherDetail"
+        component={WeatherDetailScreen}
+        options={{
+          title: 'Weather & Farm Advisory',
         }}
       />
       <Stack.Screen

@@ -105,7 +105,7 @@ export default function AddFarmScreen() {
   const [village, setVillage] = useState('');
   const [location, setLocation] = useState('');
   const [soilType, setSoilType] = useState('');
-  const [waterSource, setWaterSource] = useState('');
+  const [selectedWaterSources, setSelectedWaterSources] = useState<string[]>([]);
   const [showWaterSourcePicker, setShowWaterSourcePicker] = useState(false);
   const [showStatePicker, setShowStatePicker] = useState(false);
   const [showDistrictPicker, setShowDistrictPicker] = useState(false);
@@ -174,7 +174,11 @@ export default function AddFarmScreen() {
     setTitle(listing.title || '');
     setAcres(listing.acres || '');
     setSoilType(listing.soilType || '');
-    setWaterSource(listing.waterSource || '');
+    setSelectedWaterSources(
+      typeof listing.waterSource === 'string' && listing.waterSource
+        ? listing.waterSource.split(',').map((s: string) => s.trim()).filter(Boolean)
+        : [],
+    );
     setState(listing.state || '');
     setDistrict(listing.district || '');
     setTaluk(listing.taluk || '');
@@ -367,8 +371,8 @@ export default function AddFarmScreen() {
       listingData.crops = selectedCrops;
       listingData.currentCrop = selectedCrops[0];
     }
-    if (waterSource) {
-      listingData.waterSource = waterSource;
+    if (selectedWaterSources.length > 0) {
+      listingData.waterSource = selectedWaterSources.join(', ');
     }
     if (irrigationSchedule) {
       listingData.irrigationSchedule = irrigationSchedule;
@@ -472,9 +476,63 @@ export default function AddFarmScreen() {
     );
   };
 
+  // Same sheet as renderPickerModal, but tapping an option toggles it instead
+  // of closing the sheet — lets the farmer pick more than one (e.g. a plot
+  // fed by both a borewell and a canal) and confirm with "Done".
+  const renderMultiPickerModal = (
+    visible: boolean,
+    options: string[],
+    selectedValues: string[],
+    onToggle: (value: string) => void,
+    onClose: () => void
+  ) => {
+    if (!visible) return null;
+    return (
+      <View style={styles.pickerOverlay}>
+        <TouchableOpacity style={styles.pickerBackdrop} onPress={onClose} />
+        <View style={styles.pickerContainer}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>Select Option(s)</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
+          <ScrollView style={styles.pickerOptions}>
+            {options.map((option) => {
+              const isSelected = selectedValues.includes(option);
+              return (
+                <TouchableOpacity
+                  key={option}
+                  style={[styles.pickerOption, styles.pickerOptionRow]}
+                  onPress={() => onToggle(option)}
+                >
+                  <Text style={styles.pickerOptionText}>{option}</Text>
+                  <Ionicons
+                    name={isSelected ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={isSelected ? colors.primary : colors.textMuted}
+                  />
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+          <TouchableOpacity style={styles.pickerDoneButton} onPress={onClose} activeOpacity={0.85}>
+            <Text style={styles.pickerDoneButtonText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  };
+
   const toggleCrop = useCallback((crop: string) => {
     setSelectedCrops((prev) =>
       prev.includes(crop) ? prev.filter((c) => c !== crop) : [...prev, crop]
+    );
+  }, []);
+
+  const toggleWaterSource = useCallback((source: string) => {
+    setSelectedWaterSources((prev) =>
+      prev.includes(source) ? prev.filter((s) => s !== source) : [...prev, source]
     );
   }, []);
 
@@ -780,7 +838,7 @@ export default function AddFarmScreen() {
 
           <View style={styles.formGroup}>
             <Text style={styles.label}>Water Source</Text>
-            {renderDropdown(waterSource, 'Select Water Source', () => setShowWaterSourcePicker(true))}
+            {renderDropdown(selectedWaterSources.join(', '), 'Select Water Source', () => setShowWaterSourcePicker(true))}
           </View>
 
           {/* PIN-code quick fill */}
@@ -1108,7 +1166,7 @@ export default function AddFarmScreen() {
       {renderPickerModal(showHobliPicker, hobliOptions, handleHobliSelect, () => setShowHobliPicker(false))}
       {renderPickerModal(showVillagePicker, villageOptions, handleVillageSelect, () => setShowVillagePicker(false))}
       {renderPickerModal(showSoilPicker, SOIL_TYPES, setSoilType, () => setShowSoilPicker(false))}
-      {renderPickerModal(showWaterSourcePicker, WATER_SOURCE_OPTIONS, setWaterSource, () => setShowWaterSourcePicker(false))}
+      {renderMultiPickerModal(showWaterSourcePicker, WATER_SOURCE_OPTIONS, selectedWaterSources, toggleWaterSource, () => setShowWaterSourcePicker(false))}
       {renderPickerModal(showTenurePicker, TENURE_OPTIONS, setTenure, () => setShowTenurePicker(false))}
       {renderPickerModal(showLeaseTypePicker, LEASE_TYPE_OPTIONS, setLeaseType, () => setShowLeaseTypePicker(false))}
     </SafeAreaView>
@@ -1329,6 +1387,23 @@ const styles = StyleSheet.create({
   pickerOptionText: {
     fontSize: 16,
     color: colors.textPrimary,
+  },
+  pickerOptionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pickerDoneButton: {
+    margin: spacing.md,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+  },
+  pickerDoneButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.surface,
   },
   // Crop Selection Styles
   cropContainer: {
