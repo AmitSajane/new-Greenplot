@@ -39,7 +39,7 @@ export default function MarketHomeScreen() {
   const crop = marketCropForId(cropId);
   const state = (user as { state?: string } | null)?.state || DEFAULT_STATE;
   const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
-  const navTabs = [t('market.home.tabs.overview'), t('market.home.tabs.trend'), t('market.home.tabs.arrivals'), t('market.home.tabs.mandis'), t('market.home.tabs.demand'), t('market.home.tabs.ai')];
+  const navTabs = [t('market.home.tabs.overview'), t('market.home.tabs.trend'), t('market.home.tabs.arrivals'), t('market.home.tabs.mandis'), t('market.home.tabs.demand'), t('market.home.tabs.ai'), t('market.compare.tab')];
 
   useEffect(() => {
     let active = true;
@@ -92,6 +92,7 @@ export default function MarketHomeScreen() {
     if (index === 3) navigation.navigate('MandiList', { cropId, commodity: crop.name, state });
     if (index === 4) navigation.navigate('DemandMap', { cropId, commodity: crop.name, state });
     if (index === 5) navigation.navigate('AIInsight', { cropId });
+    if (index === 6) navigation.navigate('CropCompare');
   };
 
   return (

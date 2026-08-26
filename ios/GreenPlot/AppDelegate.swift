@@ -2,6 +2,7 @@ import UIKit
 import React
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
+import HotUpdater
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -42,7 +43,10 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 #if DEBUG
     RCTBundleURLProvider.sharedSettings().jsBundleURL(forBundleRoot: "index")
 #else
-    Bundle.main.url(forResource: "main", withExtension: "jsbundle")
+    // HotUpdater.bundleURL() returns the latest downloaded OTA bundle if one
+    // exists, falling back to the bundle shipped in the .ipa otherwise — so
+    // this still works exactly as before for anyone who hasn't set up OTA.
+    HotUpdater.bundleURL()
 #endif
   }
 }

@@ -26,6 +26,11 @@ ios/.xcode.env.local
 .env
 .env.local
 .env.*.local
+.env.hotupdater
+
+# Hot Updater — bundle-signing private key + local build output
+keys/
+.hot-updater/
 
 # Android/IntelliJ
 #
@@ -81,3 +86,13 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+# hot-updater
+.hot-updater/output
+.hot-updater/log
+# `hot-updater deploy` bundle output (rebuildable — Metro's flattened
+# asset filenames like node_modules_..._backicon.png are generated, not authored)
+dist/
+
+# Local Supabase CLI cache from `hot-updater init` / `supabase link`
+# (just this machine's linked-project ref + CLI version marker)
+supabase/.temp/
