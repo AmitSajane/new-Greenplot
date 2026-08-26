@@ -22,6 +22,7 @@ import {
   WEATHER_API_BASE_URL,
   GEMINI_API_KEY,
   GEMINI_MODEL,
+  HOT_UPDATER_BASE_URL,
 } from '@env';
 
 /**
@@ -52,6 +53,10 @@ export const ENV = {
   geminiApiKey: cleanEnv(GEMINI_API_KEY),
   geminiModel: cleanEnv(GEMINI_MODEL, 'gemini-2.5-flash-lite'),
   geminiBaseUrl: 'https://generativelanguage.googleapis.com/v1beta',
+  // OTA update check endpoint (Hot Updater). Empty until `npx hot-updater
+  // init --provider supabase` provisions the Supabase Edge Function and
+  // prints its URL — see HOT_UPDATER_BASE_URL in .env.example.
+  hotUpdaterBaseUrl: cleanEnv(HOT_UPDATER_BASE_URL),
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */
@@ -69,6 +74,11 @@ export const isWeatherConfigured = !!ENV.weatherApiKey;
 
 /** True once a Gemini key is present → Kisan Mitra uses real AI (else offline engine). */
 export const isGeminiConfigured = !!ENV.geminiApiKey;
+
+/** True once an OTA update endpoint is configured → HotUpdater.wrap() checks
+ *  for updates on launch (release builds only). False = OTA is a no-op and
+ *  the app just runs its normal bundled JS, same as before this was added. */
+export const isHotUpdaterConfigured = !!ENV.hotUpdaterBaseUrl;
 
 if (__DEV__ && !ENV.mapboxToken) {
   console.warn('[env] MAPBOX_ACCESS_TOKEN is missing — maps will fail to load. Add it to .env.');

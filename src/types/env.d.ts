@@ -15,4 +15,5 @@ declare module '@env' {
   export const WEATHER_API_BASE_URL: string | undefined;
   export const GEMINI_API_KEY: string | undefined;
   export const GEMINI_MODEL: string | undefined;
+  export const HOT_UPDATER_BASE_URL: string | undefined;
 }
