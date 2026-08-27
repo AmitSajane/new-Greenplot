@@ -239,26 +239,33 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
             <Text style={s.sectionLink} onPress={vm.onActivityViewAll}>View all</Text>
           </View>
           <View style={[s.card, { paddingHorizontal: 12 }]}>
-            {vm.activities.map((a, i) => {
-              const c = tone[a.tone];
-              return (
-                <TouchableOpacity
-                  key={a.id}
-                  style={[s.actRow, i === vm.activities.length - 1 && { borderBottomWidth: 0 }]}
-                  onPress={a.onPress}
-                  activeOpacity={0.8}
-                >
-                  <View style={[s.actDot, { backgroundColor: c.bg }]}>
-                    <Ionicons name={a.icon} size={15} color={c.fg} />
-                  </View>
-                  <View>
-                    <Text style={s.actTitle}>{a.title}</Text>
-                    <Text style={s.actSub}>{a.sub}</Text>
-                  </View>
-                  <Text style={s.actTime}>{a.time}</Text>
-                </TouchableOpacity>
-              );
-            })}
+            {vm.activities.length === 0 ? (
+              <View style={s.actEmpty}>
+                <Ionicons name="time-outline" size={20} color="#9EB8A8" />
+                <Text style={s.actEmptyText}>No recent activity yet</Text>
+              </View>
+            ) : (
+              vm.activities.map((a, i) => {
+                const c = tone[a.tone];
+                return (
+                  <TouchableOpacity
+                    key={a.id}
+                    style={[s.actRow, i === vm.activities.length - 1 && { borderBottomWidth: 0 }]}
+                    onPress={a.onPress}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[s.actDot, { backgroundColor: c.bg }]}>
+                      <Ionicons name={a.icon} size={15} color={c.fg} />
+                    </View>
+                    <View>
+                      <Text style={s.actTitle}>{a.title}</Text>
+                      <Text style={s.actSub}>{a.sub}</Text>
+                    </View>
+                    <Text style={s.actTime}>{a.time}</Text>
+                  </TouchableOpacity>
+                );
+              })
+            )}
           </View>
         </View>
 
@@ -298,11 +305,13 @@ const MetricTile: React.FC<MetricTileProps> = ({ icon, t, value, valueColor, lab
   const c = tone[t];
   return (
     <TouchableOpacity style={s.tile} onPress={onPress} activeOpacity={0.8}>
-      <View style={[s.tileIcon, { backgroundColor: c.bg }]}>
-        <Ionicons name={icon} size={14} color={c.fg} />
+      <View style={s.tileHead}>
+        <View style={[s.tileIcon, { backgroundColor: c.bg }]}>
+          <Ionicons name={icon} size={14} color={c.fg} />
+        </View>
+        <Text style={s.tileLabel} numberOfLines={1}>{label}</Text>
       </View>
       <Text style={[s.tileVal, valueColor ? { color: valueColor } : null]}>{value}</Text>
-      <Text style={s.tileLabel}>{label}</Text>
       {!!sub && <Text style={[s.tileSub, { color: subColor }]}>{sub}</Text>}
     </TouchableOpacity>
   );

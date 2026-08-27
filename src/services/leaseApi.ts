@@ -16,6 +16,7 @@ import {
   summarizeOffer,
 } from '../constants/leaseTypes';
 import { ActiveLease, Agreement, LeaseRequest } from '../types/lease';
+import { parseDateLabel } from '../utils/dateLabel';
 
 function db() {
   if (!supabase) throw new Error('Supabase not configured');
@@ -42,7 +43,9 @@ const leaseToApp = (r: any): ActiveLease => ({
   id: r.id, landId: r.land_id, landTitle: r.land_title || '', offerId: r.offer_id, typeId: r.type_id, typeName: r.type_name || '',
   termsSummary: r.terms_summary || '', farmerId: r.farmer_id, farmerName: r.farmer_name || '', ownerId: r.owner_id, ownerName: r.owner_name || '',
   startDate: r.start_date || '', rent: r.rent || undefined, nextPayment: r.next_payment || undefined,
-  status: 'active', createdAt: r.created_at,
+  // Was hardcoded to 'active' — harmless while every row ever inserted was
+  // active, but the lease closure workflow now really sets this to 'closed'.
+  status: r.status === 'closed' ? 'closed' : 'active', createdAt: r.created_at,
 });
 
 const today = () => new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -131,7 +134,10 @@ export const leaseApi = {
     const { data: ag } = await c.from('lease_agreements').select('*').eq('id', agreementId).single();
     if (!ag || ag.farmer_signed) return;
     const bothSigned = ag.owner_signed === true;
-    const startDate = today();
+    // The owner's chosen "Available from" date is the real lease start
+    // date; only fall back to today when it isn't a real date (e.g.
+    // legacy free-text offers written before the calendar picker existed).
+    const startDate = parseDateLabel(ag.available_from) ? ag.available_from : today();
     await c.from('lease_agreements').update({
       farmer_signed: true,
       farmer_signature_url: signatureUrl,

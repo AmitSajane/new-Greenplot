@@ -1,9 +1,9 @@
 import React, { memo } from 'react';
 import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { colors, radius, spacing } from '../../theme/tokens';
+import { colors, radius, spacing, statusTones } from '../../theme/tokens';
 
-export type LeaseStatus = 'Active' | 'Pending' | 'Expired';
+export type LeaseStatus = 'Active' | 'Pending' | 'Expired' | 'Rejected';
 
 export type LeaseListItem = {
   id: string;
@@ -30,6 +30,8 @@ const statusStyle = (status: LeaseStatus) => {
       return { bg: colors.softOrange, fg: colors.warning };
     case 'Expired':
       return { bg: colors.border, fg: colors.textSecondary };
+    case 'Rejected':
+      return { bg: statusTones.danger.bg, fg: statusTones.danger.fg };
   }
 };
 

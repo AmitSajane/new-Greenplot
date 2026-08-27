@@ -112,6 +112,18 @@ export const farmerHomeStyles = StyleSheet.create({
   tkPrice: { fontSize: 16, fontWeight: '800', color: '#0D1509', marginTop: 3 },
   tkChange: { fontSize: 10, fontWeight: '700', marginTop: 1 },
 
+  // Recent activity — same alert-card look as "Action required" (colored
+  // card, white icon chip, title/sub, trailing pill action button), one
+  // card per event instead of a plain row.
+  actRow: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, marginBottom: 8 },
+  actIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
+  actTitle: { fontSize: 12, fontWeight: '700' },
+  actSub: { fontSize: 10, marginTop: 1 },
+  actBtn: { marginLeft: 'auto', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  actBtnText: { fontSize: 10, fontWeight: '800', color: '#fff' },
+  actEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 20 },
+  actEmptyText: { fontSize: 11, fontWeight: '600', color: TEXT_SECONDARY },
+
   // Tasks
   task: { flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderRadius: 12, paddingHorizontal: 12, paddingVertical: 11, marginBottom: 8 },
   taskIcon: { width: 34, height: 34, borderRadius: 10, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },

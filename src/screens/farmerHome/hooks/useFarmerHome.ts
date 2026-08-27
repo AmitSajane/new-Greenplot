@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { FarmerHomeStackParamList } from '../../../navigation/FarmerHomeStack';
@@ -7,6 +7,8 @@ import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useLeases } from '../../../context/LeaseContext';
 import { useCropCycles } from '../../../context/CropCycleContext';
 import { useAgriNews } from './useAgriNews';
+import { notificationsApi, AppNotification } from '../../../services/notificationsApi';
+import { activityVisual, relativeTime, type ActivityItem } from '../../../utils/activityFeed';
 import type { SchemeCategory } from '../constants/schemeCatalog';
 import {
   FARMER_AI_ADVISORY,
@@ -21,6 +23,8 @@ import {
   type NearbyChip,
   type SnapStat,
 } from '../constants/farmerDashboardData';
+
+export type { ActivityItem };
 
 const formatAcres = (n: number) => (n % 1 === 0 ? String(n) : n.toFixed(1));
 
@@ -43,7 +47,7 @@ export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { getFeaturedListings, listings, getListingById } = useFarmListings();
-  const { activeLeases } = useLeases();
+  const { activeLeases, requests, agreements, closures } = useLeases();
   const { cropCycles } = useCropCycles();
 
   const [query, setQuery] = useState('');
@@ -192,6 +196,141 @@ export function useFarmerHome() {
     [getFeaturedListings],
   );
 
+  // One real source feeding "Recent activity" below (same `notifications`
+  // table NotificationsCenter reads — mirrors OwnerHome's own useOwnerHome).
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const loadNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      setNotifications(await notificationsApi.fetchForUser(user.id));
+    } catch {
+      setNotifications([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadNotifications();
+    return user?.id ? notificationsApi.subscribe(user.id, loadNotifications) : undefined;
+  }, [loadNotifications, user?.id]);
+
+  const openAgreements = useCallback(() => navigation.navigate('LeaseAgreements'), [navigation]);
+
+  // Recent activity merges every real, timestamped event this farmer already
+  // has data for — every stage of the lease lifecycle they've been party to:
+  // a request they sent, a lease they signed (and so leased the land), and
+  // any closure they've requested or that has since gone through.
+  const activities: ActivityItem[] = useMemo(() => {
+    const items: (ActivityItem & { ts: number })[] = [];
+
+    notifications.forEach(n => {
+      const { icon, tone } = activityVisual(n.type);
+      const ts = new Date(n.createdAt).getTime();
+      if (!Number.isFinite(ts)) return;
+      items.push({
+        id: `note-${n.id}`,
+        icon,
+        tone,
+        title: n.title,
+        sub: n.body,
+        time: relativeTime(n.createdAt),
+        actionLabel: 'View',
+        onPress: () => navigation.navigate('NotificationsCenter'),
+        ts,
+      });
+    });
+
+    requests
+      .filter(r => r.farmerId === user?.id)
+      .forEach(r => {
+        const ts = new Date(r.createdAt).getTime();
+        if (!Number.isFinite(ts)) return;
+        const visual =
+          r.status === 'accepted'
+            ? { icon: 'checkmark-circle', tone: 'green' as const }
+            : r.status === 'rejected'
+              ? { icon: 'close-circle', tone: 'red' as const }
+              : { icon: 'document-attach', tone: 'amber' as const };
+        items.push({
+          id: `request-${r.id}`,
+          ...visual,
+          title:
+            r.status === 'accepted'
+              ? 'Lease request accepted'
+              : r.status === 'rejected'
+                ? 'Lease request rejected'
+                : 'Lease request sent',
+          sub: `${r.landTitle} · ${r.ownerName}`,
+          time: relativeTime(r.createdAt),
+          actionLabel: r.status === 'pending' ? 'Track' : 'View',
+          onPress: openAgreements,
+          ts,
+        });
+      });
+
+    // Signing is the "leased the land" moment — only once the farmer has
+    // actually put their signature on it.
+    agreements
+      .filter(a => a.farmerId === user?.id && a.farmerSignedAt)
+      .forEach(a => {
+        const ts = new Date(a.farmerSignedAt!).getTime();
+        if (!Number.isFinite(ts)) return;
+        items.push({
+          id: `signed-${a.id}`,
+          icon: 'key',
+          tone: 'green',
+          title: 'Leased land',
+          sub: `${a.landTitle} · from ${a.ownerName}`,
+          time: relativeTime(a.farmerSignedAt!),
+          actionLabel: 'View',
+          onPress: () => navigation.navigate('AgreementDetails', { agreementId: a.id }),
+          ts,
+        });
+      });
+
+    closures
+      .filter(c => c.farmerId === user?.id)
+      .forEach(c => {
+        const requestedTs = new Date(c.requestedAt).getTime();
+        if (Number.isFinite(requestedTs)) {
+          items.push({
+            id: `closure-req-${c.id}`,
+            icon: 'exit-outline',
+            tone: 'amber',
+            title: 'Requested lease closure',
+            sub: `${c.landTitle} · ${c.reason}`,
+            time: relativeTime(c.requestedAt),
+            actionLabel: 'Manage',
+            onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+            ts: requestedTs,
+          });
+        }
+        if (c.status === 'closed') {
+          const closedTs = new Date(c.updatedAt).getTime();
+          if (Number.isFinite(closedTs)) {
+            items.push({
+              id: `closure-done-${c.id}`,
+              icon: 'checkmark-done-circle',
+              tone: 'red',
+              title: 'Lease terminated',
+              sub: `${c.landTitle} · closure completed`,
+              time: relativeTime(c.updatedAt),
+              actionLabel: 'View',
+              onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+              ts: closedTs,
+            });
+          }
+        }
+      });
+
+    return items
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 5)
+      .map(({ ts, ...rest }) => rest);
+  }, [notifications, requests, agreements, closures, user?.id, navigation, openAgreements]);
+
   return {
     userName: user?.name?.trim() || 'Farmer',
     locationLabel: (user as { location?: string })?.location || '',
@@ -211,6 +350,7 @@ export function useFarmerHome() {
 
     // Dynamic
     featuredListings,
+    activities,
     query,
     setQuery,
     selectedNearby,
@@ -223,6 +363,7 @@ export function useFarmerHome() {
     onOpenArticle,
     onOpenVideo,
     onSchemesMore,
+    onActivityViewAll: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),
   };
 }
 

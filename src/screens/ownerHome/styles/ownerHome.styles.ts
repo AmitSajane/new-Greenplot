@@ -121,9 +121,12 @@ export const ownerHomeStyles = StyleSheet.create({
   // Metric tiles
   tilesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tile: { flexBasis: '48%', flexGrow: 1, backgroundColor: '#fff', borderWidth: 1, borderColor: '#E8F0EC', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
+  // Icon + label sit side by side so it's clear what the icon denotes,
+  // instead of the label being a small caption under the number.
+  tileHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   tileIcon: { width: 26, height: 26, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
   tileVal: { fontSize: 18, fontWeight: '800', color: '#0D1509', marginTop: 7 },
-  tileLabel: { fontSize: 10, color: colors.textSecondary },
+  tileLabel: { fontSize: 11, fontWeight: '700', color: colors.textSecondary, flexShrink: 1 },
   tileSub: { fontSize: 9, fontWeight: '700', marginTop: 1 },
 
   // Alerts
@@ -160,6 +163,8 @@ export const ownerHomeStyles = StyleSheet.create({
   actTitle: { fontSize: 11, fontWeight: '700', color: '#1C2E18' },
   actSub: { fontSize: 10, color: colors.textSecondary },
   actTime: { fontSize: 9, color: colors.textMuted, marginLeft: 'auto' },
+  actEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 20 },
+  actEmptyText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
 
   // FAB
   fab: {

@@ -11,9 +11,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { LEASE_TYPES, LEASE_TYPE_MAP, LeaseField, LeaseTypeId, summarizeOffer } from '../../constants/leaseTypes';
 import { useLeases } from '../../context/LeaseContext';
 import { colors } from '../../theme/tokens';
+import { formatDateLabel } from '../../utils';
 
 type ParamList = { AddLeaseOffer: { landId: string; landTitle?: string } };
 
@@ -40,7 +42,16 @@ export default function AddLeaseOfferScreen() {
   const [typeId, setTypeId] = useState<LeaseTypeId>('fixed_rent');
   const [terms, setTerms] = useState<Record<string, string | number>>(() => defaultsFor('fixed_rent'));
   const [tenure, setTenure] = useState('3 years');
-  const [availableFrom, setAvailableFrom] = useState('');
+  // Picked via calendar (not typed) so this same date can become the
+  // agreement's actual lease start date once the farmer signs, instead of
+  // the sign date always being used.
+  const [availableFromDate, setAvailableFromDate] = useState(new Date());
+  const [showAvailableFromPicker, setShowAvailableFromPicker] = useState(false);
+  const availableFrom = formatDateLabel(availableFromDate);
+  // Common to every lease type (like tenure/availableFrom above), so it lives
+  // outside `terms` — `selectType` resets `terms` via defaultsFor() on every
+  // type switch, which would otherwise wipe out a deposit already typed in.
+  const [securityDeposit, setSecurityDeposit] = useState('');
 
   const def = LEASE_TYPE_MAP[typeId];
   const existing = getOffersByLand(landId);
@@ -54,17 +65,22 @@ export default function AddLeaseOfferScreen() {
     setTerms(prev => ({ ...prev, [key]: value }));
   }, []);
 
+  const termsWithDeposit = useCallback(
+    () => (securityDeposit ? { ...terms, securityDeposit } : terms),
+    [terms, securityDeposit],
+  );
+
   const previewOffer = useMemo(
-    () => summarizeOffer({ id: 'preview', landId, typeId, terms, tenure, availableFrom, createdAt: '' }),
-    [landId, typeId, terms, tenure, availableFrom],
+    () => summarizeOffer({ id: 'preview', landId, typeId, terms: termsWithDeposit(), tenure, availableFrom, createdAt: '' }),
+    [landId, typeId, termsWithDeposit, tenure, availableFrom],
   );
 
   const publish = useCallback(() => {
-    addOffer({ landId, typeId, terms, tenure, availableFrom: availableFrom || 'Immediately' });
+    addOffer({ landId, typeId, terms: termsWithDeposit(), tenure, availableFrom });
     Alert.alert('Offer added ✓', `${def.name} offer published for this land.`, [
       { text: 'OK', onPress: () => navigation.popToTop() },
     ]);
-  }, [addOffer, landId, typeId, terms, tenure, availableFrom, def.name, navigation]);
+  }, [addOffer, landId, typeId, termsWithDeposit, tenure, availableFrom, def.name, navigation]);
 
   const renderField = (f: LeaseField) => {
     const val = terms[f.key];
@@ -229,13 +245,42 @@ export default function AddLeaseOfferScreen() {
           </View>
           <View style={styles.fieldRow}>
             <Text style={styles.fieldLabel}>Available from</Text>
-            <TextInput
-              style={[styles.input, styles.inputBox]}
-              value={availableFrom}
-              placeholder="e.g. Jun 2026"
-              placeholderTextColor="#9EB8A8"
-              onChangeText={setAvailableFrom}
-            />
+            <TouchableOpacity
+              style={styles.dateInput}
+              onPress={() => setShowAvailableFromPicker(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Choose available-from date"
+            >
+              <Ionicons name="calendar-outline" size={16} color={G.n4} />
+              <Text style={styles.dateInputText}>{availableFrom}</Text>
+            </TouchableOpacity>
+            {showAvailableFromPicker && (
+              <DateTimePicker
+                value={availableFromDate}
+                mode="date"
+                display="default"
+                minimumDate={new Date()}
+                onChange={(event, selectedDate) => {
+                  setShowAvailableFromPicker(false);
+                  if (event.type !== 'dismissed' && selectedDate) setAvailableFromDate(selectedDate);
+                }}
+              />
+            )}
+          </View>
+          <View style={styles.fieldRow}>
+            <Text style={styles.fieldLabel}>Security deposit (optional)</Text>
+            <View style={styles.inputWrap}>
+              <Text style={styles.unit}>₹</Text>
+              <TextInput
+                style={styles.input}
+                keyboardType="numeric"
+                value={securityDeposit}
+                placeholder="e.g. 20000"
+                placeholderTextColor="#9EB8A8"
+                onChangeText={t => setSecurityDeposit(t.replace(/[^\d.]/g, ''))}
+              />
+            </View>
+            <Text style={styles.help}>Refundable at lease closure, minus any agreed deductions.</Text>
           </View>
         </View>
 
@@ -279,6 +324,8 @@ const styles = StyleSheet.create({
   unit: { fontSize: 14, color: G.n4, fontWeight: '700' },
   input: { flex: 1, fontSize: 14, color: G.n2, paddingVertical: 10 },
   inputBox: { backgroundColor: G.n8, borderWidth: 1, borderColor: G.n7, borderRadius: 10, paddingHorizontal: 12 },
+  dateInput: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: G.n8, borderWidth: 1, borderColor: G.n7, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 11 },
+  dateInputText: { fontSize: 14, color: G.n2, fontWeight: '600' },
   multiline: { minHeight: 70, textAlignVertical: 'top' },
   help: { fontSize: 10, color: G.n4, marginTop: 5 },
   chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },

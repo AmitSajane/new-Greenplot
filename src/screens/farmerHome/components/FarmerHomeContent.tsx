@@ -10,6 +10,7 @@ import useWeather from '../../../hooks/useWeather';
 import { farmerHomeStyles as s } from '../styles/farmerHome.styles';
 import { LanguagePickerModal } from './LanguagePickerModal';
 import {
+  ActivitySection,
   AiAdvisoryCard,
   BrowseByCropSection,
   CropHealthSection,
@@ -80,6 +81,7 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
         {/* <TasksSection items={vm.tasks} onAction={onAction} onViewAll={onTasksViewAll} /> */}
         <QuickActionsSection items={vm.quickActions} onAction={onAction} />
         {/* <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} /> */}
+        <ActivitySection items={vm.activities} onViewAll={vm.onActivityViewAll} />
         <FindLandSection
           listings={vm.featuredListings}
           onListingPress={vm.onListingPress}

@@ -15,13 +15,30 @@ import {
   buildAgreementTerms,
   summarizeOffer,
 } from '../constants/leaseTypes';
-import { ActiveLease, Agreement, LeaseRequest } from '../types/lease';
+import {
+  ActiveLease,
+  Agreement,
+  ClosureHistoryEntry,
+  LeaseClosure,
+  LeaseClosureStatus,
+  LeaseRequest,
+  OwnerClosureResponse,
+  SettlementDeduction,
+  SettlementLineItem,
+  StandingCropOption,
+} from '../types/lease';
+import { computeEligibleClosureDate } from '../constants/leaseClosure';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { leaseApi } from '../services/leaseApi';
+import { leaseClosureApi } from '../services/leaseClosureApi';
 import { useAuth } from './AuthContext';
 import { useFarmListings } from './FarmListingsContext';
+import { parseDateLabel } from '../utils/dateLabel';
 
-export type { RequestStatus, LeaseRequest, Agreement, ActiveLease } from '../types/lease';
+export type {
+  RequestStatus, LeaseRequest, Agreement, ActiveLease,
+  LeaseClosure, ClosureHistoryEntry, LeaseClosureStatus, OwnerClosureResponse, StandingCropOption,
+} from '../types/lease';
 
 interface LeaseContextType {
   offers: LeaseOffer[];
@@ -46,6 +63,48 @@ interface LeaseContextType {
   activeLeases: ActiveLease[];
   /** True when backed by Supabase (live, multi-device). */
   realtime: boolean;
+
+  // ── Lease Closure / Early Termination ──────────────────────────────────
+  closures: LeaseClosure[];
+  closureHistory: ClosureHistoryEntry[];
+  getClosureForLease: (leaseId: string) => LeaseClosure | undefined;
+  getHistoryForClosure: (closureId: string) => ClosureHistoryEntry[];
+  /** Step 1. Returns the new closure's id (or 'pending' in Supabase mode). */
+  requestClosure: (input: {
+    leaseId: string; landId: string; landTitle: string;
+    farmerId: string; farmerName: string; ownerId: string; ownerName: string;
+    reason: string; comments?: string; proposedHandoverDate: string;
+    noticePeriodDays: number; securityDeposit?: number;
+  }) => string;
+  /** Step 3. */
+  respondToClosure: (
+    closureId: string,
+    response: OwnerClosureResponse,
+    by: { ownerId: string; farmerId: string; landTitle: string },
+    opts?: { comments?: string; proposedDate?: string },
+  ) => void;
+  /** Step 2 — owner waives the notice period by mutual agreement. */
+  waiveNoticePeriod: (closureId: string, ownerId: string) => void;
+  /** Step 4. */
+  updateSettlement: (
+    closureId: string,
+    fields: Partial<Pick<LeaseClosure, 'pendingRent' | 'pendingWater' | 'pendingElectricity' | 'otherExpenses' | 'deductions'>>,
+    by: { userId: string; role: 'farmer' | 'owner' },
+  ) => void;
+  confirmSettlement: (closureId: string, by: { userId: string; role: 'farmer' | 'owner' }) => void;
+  /** Step 5. */
+  resolveStandingCrop: (
+    closureId: string,
+    option: StandingCropOption,
+    opts: { deadline?: string; notes?: string; userId: string; role: 'farmer' | 'owner' },
+  ) => void;
+  /** Step 6. */
+  addHandoverPhotos: (closureId: string, role: 'farmer' | 'owner', urls: string[], userId: string) => void;
+  setHandoverNotes: (closureId: string, role: 'farmer' | 'owner', notes: string, userId: string) => void;
+  confirmHandover: (closureId: string, role: 'farmer' | 'owner', userId: string) => void;
+  /** Step 7. */
+  finalizeClosure: (closureId: string, leaseId: string, landId: string, by: { userId: string; role: 'farmer' | 'owner' }) => void;
+  cancelClosure: (closureId: string, by: { userId: string; role: 'farmer' | 'owner' }) => void;
 }
 
 const LeaseContext = createContext<LeaseContextType | undefined>(undefined);
@@ -71,16 +130,20 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<LeaseRequest[]>([]);
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [activeLeases, setActiveLeases] = useState<ActiveLease[]>([]);
+  const [closures, setClosures] = useState<LeaseClosure[]>([]);
+  const [closureHistory, setClosureHistory] = useState<ClosureHistoryEntry[]>([]);
 
   // ── Supabase: hydrate once, then live-refetch on any realtime change ────────
   const refetch = useCallback(async () => {
     if (!supabase) return;
     try {
-      const snap = await leaseApi.fetchAll();
+      const [snap, closureSnap] = await Promise.all([leaseApi.fetchAll(), leaseClosureApi.fetchAll()]);
       setOffers(snap.offers);
       setRequests(snap.requests);
       setAgreements(snap.agreements);
       setActiveLeases(snap.activeLeases);
+      setClosures(closureSnap.closures);
+      setClosureHistory(closureSnap.history);
     } catch {
       /* network hiccup — keep last good state */
     }
@@ -94,9 +157,23 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
     // the previous account's session happened to load.
     if (!isSupabaseConfigured || !authReady) return;
     refetch();
-    const unsubscribe = leaseApi.subscribe(refetch); // any change on any phone → refetch
-    return unsubscribe;
+    const unsubLease = leaseApi.subscribe(refetch); // any change on any phone → refetch
+    const unsubClosure = leaseClosureApi.subscribe(refetch);
+    return () => {
+      unsubLease();
+      unsubClosure();
+    };
   }, [refetch, authReady, user?.id]);
+
+  // Mock-mode-only helper: appends one audit-trail entry. (Supabase mode logs
+  // its own history rows server-side inside leaseClosureApi, then refetch()
+  // picks them up — this local ledger is only needed when there's no backend.)
+  const pushHistory = useCallback(
+    (closureId: string, action: string, performedBy: string, userRole: 'farmer' | 'owner', details?: string) => {
+      setClosureHistory(prev => [...prev, { id: uid('hist'), closureId, action, performedBy, userRole, details, createdAt: nowIso() }]);
+    },
+    [],
+  );
 
   // ── Actions: write to Supabase (realtime refetches), else mutate mock state ──
   const addOffer = useCallback(
@@ -196,7 +273,11 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
           const signed = { ...a, farmerSigned: true, farmerSignatureUrl: signatureUrl, farmerSignedAt: nowIso() };
           if (signed.ownerSigned && signed.farmerSigned) {
             signed.status = 'active';
-            signed.startDate = today();
+            // The owner's chosen "Available from" date is the real lease
+            // start date; only fall back to today when it isn't a real
+            // date (e.g. legacy free-text offers written before the
+            // calendar picker existed).
+            signed.startDate = parseDateLabel(signed.availableFrom) ? signed.availableFrom : today();
             setActiveLeases(al =>
               al.some(l => l.offerId === signed.offerId && l.farmerId === signed.farmerId)
                 ? al
@@ -218,14 +299,229 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
     [refetch, updateListing],
   );
 
+  // ── Lease Closure / Early Termination ────────────────────────────────────
+  const getClosureForLease = useCallback((leaseId: string) => closures.find(c => c.leaseId === leaseId), [closures]);
+  const getHistoryForClosure = useCallback(
+    (closureId: string) => closureHistory.filter(h => h.closureId === closureId),
+    [closureHistory],
+  );
+
+  const requestClosure = useCallback<LeaseContextType['requestClosure']>(
+    input => {
+      // A lease only ever has one *open* closure at a time.
+      const open = closures.find(c => c.leaseId === input.leaseId && !['closed', 'rejected', 'cancelled'].includes(c.status));
+      if (open) return open.id;
+
+      if (supabase) {
+        leaseClosureApi.requestClosure(input).then(refetch).catch(() => {});
+        return 'pending';
+      }
+      const id = uid('closure');
+      const requestedAt = nowIso();
+      const closure: LeaseClosure = {
+        id, leaseId: input.leaseId, landId: input.landId, landTitle: input.landTitle,
+        farmerId: input.farmerId, farmerName: input.farmerName, ownerId: input.ownerId, ownerName: input.ownerName,
+        status: 'requested', reason: input.reason, comments: input.comments, proposedHandoverDate: input.proposedHandoverDate,
+        requestedAt, noticePeriodDays: input.noticePeriodDays, noticeWaived: false,
+        eligibleClosureDate: computeEligibleClosureDate(requestedAt, input.noticePeriodDays),
+        otherExpenses: [], securityDeposit: input.securityDeposit, deductions: [], settlementConfirmed: false,
+        standingCropResolved: false, farmerPhotos: [], ownerPhotos: [], createdAt: requestedAt, updatedAt: requestedAt,
+      };
+      setClosures(prev => [closure, ...prev]);
+      pushHistory(id, 'closure_requested', input.farmerId, 'farmer', input.reason);
+      return id;
+    },
+    [closures, refetch, pushHistory],
+  );
+
+  const respondToClosure = useCallback<LeaseContextType['respondToClosure']>(
+    (closureId, response, by, opts) => {
+      if (supabase) {
+        leaseClosureApi.respondToClosure(closureId, response, by, opts).then(refetch).catch(() => {});
+        return;
+      }
+      const nextStatus: LeaseClosureStatus =
+        response === 'rejected' ? 'rejected' : response === 'accepted_with_settlement' ? 'settlement_pending' : 'under_review';
+      setClosures(prev =>
+        prev.map(c =>
+          c.id === closureId
+            ? { ...c, ownerResponse: response, ownerResponseComments: opts?.comments, ownerProposedDate: opts?.proposedDate, ownerRespondedAt: nowIso(), status: nextStatus, updatedAt: nowIso() }
+            : c,
+        ),
+      );
+      pushHistory(closureId, `owner_${response}`, by.ownerId, 'owner', opts?.comments);
+    },
+    [refetch, pushHistory],
+  );
+
+  const waiveNoticePeriod = useCallback<LeaseContextType['waiveNoticePeriod']>(
+    (closureId, ownerId) => {
+      if (supabase) {
+        leaseClosureApi.waiveNoticePeriod(closureId, ownerId).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev => prev.map(c => (c.id === closureId ? { ...c, noticeWaived: true, updatedAt: nowIso() } : c)));
+      pushHistory(closureId, 'notice_waived', ownerId, 'owner');
+    },
+    [refetch, pushHistory],
+  );
+
+  const updateSettlement = useCallback<LeaseContextType['updateSettlement']>(
+    (closureId, fields, by) => {
+      if (supabase) {
+        leaseClosureApi.updateSettlement(closureId, fields, by).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev => prev.map(c => (c.id === closureId ? { ...c, ...fields, updatedAt: nowIso() } : c)));
+      pushHistory(closureId, 'settlement_updated', by.userId, by.role);
+    },
+    [refetch, pushHistory],
+  );
+
+  const confirmSettlement = useCallback<LeaseContextType['confirmSettlement']>(
+    (closureId, by) => {
+      const standingResolved = closures.find(c => c.id === closureId)?.standingCropResolved ?? false;
+      if (supabase) {
+        leaseClosureApi.confirmSettlement(closureId, standingResolved, by).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev =>
+        prev.map(c =>
+          c.id === closureId
+            ? { ...c, settlementConfirmed: true, status: standingResolved ? 'handover_pending' : 'settlement_pending', updatedAt: nowIso() }
+            : c,
+        ),
+      );
+      pushHistory(closureId, 'settlement_confirmed', by.userId, by.role);
+    },
+    [closures, refetch, pushHistory],
+  );
+
+  const resolveStandingCrop = useCallback<LeaseContextType['resolveStandingCrop']>(
+    (closureId, option, opts) => {
+      const settlementDone = closures.find(c => c.id === closureId)?.settlementConfirmed ?? false;
+      if (supabase) {
+        leaseClosureApi.resolveStandingCrop(closureId, option, settlementDone, opts).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev =>
+        prev.map(c =>
+          c.id === closureId
+            ? {
+                ...c,
+                standingCropOption: option, standingCropDeadline: opts.deadline, standingCropNotes: opts.notes, standingCropResolved: true,
+                status: settlementDone ? 'handover_pending' : 'settlement_pending', updatedAt: nowIso(),
+              }
+            : c,
+        ),
+      );
+      pushHistory(closureId, 'standing_crop_resolved', opts.userId, opts.role, option);
+    },
+    [closures, refetch, pushHistory],
+  );
+
+  const addHandoverPhotos = useCallback<LeaseContextType['addHandoverPhotos']>(
+    (closureId, role, urls, userId) => {
+      const existing = closures.find(c => c.id === closureId);
+      const priorUrls = role === 'farmer' ? existing?.farmerPhotos ?? [] : existing?.ownerPhotos ?? [];
+      if (supabase) {
+        leaseClosureApi.addHandoverPhotos(closureId, role, urls, userId, priorUrls).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev =>
+        prev.map(c =>
+          c.id === closureId
+            ? { ...c, [role === 'farmer' ? 'farmerPhotos' : 'ownerPhotos']: [...priorUrls, ...urls], updatedAt: nowIso() }
+            : c,
+        ),
+      );
+      pushHistory(closureId, 'handover_photos_added', userId, role, `${urls.length} photo(s)`);
+    },
+    [closures, refetch, pushHistory],
+  );
+
+  const setHandoverNotes = useCallback<LeaseContextType['setHandoverNotes']>(
+    (closureId, role, notes, userId) => {
+      if (supabase) {
+        leaseClosureApi.setHandoverNotes(closureId, role, notes, userId).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev =>
+        prev.map(c => (c.id === closureId ? { ...c, [role === 'farmer' ? 'farmerHandoverNotes' : 'ownerHandoverNotes']: notes, updatedAt: nowIso() } : c)),
+      );
+      pushHistory(closureId, 'handover_notes_added', userId, role, notes);
+    },
+    [refetch, pushHistory],
+  );
+
+  const confirmHandover = useCallback<LeaseContextType['confirmHandover']>(
+    (closureId, role, userId) => {
+      const existing = closures.find(c => c.id === closureId);
+      const otherConfirmed = role === 'farmer' ? !!existing?.ownerConfirmedAt : !!existing?.farmerConfirmedAt;
+      if (supabase) {
+        leaseClosureApi.confirmHandover(closureId, role, userId, otherConfirmed).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev =>
+        prev.map(c =>
+          c.id === closureId
+            ? {
+                ...c,
+                [role === 'farmer' ? 'farmerConfirmedAt' : 'ownerConfirmedAt']: nowIso(),
+                status: otherConfirmed ? 'ready_for_closure' : 'handover_pending',
+                updatedAt: nowIso(),
+              }
+            : c,
+        ),
+      );
+      pushHistory(closureId, role === 'farmer' ? 'farmer_confirmed_handover' : 'owner_confirmed_receipt', userId, role);
+    },
+    [closures, refetch, pushHistory],
+  );
+
+  const finalizeClosure = useCallback<LeaseContextType['finalizeClosure']>(
+    (closureId, leaseId, landId, by) => {
+      if (supabase) {
+        leaseClosureApi.finalizeClosure(closureId, leaseId, landId, by).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev => prev.map(c => (c.id === closureId ? { ...c, status: 'closed', updatedAt: nowIso() } : c)));
+      setActiveLeases(prev => prev.map(l => (l.id === leaseId ? { ...l, status: 'closed' } : l)));
+      updateListing(landId, { status: 'active' });
+      pushHistory(closureId, 'lease_closed', by.userId, by.role);
+    },
+    [refetch, updateListing, pushHistory],
+  );
+
+  const cancelClosure = useCallback<LeaseContextType['cancelClosure']>(
+    (closureId, by) => {
+      if (supabase) {
+        leaseClosureApi.cancelClosure(closureId, by).then(refetch).catch(() => {});
+        return;
+      }
+      setClosures(prev => prev.map(c => (c.id === closureId ? { ...c, status: 'cancelled', updatedAt: nowIso() } : c)));
+      pushHistory(closureId, 'closure_cancelled', by.userId, by.role);
+    },
+    [refetch, pushHistory],
+  );
+
   const value = useMemo<LeaseContextType>(
     () => ({
       offers, addOffer, removeOffer, getOffersByLand,
       requests, applyForLease, getRequestsForFarmer, approveRequest, rejectRequest,
       agreements, getAgreementById, signAgreementAsFarmer,
       activeLeases, realtime: isSupabaseConfigured,
+      closures, closureHistory, getClosureForLease, getHistoryForClosure,
+      requestClosure, respondToClosure, waiveNoticePeriod, updateSettlement, confirmSettlement,
+      resolveStandingCrop, addHandoverPhotos, setHandoverNotes, confirmHandover, finalizeClosure, cancelClosure,
     }),
-    [offers, addOffer, removeOffer, getOffersByLand, requests, applyForLease, getRequestsForFarmer, approveRequest, rejectRequest, agreements, getAgreementById, signAgreementAsFarmer, activeLeases],
+    [
+      offers, addOffer, removeOffer, getOffersByLand, requests, applyForLease, getRequestsForFarmer, approveRequest, rejectRequest,
+      agreements, getAgreementById, signAgreementAsFarmer, activeLeases,
+      closures, closureHistory, getClosureForLease, getHistoryForClosure,
+      requestClosure, respondToClosure, waiveNoticePeriod, updateSettlement, confirmSettlement,
+      resolveStandingCrop, addHandoverPhotos, setHandoverNotes, confirmHandover, finalizeClosure, cancelClosure,
+    ],
   );
 
   return <LeaseContext.Provider value={value}>{children}</LeaseContext.Provider>;

@@ -9,6 +9,8 @@ import CreateWorkScreen from '../modules/work/screens/CreateWorkScreen';
 import LeaseLandScreen from '../screens/LeaseLandScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
+import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
+import LeaseClosureScreen from '../screens/leaseClosure/LeaseClosureScreen';
 import AIAssistantScreen from '../screens/AIAssistantScreen';
 import SatelliteMapScreen from '../screens/satelliteMap';
 import WeatherDetailScreen from '../screens/WeatherDetailScreen';
@@ -54,6 +56,8 @@ export type OwnerHomeStackParamList = {
   LeaseLand: undefined;
   LeaseAgreements: undefined;
   AgreementDetails: { agreementId: string };
+  LeaseClosureRequest: { leaseId: string };
+  LeaseClosure: { closureId: string };
   AIAssistant: undefined;
   SatelliteMap: { returnTo?: string } | undefined;
   WeatherDetail: undefined;
@@ -131,6 +135,16 @@ export default function OwnerHomeStack() {
         options={{
           title: 'Agreement Details',
         }}
+      />
+      <Stack.Screen
+        name="LeaseClosureRequest"
+        component={RequestLeaseClosureScreen}
+        options={{ title: 'Request Lease Closure' }}
+      />
+      <Stack.Screen
+        name="LeaseClosure"
+        component={LeaseClosureScreen}
+        options={{ title: 'Lease Closure' }}
       />
       <Stack.Screen
         name="SatelliteMap"

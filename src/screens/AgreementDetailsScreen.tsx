@@ -20,6 +20,21 @@ import { useFarmListings } from '../context/FarmListingsContext';
 import { useAuth } from '../context/AuthContext';
 import { profilesApi, FarmerProfile } from '../services/profilesApi';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
+import { buildTermsAndConditions, TermsClauseRole, TermsSourceRecord } from '../constants/leaseTermsAndConditions';
+import { CLOSURE_STATUS_LABELS, CLOSURE_STATUS_TONE, OWNER_RESPONSE_LABELS } from '../constants/leaseClosure';
+
+const ROLE_BADGE: Record<TermsClauseRole, { label: string; bg: string; fg: string }> = {
+  owner: { label: 'OWNER', bg: '#FFF1DC', fg: '#B87214' },
+  farmer: { label: 'FARMER', bg: '#E7F0FF', fg: '#1A5299' },
+  both: { label: 'BOTH', bg: '#E4F4EC', fg: '#1A6B3A' },
+};
+
+const CLOSURE_TONE_COLOR: Record<'green' | 'amber' | 'red' | 'blue', string> = {
+  green: colors.success,
+  amber: '#B87214',
+  red: '#C02828',
+  blue: '#1A5299',
+};
 
 type Props = NativeStackScreenProps<FarmerHomeStackParamList, 'AgreementDetails'>;
 
@@ -42,7 +57,7 @@ function callNumber(phone: string) {
 export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const { agreementId } = route.params;
   const { user } = useAuth();
-  const { agreements, getAgreementById, activeLeases } = useLeases();
+  const { agreements, getAgreementById, activeLeases, getClosureForLease, getHistoryForClosure } = useLeases();
   const { getListingById } = useFarmListings();
   const activeLease = activeLeases.find((l) => l.id === agreementId);
   // `agreementId` is sometimes actually an ActiveLease id (LeaseAgreementsScreen's
@@ -88,6 +103,39 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const land = getListingById(record.landId);
   const ownerProfile = profilesById[record.ownerId];
   const farmerProfile = profilesById[record.farmerId];
+
+  // Closure only applies to a lease that has actually gone active — `activeLease`
+  // is that row (its own id is what the whole closure workflow keys off).
+  const closure = activeLease ? getClosureForLease(activeLease.id) : undefined;
+  const closureOpen = !!closure && !['closed', 'rejected', 'cancelled'].includes(closure.status);
+  const canRequestClosure = isFarmer && !!activeLease && activeLease.status === 'active' && !closure;
+
+  const termsSource: TermsSourceRecord = {
+    typeId: record.typeId,
+    termsSummary: record.termsSummary,
+    tenure,
+    // Before the farmer signs, `startDate` isn't set yet (only written once
+    // the lease goes active) — fall back to the owner's chosen "Available
+    // from" date so the Duration clause shows the real start date being
+    // agreed to, not a vague "on the date both parties sign".
+    startDate: record.startDate || agreement?.availableFrom,
+    farmerName: record.farmerName,
+    ownerName: record.ownerName,
+    fullTerms: agreement?.fullTerms,
+    farmerSignedAt: agreement?.farmerSignedAt,
+  };
+  const termsClauses = buildTermsAndConditions(termsSource, land);
+
+  // Agreement History: closure events (if any) plus the two milestones that
+  // always exist on a signed agreement, so the timeline is never empty.
+  const historyEntries = closure ? getHistoryForClosure(closure.id) : [];
+  const timeline = [
+    agreement?.createdAt ? { label: 'Agreement created', at: agreement.createdAt, role: 'both' as const } : null,
+    agreement?.farmerSignedAt ? { label: `${record.farmerName} signed the agreement`, at: agreement.farmerSignedAt, role: 'farmer' as const } : null,
+    ...historyEntries.map(h => ({ label: h.action.replace(/_/g, ' '), at: h.createdAt, role: h.userRole, details: h.details })),
+  ]
+    .filter((e): e is NonNullable<typeof e> => e !== null)
+    .sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -178,6 +226,28 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
           </View>
         </View>
 
+        {/* Terms & Conditions Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Icon name="gavel" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Terms & Conditions</Text>
+          </View>
+          {termsClauses.map(clause => {
+            const badge = ROLE_BADGE[clause.role];
+            return (
+              <View key={clause.id} style={styles.termsClause}>
+                <View style={styles.termsClauseHead}>
+                  <Text style={styles.termsClauseTitle}>{clause.title}</Text>
+                  <View style={[styles.roleBadge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.roleBadgeText, { color: badge.fg }]}>{badge.label}</Text>
+                  </View>
+                </View>
+                <Text style={styles.termsClauseBody}>{clause.body}</Text>
+              </View>
+            );
+          })}
+        </View>
+
         {/* Parties Involved Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -260,6 +330,76 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
           <Text style={styles.comingSoon}>Coming soon</Text>
         </View>
 
+        {/* Lease Closure Section — only meaningful once the lease is actually active. */}
+        {!!activeLease && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="meeting-room" size={20} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Lease Closure</Text>
+            </View>
+
+            {closure ? (
+              <>
+                <View style={styles.closureStatusRow}>
+                  <View style={[styles.closurePill, { backgroundColor: `${CLOSURE_TONE_COLOR[CLOSURE_STATUS_TONE[closure.status]]}20` }]}>
+                    <Text style={[styles.closurePillText, { color: CLOSURE_TONE_COLOR[CLOSURE_STATUS_TONE[closure.status]] }]}>
+                      {CLOSURE_STATUS_LABELS[closure.status]}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.infoGrid}>
+                  <View style={styles.infoItem}>
+                    <Text style={styles.infoLabel}>Reason</Text>
+                    <Text style={styles.infoValue}>{closure.reason}</Text>
+                  </View>
+                  <View style={styles.infoItem}>
+                    <Text style={styles.infoLabel}>Requested</Text>
+                    <Text style={styles.infoValue}>{new Date(closure.requestedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</Text>
+                  </View>
+                  <View style={styles.infoItem}>
+                    <Text style={styles.infoLabel}>Notice period</Text>
+                    <Text style={styles.infoValue}>{closure.noticeWaived ? 'Waived' : `${closure.noticePeriodDays} days`}</Text>
+                  </View>
+                  <View style={styles.infoItem}>
+                    <Text style={styles.infoLabel}>Eligible closure date</Text>
+                    <Text style={styles.infoValue}>{closure.eligibleClosureDate || '—'}</Text>
+                  </View>
+                  {!!closure.ownerResponse && (
+                    <View style={styles.infoItem}>
+                      <Text style={styles.infoLabel}>Owner's response</Text>
+                      <Text style={styles.infoValue}>{OWNER_RESPONSE_LABELS[closure.ownerResponse]}</Text>
+                    </View>
+                  )}
+                </View>
+                <TouchableOpacity
+                  style={styles.closureButton}
+                  activeOpacity={0.85}
+                  onPress={() => (navigation as any).navigate('LeaseClosure', { closureId: closure.id })}
+                >
+                  <Icon name="arrow-forward" size={18} color={colors.surface} />
+                  <Text style={styles.closureButtonText}>{closureOpen ? 'Manage closure' : 'View closure details'}</Text>
+                </TouchableOpacity>
+              </>
+            ) : canRequestClosure ? (
+              <>
+                <Text style={styles.comingSoon}>
+                  Want to end this lease early? Submit a closure request with your reason and a proposed handover date.
+                </Text>
+                <TouchableOpacity
+                  style={styles.closureButton}
+                  activeOpacity={0.85}
+                  onPress={() => (navigation as any).navigate('LeaseClosureRequest', { leaseId: activeLease.id })}
+                >
+                  <Icon name="exit-to-app" size={18} color={colors.surface} />
+                  <Text style={styles.closureButtonText}>Request Lease Closure</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <Text style={styles.comingSoon}>No closure has been requested for this lease.</Text>
+            )}
+          </View>
+        )}
+
         {/* Documents Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Documents</Text>
@@ -278,6 +418,30 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Agreement History Section — full audit trail: creation, signing, and
+            every recorded closure action, oldest first. */}
+        {timeline.length > 0 && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="history" size={20} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Agreement History</Text>
+            </View>
+            {timeline.map((entry, i) => (
+              <View key={i} style={[styles.historyRow, i === timeline.length - 1 && styles.historyRowLast]}>
+                <View style={styles.historyDot} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.historyLabel}>{entry.label}</Text>
+                  {'details' in entry && !!entry.details && <Text style={styles.historyDetails}>{entry.details}</Text>}
+                  <Text style={styles.historyDate}>
+                    {new Date(entry.at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    {' · '}{entry.role === 'both' ? 'System' : entry.role === 'farmer' ? 'Farmer' : 'Land Owner'}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        )}
 
         {/* Bottom Spacing */}
         {/* <View style={styles.bottomSpacing} /> */}
@@ -547,6 +711,114 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: colors.surface,
+  },
+
+  // Terms & Conditions
+  termsClause: {
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  termsClauseHead: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  termsClauseTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  roleBadge: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  roleBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  termsClauseBody: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    lineHeight: 19,
+  },
+
+  // Lease Closure
+  closureStatusRow: {
+    marginBottom: spacing.md,
+  },
+  closurePill: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.pill,
+  },
+  closurePillText: {
+    fontSize: 12,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+  },
+  closureButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.md,
+    borderRadius: radius.md,
+    marginTop: spacing.md,
+  },
+  closureButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: colors.surface,
+  },
+
+  // Agreement History
+  historyRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    paddingBottom: spacing.md,
+    marginBottom: spacing.md,
+    borderLeftWidth: 2,
+    borderLeftColor: colors.border,
+    marginLeft: 5,
+    paddingLeft: spacing.md,
+  },
+  historyRowLast: {
+    borderLeftColor: 'transparent',
+    marginBottom: 0,
+    paddingBottom: 0,
+  },
+  historyDot: {
+    position: 'absolute',
+    left: -6,
+    top: 2,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: colors.primary,
+  },
+  historyLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: colors.textPrimary,
+    textTransform: 'capitalize',
+  },
+  historyDetails: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  historyDate: {
+    fontSize: 11,
+    color: colors.textMuted,
+    marginTop: 3,
   },
 });
 

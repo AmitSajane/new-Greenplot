@@ -44,6 +44,9 @@ export interface LeaseTypeDef {
   accent: string;
   /** Type-specific term inputs rendered in the offer form. */
   fields: LeaseField[];
+  /** Shown on the signed agreement's Terms & Conditions section. */
+  farmerResponsibilities: string[];
+  ownerResponsibilities: string[];
 }
 
 /** Accent palette (matches the app theme). */
@@ -69,6 +72,17 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
       { key: 'totalAmount', label: 'Total cash', kind: 'number', unit: '₹', placeholder: 'e.g. 60000' },
       { key: 'payByDate', label: 'Pay by', kind: 'text', placeholder: 'e.g. before sowing' },
     ],
+    farmerResponsibilities: [
+      'Provide all labor and machinery for planting & harvesting',
+      'Cover all seed, fertilizer, and chemical costs',
+      'Maintain field boundaries',
+      'Handle all operational and yield risk',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Carry out major infrastructure repairs (irrigation, fences)',
+      'Receive the agreed cash payment by the due date',
+    ],
   },
   {
     id: 'fixed_rent',
@@ -81,6 +95,17 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
     fields: [
       { key: 'ratePerAcre', label: 'Rent per acre / year', kind: 'number', unit: '₹', placeholder: 'e.g. 12000' },
       { key: 'installments', label: 'Installments', kind: 'select', options: ['Full upfront', '2 splits', '3 splits'], default: '2 splits' },
+    ],
+    farmerResponsibilities: [
+      'Provide all labor and machinery for planting & harvesting',
+      'Cover all seed, fertilizer, and chemical costs',
+      'Maintain field boundaries',
+      'Pay each installment on schedule',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Carry out major infrastructure repairs (irrigation, fences)',
+      'Receive rent per the agreed installment schedule',
     ],
   },
   {
@@ -96,6 +121,17 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
       { key: 'inputSplit', label: 'Input-cost split (farmer share)', kind: 'split', default: 50 },
       { key: 'crops', label: 'Crops allowed', kind: 'text', placeholder: 'e.g. Tomato, Cotton' },
     ],
+    farmerResponsibilities: [
+      'Provide all labor and machinery for planting & harvesting',
+      'Cover your agreed share of seed, fertilizer, and chemical costs',
+      'Maintain field boundaries',
+      'Grow only the crops allowed under this lease',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Cover your agreed share of seed, fertilizer, and chemical costs',
+      'Carry out major infrastructure repairs (irrigation, fences)',
+    ],
   },
   {
     id: 'revenue_share',
@@ -108,6 +144,17 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
     fields: [
       { key: 'ownerPercent', label: 'Owner revenue share', kind: 'percent', unit: '%', default: 25 },
       { key: 'inputSplit', label: 'Input-cost split (farmer share)', kind: 'split', default: 50 },
+    ],
+    farmerResponsibilities: [
+      'Provide all labor and machinery for planting & harvesting',
+      'Cover your agreed share of operational costs',
+      'Maintain field boundaries',
+      'Sell the produce through a channel both parties agree is fair',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Carry out major infrastructure repairs (irrigation, fences)',
+      'Receive the agreed share of sale revenue',
     ],
   },
   {
@@ -123,6 +170,17 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
       { key: 'bonusPercent', label: 'Bonus share of upside', kind: 'percent', unit: '%', default: 20 },
       { key: 'threshold', label: 'Bonus applies when', kind: 'text', placeholder: 'e.g. price > ₹20/kg' },
     ],
+    farmerResponsibilities: [
+      'Provide all labor and machinery for planting & harvesting',
+      'Cover all operational costs',
+      'Maintain field boundaries',
+      'Pay the base rent on schedule regardless of yield',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Carry out major infrastructure repairs (irrigation, fences)',
+      'Receive the base rent plus the bonus once its condition is met',
+    ],
   },
   {
     id: 'custom',
@@ -135,6 +193,16 @@ export const LEASE_TYPES: readonly LeaseTypeDef[] = [
     fields: [
       { key: 'crops', label: 'Crops', kind: 'text', placeholder: 'e.g. Sugarcane' },
       { key: 'clauses', label: 'Custom clauses', kind: 'clauses', placeholder: 'One clause per line…' },
+    ],
+    farmerResponsibilities: [
+      'Follow the custom clauses written into this agreement',
+      'Maintain field boundaries',
+      'Raise any disagreement with a clause before signing, not after',
+    ],
+    ownerResponsibilities: [
+      'Pay all real estate taxes and insurance on the land',
+      'Follow the custom clauses written into this agreement',
+      'Carry out major infrastructure repairs (irrigation, fences)',
     ],
   },
 ];
@@ -161,8 +229,8 @@ export interface AgreementTerm {
   value: string;
 }
 
-/** Detailed, human-readable agreement clauses generated from an offer's terms. */
-export function buildAgreementTerms(offer: LeaseOffer): AgreementTerm[] {
+/** Type-specific rows only — see buildAgreementTerms for the common rows appended to these. */
+function typeSpecificTerms(offer: LeaseOffer): AgreementTerm[] {
   const t = offer.terms;
   const split = (v: unknown) => {
     const f = Number(v ?? 50);
@@ -204,6 +272,18 @@ export function buildAgreementTerms(offer: LeaseOffer): AgreementTerm[] {
     default:
       return [];
   }
+}
+
+/** Detailed, human-readable agreement clauses generated from an offer's terms.
+ *  Appends common rows (currently: security deposit, when the owner set one)
+ *  after the type-specific rows, so every lease type picks it up for free. */
+export function buildAgreementTerms(offer: LeaseOffer): AgreementTerm[] {
+  const rows = typeSpecificTerms(offer);
+  const deposit = offer.terms.securityDeposit;
+  if (deposit !== undefined && deposit !== '' && Number(deposit) > 0) {
+    rows.push({ label: 'Security deposit', value: `₹${deposit} (refundable, subject to lease closure settlement)` });
+  }
+  return rows;
 }
 
 /** One-line, farmer-friendly summary of an offer (used on cards/lists). */

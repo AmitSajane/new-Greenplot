@@ -10,10 +10,17 @@ import { colors } from '../theme/tokens';
 import { supabase } from '../services/supabase';
 import { storageApi } from '../services/storageApi';
 import { SignaturePadModal } from '../components/organisms/SignaturePadModal';
+import { buildTermsAndConditions, TermsClauseRole } from '../constants/leaseTermsAndConditions';
 
 type ParamList = { AgreementSign: { agreementId: string } };
 
 const G = colors.deepGreen;
+
+const ROLE_BADGE: Record<TermsClauseRole, { label: string; bg: string; fg: string }> = {
+  owner: { label: 'OWNER', bg: '#FFF1DC', fg: '#B87214' },
+  farmer: { label: 'FARMER', bg: '#E7F0FF', fg: '#1A5299' },
+  both: { label: 'BOTH', bg: '#E4F4EC', fg: '#1A6B3A' },
+};
 
 function SignatureBlock({ name, role, signed, signatureUrl }: { name: string; role: string; signed: boolean; signatureUrl?: string }) {
   return (
@@ -49,14 +56,17 @@ export default function AgreementScreen() {
 
   const [padOpen, setPadOpen] = useState(false);
   const [signing, setSigning] = useState(false);
+  // Farmer must read the Terms & Conditions below before this unlocks the
+  // sign button — reading comes before signing, not after.
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const onSign = useCallback(() => {
-    if (!agreement) return;
+    if (!agreement || !agreedToTerms) return;
     Alert.alert('Sign this agreement?', 'By signing, you draw your signature to accept the lease terms shown above.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Continue', onPress: () => setPadOpen(true) },
     ]);
-  }, [agreement]);
+  }, [agreement, agreedToTerms]);
 
   const closePad = useCallback(() => {
     if (signing) return; // don't let a stray tap dismiss mid-upload
@@ -117,6 +127,15 @@ export default function AgreementScreen() {
     { label: 'Tenure', value: agreement.tenure },
     { label: 'Available from', value: agreement.availableFrom },
   ];
+  // Before the farmer signs, `agreement.startDate` isn't set yet (it's only
+  // written once the lease goes active) — fall back to the owner's chosen
+  // "Available from" date so the Duration clause already shows the real
+  // start date the farmer is agreeing to, not a vague "on the date both
+  // parties sign".
+  const termsClauses = buildTermsAndConditions({ ...agreement, startDate: agreement.startDate || agreement.availableFrom });
+  // Only the farmer is stopped by the unread-terms gate here — the owner's
+  // side of this screen is a read-only wait state, never the sign action.
+  const needsTermsGate = !active && !isOwnerViewer && !agreement.farmerSigned;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -159,6 +178,41 @@ export default function AgreementScreen() {
           </Text>
         </View>
 
+        {/* Terms & Conditions — shown in full so the farmer reads every clause
+            before signing, not after. */}
+        <Text style={styles.sectionLabel}>Terms & Conditions</Text>
+        <View style={styles.termsDoc}>
+          {termsClauses.map(clause => {
+            const badge = ROLE_BADGE[clause.role];
+            return (
+              <View key={clause.id} style={styles.termsClause}>
+                <View style={styles.termsClauseHead}>
+                  <Text style={styles.termsClauseTitle}>{clause.title}</Text>
+                  <View style={[styles.roleBadge, { backgroundColor: badge.bg }]}>
+                    <Text style={[styles.roleBadgeText, { color: badge.fg }]}>{badge.label}</Text>
+                  </View>
+                </View>
+                <Text style={styles.termsClauseBody}>{clause.body}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {needsTermsGate && (
+          <TouchableOpacity
+            style={styles.agreeRow}
+            activeOpacity={0.75}
+            onPress={() => setAgreedToTerms(v => !v)}
+          >
+            <Ionicons
+              name={agreedToTerms ? 'checkbox' : 'square-outline'}
+              size={22}
+              color={agreedToTerms ? G.g3 : G.n4}
+            />
+            <Text style={styles.agreeText}>I have read and agree to all the Terms & Conditions above</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Signatures */}
         <Text style={styles.sectionLabel}>Signatures</Text>
         <View style={styles.signRow}>
@@ -188,7 +242,12 @@ export default function AgreementScreen() {
             <Text style={styles.waitText}>You’ve signed. Finalising the lease…</Text>
           </View>
         ) : (
-          <TouchableOpacity style={styles.signBtn} onPress={onSign} activeOpacity={0.85}>
+          <TouchableOpacity
+            style={[styles.signBtn, !agreedToTerms && styles.signBtnDisabled]}
+            onPress={onSign}
+            activeOpacity={0.85}
+            disabled={!agreedToTerms}
+          >
             <Ionicons name="create" size={18} color="#fff" />
             <Text style={styles.signBtnText}>Accept & Sign agreement</Text>
           </TouchableOpacity>
@@ -236,7 +295,17 @@ const styles = StyleSheet.create({
   signatureImg: { width: '100%', height: 40, marginBottom: 4 },
   pendingName: { fontSize: 12, color: G.a3, fontWeight: '600' },
   signBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: G.g2, borderRadius: 12, paddingVertical: 15, marginTop: 16 },
+  signBtnDisabled: { backgroundColor: G.n6 },
   signBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },
+  termsDoc: { backgroundColor: '#fff', borderWidth: 1, borderColor: G.n7, borderRadius: 14, padding: 16 },
+  termsClause: { marginBottom: 12, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: G.n8 },
+  termsClauseHead: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 },
+  termsClauseTitle: { flex: 1, fontSize: 13, fontWeight: '800', color: G.g1 },
+  roleBadge: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 20 },
+  roleBadgeText: { fontSize: 10, fontWeight: '800' },
+  termsClauseBody: { fontSize: 12, color: G.n2, lineHeight: 18 },
+  agreeRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 14, paddingHorizontal: 2 },
+  agreeText: { flex: 1, fontSize: 12, color: G.n2, fontWeight: '600', lineHeight: 17 },
   activeBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: G.g7, borderRadius: 12, padding: 14, marginTop: 16, justifyContent: 'center' },
   activeText: { color: G.g2, fontSize: 13, fontWeight: '800' },
   waitBox: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: G.a7, borderRadius: 12, padding: 14, marginTop: 16, justifyContent: 'center' },

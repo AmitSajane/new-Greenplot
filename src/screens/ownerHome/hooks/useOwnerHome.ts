@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useEffect, useState } from 'react';
 import { Alert } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -6,9 +6,11 @@ import { OwnerHomeStackParamList } from '../../../navigation/OwnerHomeStack';
 import { useAuth } from '../../../context/AuthContext';
 import { useFarmListings } from '../../../context/FarmListingsContext';
 import { useLeases } from '../../../context/LeaseContext';
+import { notificationsApi, AppNotification } from '../../../services/notificationsApi';
 import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
 import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
+import { activityVisual, relativeTime, type ActivityItem } from '../../../utils/activityFeed';
 import {
   buildPropertySnapshots,
   formatCompactRupees,
@@ -38,15 +40,7 @@ export interface ToolItem {
   onPress: () => void;
 }
 
-export interface ActivityItem {
-  id: string;
-  icon: string;
-  tone: 'green' | 'blue' | 'amber';
-  title: string;
-  sub: string;
-  time: string;
-  onPress: () => void;
-}
+export type { ActivityItem };
 
 export function useOwnerHome() {
   const navigation = useNavigation<NavigationProp>();
@@ -227,38 +221,104 @@ export function useOwnerHome() {
     [navigation],
   );
 
-  const activities: ActivityItem[] = useMemo(
-    () => [
-      {
-        id: 'a1',
-        icon: 'cash',
+  // One real source feeding "Recent activity" below: the same `notifications`
+  // table NotificationsCenter reads (that's why "View all" points there).
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const loadNotifications = useCallback(async () => {
+    if (!user?.id) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      setNotifications(await notificationsApi.fetchForUser(user.id));
+    } catch {
+      setNotifications([]);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadNotifications();
+    return user?.id ? notificationsApi.subscribe(user.id, loadNotifications) : undefined;
+  }, [loadNotifications, user?.id]);
+
+  // Recent activity merges every real, timestamped event this owner already
+  // has data for — not just the notifications table (which nothing in this
+  // app writes to yet, so it's often empty): a new land listed, a lease
+  // going active, and a lease request coming in are all real state changes
+  // already tracked in FarmListingsContext / LeaseContext.
+  const activities: ActivityItem[] = useMemo(() => {
+    const items: (ActivityItem & { ts: number })[] = [];
+
+    notifications.forEach(n => {
+      const { icon, tone } = activityVisual(n.type);
+      const ts = new Date(n.createdAt).getTime();
+      if (!Number.isFinite(ts)) return;
+      items.push({
+        id: `note-${n.id}`,
+        icon,
+        tone,
+        title: n.title,
+        sub: n.body,
+        time: relativeTime(n.createdAt),
+        onPress: () => navigation.navigate('NotificationsCenter'),
+        ts,
+      });
+    });
+
+    ownerListings.forEach(listing => {
+      const ts = listing.createdAt.getTime();
+      if (!Number.isFinite(ts)) return;
+      items.push({
+        id: `land-${listing.id}`,
+        icon: 'add-circle',
         tone: 'green',
-        title: 'Payment received · ₹45,000',
-        sub: 'From Suresh M. · Wheat Land',
-        time: '2h',
-        onPress: () => goTab('MyProperties'),
-      },
-      {
-        id: 'a2',
-        icon: 'document-attach',
-        tone: 'blue',
-        title: 'New lease request',
-        sub: 'Paddy Land · from Vikram R.',
-        time: '4h',
-        onPress: () => goTab('MyProperties'),
-      },
-      {
-        id: 'a3',
-        icon: 'checkmark-done',
-        tone: 'amber',
-        title: 'Work report submitted',
-        sub: 'Weeding · Black Soil Land',
-        time: '1d',
-        onPress: () => navigation.navigate('OwnerWorkReport'),
-      },
-    ],
-    [navigation, goTab],
-  );
+        title: 'New land added',
+        sub: listing.locationLabel || listing.title,
+        time: relativeTime(listing.createdAt.toISOString()),
+        onPress: () => openProperty(listing.id),
+        ts,
+      });
+    });
+
+    activeLeases
+      .filter(l => l.ownerId === user?.id)
+      .forEach(l => {
+        const ts = new Date(l.createdAt).getTime();
+        if (!Number.isFinite(ts)) return;
+        items.push({
+          id: `leased-${l.id}`,
+          icon: 'key',
+          tone: 'blue',
+          title: 'Land leased',
+          sub: `${l.landTitle} · to ${l.farmerName}`,
+          time: relativeTime(l.createdAt),
+          onPress: () => openProperty(l.landId),
+          ts,
+        });
+      });
+
+    requests
+      .filter(r => r.ownerId === user?.id)
+      .forEach(r => {
+        const ts = new Date(r.createdAt).getTime();
+        if (!Number.isFinite(ts)) return;
+        items.push({
+          id: `request-${r.id}`,
+          icon: 'document-attach',
+          tone: 'amber',
+          title: 'New lease request',
+          sub: `${r.landTitle} · from ${r.farmerName}`,
+          time: relativeTime(r.createdAt),
+          onPress: () => navigation.navigate('LeaseRequests'),
+          ts,
+        });
+      });
+
+    return items
+      .sort((a, b) => b.ts - a.ts)
+      .slice(0, 5)
+      .map(({ ts, ...rest }) => rest);
+  }, [notifications, ownerListings, activeLeases, requests, user?.id, navigation, openProperty]);
 
   return {
     userName: user?.name?.trim() || 'Owner',

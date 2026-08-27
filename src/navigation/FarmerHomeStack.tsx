@@ -5,6 +5,8 @@ import FarmDetailScreen from '../screens/farmer/FarmDetailScreen';
 import AllAvailableLandsScreen from '../screens/farmer/AllAvailableLandsScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
+import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
+import LeaseClosureScreen from '../screens/leaseClosure/LeaseClosureScreen';
 import MyActiveLeasesScreen from '../screens/leases/myActiveLeases';
 import LeaseTypeDetailsScreen from '../screens/LeaseTypeDetailsScreen';
 import LeaseDetailViewScreen from '../screens/LeaseDetailViewScreen';
@@ -38,6 +40,8 @@ export type FarmerHomeStackParamList = {
   LeaseStatus: undefined;
   LeaseAgreements: undefined;
   AgreementDetails: { agreementId: string };
+  LeaseClosureRequest: { leaseId: string };
+  LeaseClosure: { closureId: string };
   MyActiveLeases: undefined;
   LeaseTypeDetails: { selectedLeaseType?: string; propertyId?: string };
   LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
@@ -103,6 +107,16 @@ export default function FarmerHomeStack() {
         options={{
           title: 'Agreement Details',
         }}
+      />
+      <Stack.Screen
+        name="LeaseClosureRequest"
+        component={RequestLeaseClosureScreen}
+        options={{ title: 'Request Lease Closure' }}
+      />
+      <Stack.Screen
+        name="LeaseClosure"
+        component={LeaseClosureScreen}
+        options={{ title: 'Lease Closure' }}
       />
       <Stack.Screen
         name="LeaseTypeDetails"

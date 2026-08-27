@@ -30,6 +30,11 @@ export function useMyActiveLeases({ navigation }: Props) {
     () => new Set(myAgreements.filter((a) => a.status === 'awaiting' && !a.farmerSigned).map((a) => a.id)),
     [myAgreements],
   );
+  // Rejected requests have no agreement/lease to open — tapping one is a no-op.
+  const rejectedIds = useMemo(
+    () => new Set(myRequests.filter((r) => r.status === 'rejected').map((r) => r.id)),
+    [myRequests],
+  );
 
   const realItems: LeaseListItem[] = useMemo(() => {
     const active: LeaseListItem[] = myActiveLeases.map((l) => ({
@@ -67,7 +72,21 @@ export function useMyActiveLeases({ navigation }: Props) {
         status: 'Pending',
         image: DEFAULT_LEASE_IMAGE,
       }));
-    return [...toSign, ...active, ...pending];
+    // Previously dropped entirely once rejected — the request just vanished
+    // from this list with no explanation. Now it stays, clearly labelled.
+    const rejected: LeaseListItem[] = myRequests
+      .filter((r) => r.status === 'rejected')
+      .map((r) => ({
+        id: r.id,
+        title: r.landTitle,
+        ownerName: r.ownerName,
+        locationLabel: `${LEASE_TYPE_MAP[r.typeId].name} · declined by owner`,
+        acresLabel: '',
+        rentLabel: r.termsSummary,
+        status: 'Rejected',
+        image: DEFAULT_LEASE_IMAGE,
+      }));
+    return [...toSign, ...active, ...pending, ...rejected];
   }, [myActiveLeases, myAgreements, myRequests]);
 
   const filtered = useMemo(() => {
@@ -83,7 +102,7 @@ export function useMyActiveLeases({ navigation }: Props) {
     });
   }, [filter, query, realItems]);
 
-  const filterKeys: LeaseFilterKey[] = ['All', 'Active', 'Pending', 'Expired'];
+  const filterKeys: LeaseFilterKey[] = ['All', 'Active', 'Pending', 'Rejected', 'Expired'];
 
   return {
     canGoBack: navigation.canGoBack(),
@@ -97,13 +116,16 @@ export function useMyActiveLeases({ navigation }: Props) {
     onBack: useCallback(() => navigation.goBack(), [navigation]),
     onLeasePress: useCallback(
       (item: LeaseListItem) => {
+      if (rejectedIds.has(item.id)) {
+      return; // nothing to open — the request never became an agreement or lease
+      }
       if (awaitingSignIds.has(item.id)) {
       (navigation as { navigate: (n: string, p?: object) => void }).navigate('AgreementSign', { agreementId: item.id });
       } else {
       (navigation as { navigate: (n: string, p?: object) => void }).navigate('AgreementDetails', { agreementId: item.id });
     }
   },
-  [navigation, awaitingSignIds],
+  [navigation, awaitingSignIds, rejectedIds],
 ),
     onOptionsPress: useCallback(() => {}, []),
     onNewLeasePress: useCallback(() => {}, []),

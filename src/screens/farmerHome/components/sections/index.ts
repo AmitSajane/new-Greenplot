@@ -4,6 +4,7 @@ export { FarmSnapshot } from './FarmSnapshot';
 export { AiAdvisoryCard } from './AiAdvisoryCard';
 export { MarketTicker } from './MarketTicker';
 export { TasksSection } from './TasksSection';
+export { ActivitySection } from './ActivitySection';
 export { QuickActionsSection } from './QuickActionsSection';
 export { CropHealthSection } from './CropHealthSection';
 export { FindLandSection } from './FindLandSection';
