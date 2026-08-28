@@ -107,8 +107,18 @@ export default function LeaseRequestsScreen() {
   const onRespond = useCallback(
     (id: string, ok: boolean) => {
       if (ok) {
-        approveRequest(id);
-        Alert.alert('Approved & signed ✓', 'You have signed the agreement. It now goes to the farmer to sign — once they do, the lease becomes active.');
+        // Awaited: approving now locks the land and auto-rejects every other
+        // pending request for it, atomically — if this request lost that
+        // race (already decided, or the land was taken a moment ago), the
+        // owner needs to see that instead of a false "Approved" message.
+        approveRequest(id)
+          .then(() => {
+            Alert.alert('Approved & signed ✓', 'You have signed the agreement. It now goes to the farmer to sign — once they do, the lease becomes active.');
+          })
+          .catch((err: unknown) => {
+            const message = err instanceof Error ? err.message : 'Could not approve this request.';
+            Alert.alert("Couldn't approve", message);
+          });
       } else {
         rejectRequest(id);
       }

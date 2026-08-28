@@ -51,7 +51,11 @@ interface LeaseContextType {
     offer: LeaseOffer; landTitle: string; farmerId: string; farmerName: string; ownerId: string; ownerName: string; message?: string;
   }) => string;
   getRequestsForFarmer: (farmerId: string) => LeaseRequest[];
-  approveRequest: (requestId: string) => string | undefined;
+  /** Approves one request; every other pending request on the same land is
+   *  auto-rejected and the land is locked, atomically. Rejects (throws) if
+   *  the land was already taken by another approval, or this request was
+   *  already decided — the caller should surface that, not assume success. */
+  approveRequest: (requestId: string) => Promise<string | undefined>;
   rejectRequest: (requestId: string) => void;
 
   agreements: Agreement[];
@@ -225,13 +229,18 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
   const getRequestsForFarmer = useCallback((farmerId: string) => requests.filter(r => r.farmerId === farmerId), [requests]);
 
   const approveRequest = useCallback(
-    (requestId: string) => {
+    (requestId: string): Promise<string | undefined> => {
       if (supabase) {
-        leaseApi.approveRequest(requestId).then(refetch).catch(() => {});
-        return undefined;
+        return leaseApi.approveRequest(requestId).then(agreementId => {
+          refetch();
+          return agreementId;
+        });
+        // Errors (e.g. "already taken", "already decided") propagate to the
+        // caller instead of being swallowed — the owner needs to know their
+        // approve attempt lost a race, not see a false success message.
       }
       const req = requests.find(r => r.id === requestId);
-      if (!req) return undefined;
+      if (!req || req.status !== 'pending') return Promise.resolve(undefined);
       const offer = offers.find(o => o.id === req.offerId);
       const agId = uid('agr');
       const agreement: Agreement = {
@@ -241,11 +250,20 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
         farmerId: req.farmerId, farmerName: req.farmerName, ownerId: req.ownerId, ownerName: req.ownerName,
         ownerSigned: true, farmerSigned: false, status: 'awaiting', createdAt: nowIso(),
       };
-      setRequests(prev => prev.map(r => (r.id === requestId ? { ...r, status: 'accepted' } : r)));
+      // Accept this one, auto-reject every other pending request on the same
+      // land, and lock the land now instead of waiting for the signature.
+      setRequests(prev =>
+        prev.map(r => {
+          if (r.id === requestId) return { ...r, status: 'accepted' };
+          if (r.landId === req.landId && r.status === 'pending') return { ...r, status: 'rejected' };
+          return r;
+        }),
+      );
       setAgreements(prev => [agreement, ...prev]);
-      return agId;
+      updateListing(req.landId, { status: 'leased' });
+      return Promise.resolve(agId);
     },
-    [requests, offers, refetch],
+    [requests, offers, refetch, updateListing],
   );
 
   const rejectRequest = useCallback(

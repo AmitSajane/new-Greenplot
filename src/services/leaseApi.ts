@@ -109,22 +109,27 @@ export const leaseApi = {
     await db().from('lease_requests').update({ status: 'rejected' }).eq('id', requestId);
   },
 
-  /** Owner approves → request accepted + an owner-signed agreement is created. */
-  async approveRequest(requestId: string): Promise<void> {
+  /** Owner approves → the DB atomically accepts this request, auto-rejects
+   *  every other pending request on the same land, locks the land, and
+   *  creates the owner-signed agreement. See supabase/lock_land_on_approval.sql —
+   *  this replaces the old multi-step client sequence that let two farmers
+   *  both get approved for one land. Throws if the land was already taken
+   *  (e.g. lost a race to another approval) or the request was already decided. */
+  async approveRequest(requestId: string): Promise<string> {
     const c = db();
+    // type_name / full_terms still come from the app's lease-type constants —
+    // only the atomic land-lock + auto-reject + insert moved server-side.
     const { data: req } = await c.from('lease_requests').select('*').eq('id', requestId).single();
-    if (!req) return;
+    if (!req) throw new Error('Request not found');
     const { data: offerRow } = await c.from('lease_offers').select('*').eq('id', req.offer_id).single();
     const offer = offerRow ? offerToApp(offerRow) : null;
-    await c.from('lease_requests').update({ status: 'accepted' }).eq('id', requestId);
-    await c.from('lease_agreements').insert({
-      request_id: requestId, land_id: req.land_id, offer_id: req.offer_id, type_id: req.type_id,
-      land_title: req.land_title, type_name: LEASE_TYPE_MAP[req.type_id as keyof typeof LEASE_TYPE_MAP].name,
-      terms_summary: req.terms_summary, full_terms: offer ? buildAgreementTerms(offer) : [],
-      tenure: offer?.tenure || '', available_from: offer?.availableFrom || '',
-      farmer_id: req.farmer_id, farmer_name: req.farmer_name, owner_id: req.owner_id, owner_name: req.owner_name,
-      owner_signed: true, farmer_signed: false, status: 'awaiting',
+    const { data, error } = await c.rpc('approve_lease_request', {
+      p_request_id: requestId,
+      p_type_name: LEASE_TYPE_MAP[req.type_id as keyof typeof LEASE_TYPE_MAP].name,
+      p_full_terms: offer ? buildAgreementTerms(offer) : [],
     });
+    if (error) throw error;
+    return data as string;
   },
 
   /** Farmer signs (drawn signature already uploaded → `signatureUrl`) → if
