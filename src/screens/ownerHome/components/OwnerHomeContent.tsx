@@ -238,35 +238,30 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
             </View>
             <Text style={s.sectionLink} onPress={vm.onActivityViewAll}>View all</Text>
           </View>
-          <View style={[s.card, { paddingHorizontal: 12 }]}>
-            {vm.activities.length === 0 ? (
-              <View style={s.actEmpty}>
-                <Ionicons name="time-outline" size={20} color="#9EB8A8" />
-                <Text style={s.actEmptyText}>No recent activity yet</Text>
-              </View>
-            ) : (
-              vm.activities.map((a, i) => {
-                const c = tone[a.tone];
-                return (
-                  <TouchableOpacity
-                    key={a.id}
-                    style={[s.actRow, i === vm.activities.length - 1 && { borderBottomWidth: 0 }]}
-                    onPress={a.onPress}
-                    activeOpacity={0.8}
-                  >
-                    <View style={[s.actDot, { backgroundColor: c.bg }]}>
-                      <Ionicons name={a.icon} size={15} color={c.fg} />
-                    </View>
-                    <View>
-                      <Text style={s.actTitle}>{a.title}</Text>
-                      <Text style={s.actSub}>{a.sub}</Text>
-                    </View>
-                    <Text style={s.actTime}>{a.time}</Text>
+          {vm.activities.length === 0 ? (
+            <View style={[s.card, s.actEmpty]}>
+              <Ionicons name="time-outline" size={20} color="#9EB8A8" />
+              <Text style={s.actEmptyText}>No recent activity yet</Text>
+            </View>
+          ) : (
+            vm.activities.map(a => {
+              const c = tone[a.tone];
+              return (
+                <View key={a.id} style={[s.alertRow, { backgroundColor: c.bg, borderColor: c.bg }]}>
+                  <View style={s.alertIcon}>
+                    <Ionicons name={a.icon} size={16} color={c.fg} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[s.alertTitle, { color: c.strong }]}>{a.title}</Text>
+                    <Text style={[s.alertSub, { color: c.fg }]}>{a.sub}</Text>
+                  </View>
+                  <TouchableOpacity style={[s.alertBtn, { backgroundColor: c.fg }]} onPress={a.onPress} activeOpacity={0.85}>
+                    <Text style={s.alertBtnText}>{a.actionLabel || 'View'}</Text>
                   </TouchableOpacity>
-                );
-              })
-            )}
-          </View>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* ───────── Schemes & news ───────── */}

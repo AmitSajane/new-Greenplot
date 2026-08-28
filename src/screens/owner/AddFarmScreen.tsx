@@ -18,7 +18,8 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { OwnerHomeStackParamList } from '../../navigation/OwnerHomeStack';
-import { useFarmListings } from '../../context/FarmListingsContext';
+import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
+import { useLeases } from '../../context/LeaseContext';
 import { useAuth } from '../../context/AuthContext';
 import locationHierarchy, { type StateItem } from '../../data/locationHierarchy';
 import INDIA_LOCATIONS from '../../constants/indiaLocations.json';
@@ -26,6 +27,8 @@ import { lookupPincode } from '../../services/pincodeApi';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 import { landVerifier, VerificationResult } from '../../services/landVerifier';
 import { storageApi } from '../../services/storageApi';
+import { LeaseTypeId } from '../../constants/leaseTypes';
+import { formatDateLabel } from '../../utils';
 
 /** Complete all-India State → District → Taluk map (offline, 35 states / 10.8k taluks). */
 const INDIA = INDIA_LOCATIONS as Record<string, Record<string, string[]>>;
@@ -70,6 +73,42 @@ const LEASE_TYPE_OPTIONS = [
 
 const CROP_OPTIONS = ['Wheat', 'Rice', 'Cotton', 'Sugarcane', 'Pulses'];
 
+// Maps this screen's own lease-type option labels (a separate, plain-English
+// list from leaseTypes.ts's canonical LeaseTypeId enum) onto a real offer
+// type, so "List Without Lease Offer" can synthesize one real, appliable
+// LeaseOffer from what's already been typed in above — reusing the exact
+// same LeaseOffer shape AddLeaseOfferScreen publishes, so nothing downstream
+// (LeaseOptionsSection, applyForLease, agreements) needs to know this offer
+// wasn't hand-built by the owner.
+const LEASE_TYPE_TO_ID: Record<string, LeaseTypeId> = {
+  'Fixed Rent': 'fixed_rent',
+  'Share Cropping': 'crop_share',
+  'Crop Share': 'crop_share',
+  'Revenue Share': 'revenue_share',
+  'Fixed + Share': 'flexible_share',
+  'Custom Agreement': 'custom',
+};
+
+/** `pricePerYear` here is the TOTAL annual rent for the whole plot (this
+ *  form's "Price per Year" field), while `fixed_rent`/`flexible_share`
+ *  offers are priced per acre — divide it out so the synthesized offer's
+ *  numbers read correctly wherever a farmer sees them. */
+function basicOfferFromFarmForm(input: { leaseType: string; tenure: string; pricePerYear: string; acres: string }) {
+  const typeId: LeaseTypeId = LEASE_TYPE_TO_ID[input.leaseType] || 'fixed_rent';
+  const totalPerYear = Number(input.pricePerYear.replace(/[^\d.]/g, '')) || 0;
+  const acresNum = parseFloat(input.acres) || 0;
+  const perAcre = acresNum > 0 ? Math.round(totalPerYear / acresNum) : totalPerYear;
+
+  const terms: Record<string, string | number> =
+    typeId === 'crop_share' ? { harvestSplit: 50, inputSplit: 50 }
+    : typeId === 'revenue_share' ? { ownerPercent: 25, inputSplit: 50 }
+    : typeId === 'flexible_share' ? { baseRate: perAcre, bonusPercent: 20 }
+    : typeId === 'custom' ? { clauses: 'As described in the land listing.' }
+    : { ratePerAcre: perAcre, installments: 'Full upfront' }; // fixed_rent
+
+  return { typeId, terms, tenure: input.tenure || '1 year', availableFrom: formatDateLabel(new Date()) };
+}
+
 interface MediaItem {
   id: string;
   uri: string; // local preview uri
@@ -85,6 +124,7 @@ export default function AddFarmScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<any>();
   const { addListing, updateListing, getListingById } = useFarmListings();
+  const { addOffer } = useLeases();
   const { user } = useAuth();
   const selfFarmed = !!route?.params?.selfFarmed;
 
@@ -303,8 +343,10 @@ export default function AddFarmScreen() {
       .finally(() => setPinLoading(false));
   }, []);
 
-  const handleSubmit = async () => {
-    if (submitting) return;
+  // Validates the form and assembles the listing payload, or returns null
+  // (after showing the relevant alert) when it isn't ready to submit yet.
+  // Shared by every submit path below so the checks only live in one place.
+  const buildListingData = useCallback((): any => {
     const addressParts = [village, hobli, taluk, district, state].filter(Boolean);
     const locationText = addressParts.length > 0 ? addressParts.join(', ') : location;
 
@@ -322,25 +364,24 @@ export default function AddFarmScreen() {
 
     if (missingFields.length > 0) {
       Alert.alert('Missing Fields', `Please fill the following required fields:\n\n${missingFields.join(', ')}`);
-      return;
+      return null;
     }
     if (mediaItems.some(m => m.uploading)) {
       Alert.alert('Please wait', 'Photos are still uploading. Try again in a moment.');
-      return;
+      return null;
     }
     if (mediaItems.some(m => m.error)) {
       Alert.alert(
         'A photo failed to upload',
         'Retry the failed photo, or remove it, before publishing.',
       );
-      return;
+      return null;
     }
 
     // Uploaded media URLs (work across devices); first photo is the cover image.
     const uploadedUrls = mediaItems.map(m => m.remoteUrl).filter((u): u is string => !!u);
 
-    // Add the listing
-    const listingData: any = {
+    const listingData: Record<string, any> = {
       title,
       soilType,
       acres,
@@ -384,23 +425,63 @@ export default function AddFarmScreen() {
       listingData.expectedHarvest = expectedHarvest;
     }
 
-    if (isEditMode && editListingId) {
-      setSubmitting(true);
-      // Never let an edit silently flip a leased land back to active.
-      const updates = { ...listingData };
-      delete updates.status;
-      delete updates.ownerId;
-      delete updates.ownerName;
-      updateListing(editListingId, updates);
+    return listingData;
+  }, [
+    village, hobli, taluk, district, state, location, title, acres, soilType, selfFarmed, tenure, leaseType,
+    pricePerYear, mediaItems, description, user?.id, user?.name, route?.params?.plotGeoJSON, govtSurveyNumber,
+    verifyResult, selectedCrops, selectedWaterSources, irrigationSchedule, pesticideSchedule, expectedHarvest,
+  ]);
+
+  // Edit mode: same "one land, one write" shape as before — just an update,
+  // never a create, so it never needs the with/without-offer choice below.
+  const handleSaveEdit = useCallback(async () => {
+    if (submitting || !editListingId) return;
+    const listingData = buildListingData();
+    if (!listingData) return;
+    setSubmitting(true);
+    // Never let an edit silently flip a leased land back to active, or reassign ownership.
+    const updates = { ...listingData };
+    delete updates.status;
+    delete updates.ownerId;
+    delete updates.ownerName;
+    updateListing(editListingId, updates);
+    setSubmitting(false);
+    Alert.alert('Changes saved ✓', 'Your listing has been updated.', [
+      { text: 'OK', onPress: () => navigation.goBack() },
+    ]);
+  }, [submitting, editListingId, buildListingData, updateListing, navigation]);
+
+  // Self-farmed land was never eligible for a lease offer, so it keeps the
+  // old single-button create flow — no with/without-offer choice needed.
+  const handleSelfFarmedSubmit = useCallback(async () => {
+    if (submitting) return;
+    const listingData = buildListingData();
+    if (!listingData) return;
+    setSubmitting(true);
+    try {
+      await addListing(listingData);
+    } catch (e) {
       setSubmitting(false);
-      Alert.alert('Changes saved ✓', 'Your listing has been updated.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
+      const reason = e instanceof Error ? e.message : (e as { message?: string })?.message;
+      Alert.alert('Could not publish', reason || 'Please check your connection and try again.');
       return;
     }
+    setSubmitting(false);
+    Alert.alert('Land added ✓', 'You can now add a crop for it from My Crops & Plots.', [
+      { text: 'OK', onPress: () => navigation.goBack() },
+    ]);
+  }, [submitting, buildListingData, addListing, navigation]);
 
-    let newLandId: string;
+  // "List Without Lease Offer" — creates the land AND a real, appliable
+  // LeaseOffer synthesized from the lease fields already collected above, in
+  // one guarded action, so a bare land row that farmers can't apply to is
+  // never left behind.
+  const handleListWithoutOffer = useCallback(async () => {
+    if (submitting) return;
+    const listingData = buildListingData();
+    if (!listingData) return;
     setSubmitting(true);
+    let newLandId: string;
     try {
       newLandId = await addListing(listingData);
     } catch (e) {
@@ -409,23 +490,29 @@ export default function AddFarmScreen() {
       Alert.alert('Could not publish', reason || 'Please check your connection and try again.');
       return;
     }
+    addOffer({ landId: newLandId, ...basicOfferFromFarmForm({ leaseType, tenure, pricePerYear: listingData.pricePerYear, acres }) });
     setSubmitting(false);
+    Alert.alert(
+      'Land Published ✓',
+      'Farmers can already apply using a basic offer generated from your Tenure, Lease Type & Price/Year. Add a detailed offer anytime from My Properties.',
+      [{ text: 'Go to Home', onPress: () => navigation.popToTop() }],
+    );
+  }, [submitting, buildListingData, addListing, addOffer, leaseType, tenure, acres, navigation]);
 
-    if (selfFarmed) {
-      Alert.alert('Land added ✓', 'You can now add a crop for it from My Crops & Plots.', [
-        { text: 'OK', onPress: () => navigation.goBack() },
-      ]);
-      return;
-    }
+  // "Continue with Lease Offer" — does NOT create the land. It hands the
+  // validated form data to AddLeaseOfferScreen as a draft, which creates the
+  // land and the offer together, exactly once, only once the owner actually
+  // publishes there. `replace` (not `navigate`) removes this screen from the
+  // stack, so there is no "come back and tap Submit again" path left that
+  // could create the same land twice.
+  const handleContinueWithOffer = useCallback(() => {
+    if (submitting) return;
+    const listingData = buildListingData();
+    if (!listingData) return;
+    navigation.replace('AddLeaseOffer', { draftLand: listingData as Omit<FarmListing, 'id' | 'createdAt'>, landTitle: title });
+  }, [submitting, buildListingData, navigation, title]);
 
-    Alert.alert('Land published ✓', 'Next, add lease offers so farmers can compare and apply.', [
-      { text: 'Later', style: 'cancel', onPress: () => navigation.goBack() },
-      {
-        text: 'Add lease offers',
-        onPress: () => navigation.navigate('AddLeaseOffer', { landId: newLandId, landTitle: title }),
-      },
-    ]);
-  };
+  const handlePrimarySubmit = isEditMode ? handleSaveEdit : handleSelfFarmedSubmit;
 
   const renderDropdown = (
     value: string,
@@ -1140,22 +1227,75 @@ export default function AddFarmScreen() {
             <Text style={styles.mediaHint}>Add multiple photos — clear photos rent your land faster.</Text>
           </View>
 
-          {/* Submit Button */}
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            activeOpacity={0.8}
-            disabled={submitting}
-          >
-            {submitting ? (
-              <ActivityIndicator color={colors.textPrimary} />
-            ) : (
-              <>
-                <Ionicons name={isEditMode ? 'checkmark-circle' : 'add-circle'} size={22} color={colors.textPrimary} />
-                <Text style={styles.submitButtonText}>{isEditMode ? 'Save Changes' : 'Submit'}</Text>
-              </>
-            )}
-          </TouchableOpacity>
+          {/* Submit — a single button for edits and self-farmed land (no lease
+              offer ever applies to those); a new land being leased out gets
+              the with/without-offer choice instead, so the create only ever
+              happens inside one of those two handlers, never here. */}
+          {isEditMode || selfFarmed ? (
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              onPress={handlePrimarySubmit}
+              activeOpacity={0.8}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color={colors.textPrimary} />
+              ) : (
+                <>
+                  <Ionicons name={isEditMode ? 'checkmark-circle' : 'add-circle'} size={22} color={colors.textPrimary} />
+                  <Text style={styles.submitButtonText}>{isEditMode ? 'Save Changes' : 'Submit'}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.listingChoice}>
+              <Text style={styles.listingChoiceHeading}>How would you like to list this land?</Text>
+              <Text style={styles.listingChoiceSub}>Choose one to finish — your land details are used either way.</Text>
+
+              <TouchableOpacity
+                style={styles.choiceCard}
+                onPress={handleContinueWithOffer}
+                activeOpacity={0.8}
+                disabled={submitting}
+              >
+                <View style={[styles.choiceIcon, { backgroundColor: colors.softGreen }]}>
+                  <Ionicons name="create" size={22} color={colors.primary} />
+                </View>
+                <View style={styles.choiceTextWrap}>
+                  <Text style={styles.choiceTitle}>Continue with Lease Offer</Text>
+                  <Text style={styles.choiceSub}>Add detailed lease terms and conditions now</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.choiceCard}
+                onPress={handleListWithoutOffer}
+                activeOpacity={0.8}
+                disabled={submitting}
+              >
+                <View style={[styles.choiceIcon, { backgroundColor: colors.softOrange }]}>
+                  {submitting ? (
+                    <ActivityIndicator color={colors.warning} size="small" />
+                  ) : (
+                    <Ionicons name="flash" size={22} color={colors.warning} />
+                  )}
+                </View>
+                <View style={styles.choiceTextWrap}>
+                  <Text style={styles.choiceTitle}>List Without Lease Offer</Text>
+                  <Text style={styles.choiceSub}>Publish the land now and add lease details later</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </TouchableOpacity>
+
+              <View style={styles.choiceCaption}>
+                <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} />
+                <Text style={styles.choiceCaptionText}>
+                  Your land details are saved once you complete either option — no duplicate listings.
+                </Text>
+              </View>
+            </View>
+          )}
         </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1338,6 +1478,66 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.textPrimary,
     marginLeft: spacing.sm,
+  },
+  // With/without-lease-offer choice (replaces the plain Submit button for a
+  // new leasable land)
+  listingChoice: {
+    marginTop: spacing.lg,
+  },
+  listingChoiceHeading: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: colors.textPrimary,
+    marginBottom: 3,
+  },
+  listingChoiceSub: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
+  choiceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    ...shadow.card,
+  },
+  choiceIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  choiceTextWrap: {
+    flex: 1,
+  },
+  choiceTitle: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: colors.textPrimary,
+  },
+  choiceSub: {
+    fontSize: 11.5,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  choiceCaption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginTop: spacing.sm,
+  },
+  choiceCaptionText: {
+    flex: 1,
+    fontSize: 11,
+    color: colors.textMuted,
+    lineHeight: 16,
   },
   // Picker Modal Styles
   pickerOverlay: {

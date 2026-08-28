@@ -11,6 +11,7 @@ import { useAgriNews } from '../../farmerHome/hooks/useAgriNews';
 import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
 import { activityVisual, relativeTime, type ActivityItem } from '../../../utils/activityFeed';
+import { CLOSURE_HISTORY_ACTION_LABELS, closureNeedsOwnerAction } from '../../../constants/leaseClosure';
 import {
   buildPropertySnapshots,
   formatCompactRupees,
@@ -19,6 +20,24 @@ import {
   parsePrice,
   type PropertySnapshot,
 } from '../constants/ownerDashboardData';
+
+// Icon per closure-history action — mirrors CLOSURE_HISTORY_ACTION_LABELS'
+// keys, just picking a glyph instead of text.
+function closureActionIcon(action: string): string {
+  if (action === 'owner_rejected' || action === 'closure_cancelled') return 'close-circle';
+  if (action === 'owner_accepted' || action === 'owner_accepted_with_settlement') return 'checkmark-circle';
+  if (action === 'notice_waived') return 'time';
+  if (action === 'settlement_confirmed' || action === 'settlement_updated') return 'cash';
+  if (action === 'owner_confirmed_receipt' || action === 'farmer_confirmed_handover') return 'hand-left';
+  if (action === 'lease_closed') return 'checkmark-done-circle';
+  return 'document-text';
+}
+
+function closureActionTone(action: string): ActivityItem['tone'] {
+  if (action === 'owner_rejected' || action === 'closure_cancelled') return 'red';
+  if (action === 'lease_closed') return 'green';
+  return 'blue';
+}
 
 type NavigationProp = NativeStackNavigationProp<OwnerHomeStackParamList>;
 
@@ -46,8 +65,14 @@ export function useOwnerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
   const { ownerListings } = useFarmListings();
-  const { requests, activeLeases } = useLeases();
+  const { requests, activeLeases, closures, getHistoryForClosure } = useLeases();
   const pendingLeaseRequests = requests.filter(r => r.status === 'pending').length;
+  // Every closure (any stage — respond, confirm settlement, confirm
+  // handover, finalize) currently waiting on this owner to do something.
+  const closuresNeedingAction = useMemo(
+    () => closures.filter(c => c.ownerId === user?.id && closureNeedsOwnerAction(c)),
+    [closures, user?.id],
+  );
 
   // Live agriculture news + in-app readers (shared with Farmer Home).
   const news = useAgriNews(FARMER_NEWS);
@@ -166,6 +191,19 @@ export function useOwnerHome() {
         actionLabel: 'Review',
         onPress: () => navigation.navigate('LeaseRequests'),
       },
+      ...(closuresNeedingAction.length > 0
+        ? [
+            {
+              id: 'closureActions',
+              tone: 'amber' as const,
+              icon: 'exit-outline',
+              title: `${closuresNeedingAction.length} closure action${closuresNeedingAction.length === 1 ? '' : 's'}`,
+              sub: 'A lease closure needs your input',
+              actionLabel: 'Review',
+              onPress: () => navigation.navigate('LeaseClosure', { closureId: closuresNeedingAction[0].id }),
+            },
+          ]
+        : []),
       // {
       //   id: 'approvals',
       //   tone: 'amber',
@@ -203,7 +241,7 @@ export function useOwnerHome() {
       //   onPress: () => navigation.navigate('MyCrops'),
       // },
     ],
-    [navigation, pendingLeaseRequests],
+    [navigation, pendingLeaseRequests, closuresNeedingAction],
   );
 
   const tools: ToolItem[] = useMemo(
@@ -260,6 +298,7 @@ export function useOwnerHome() {
         title: n.title,
         sub: n.body,
         time: relativeTime(n.createdAt),
+        actionLabel: 'View',
         onPress: () => navigation.navigate('NotificationsCenter'),
         ts,
       });
@@ -275,6 +314,7 @@ export function useOwnerHome() {
         title: 'New land added',
         sub: listing.locationLabel || listing.title,
         time: relativeTime(listing.createdAt.toISOString()),
+        actionLabel: 'View',
         onPress: () => openProperty(listing.id),
         ts,
       });
@@ -292,33 +332,64 @@ export function useOwnerHome() {
           title: 'Land leased',
           sub: `${l.landTitle} · to ${l.farmerName}`,
           time: relativeTime(l.createdAt),
+          actionLabel: 'View',
           onPress: () => openProperty(l.landId),
           ts,
         });
       });
 
+    // Only settled outcomes here — a still-pending request belongs solely in
+    // "Action required" above, not duplicated here as a completed-looking row.
     requests
-      .filter(r => r.ownerId === user?.id)
+      .filter(r => r.ownerId === user?.id && r.status !== 'pending')
       .forEach(r => {
         const ts = new Date(r.createdAt).getTime();
         if (!Number.isFinite(ts)) return;
         items.push({
           id: `request-${r.id}`,
-          icon: 'document-attach',
-          tone: 'amber',
-          title: 'New lease request',
-          sub: `${r.landTitle} · from ${r.farmerName}`,
+          icon: r.status === 'accepted' ? 'checkmark-circle' : 'close-circle',
+          tone: r.status === 'accepted' ? 'green' : 'red',
+          title: r.status === 'accepted' ? 'Lease request accepted' : 'Lease request rejected',
+          sub: `${r.landTitle} · ${r.farmerName}`,
           time: relativeTime(r.createdAt),
+          actionLabel: 'View',
           onPress: () => navigation.navigate('LeaseRequests'),
           ts,
         });
+      });
+
+    // Lease closure — only this owner's own already-completed actions on
+    // it (accept/reject, waive notice, confirm settlement/handover,
+    // finalize). A closure still waiting on this owner for its *next* step
+    // stays in "Action required" instead — its history so far is still
+    // fair game here since each entry is something already done.
+    closures
+      .filter(c => c.ownerId === user?.id)
+      .forEach(c => {
+        getHistoryForClosure(c.id)
+          .filter(h => h.userRole === 'owner')
+          .forEach(h => {
+            const ts = new Date(h.createdAt).getTime();
+            if (!Number.isFinite(ts)) return;
+            items.push({
+              id: `closure-hist-${h.id}`,
+              icon: closureActionIcon(h.action),
+              tone: closureActionTone(h.action),
+              title: CLOSURE_HISTORY_ACTION_LABELS[h.action] || h.action.replace(/_/g, ' '),
+              sub: `${c.landTitle} · ${c.farmerName}`,
+              time: relativeTime(h.createdAt),
+              actionLabel: 'View',
+              onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+              ts,
+            });
+          });
       });
 
     return items
       .sort((a, b) => b.ts - a.ts)
       .slice(0, 5)
       .map(({ ts, ...rest }) => rest);
-  }, [notifications, ownerListings, activeLeases, requests, user?.id, navigation, openProperty]);
+  }, [notifications, ownerListings, activeLeases, requests, closures, getHistoryForClosure, user?.id, navigation, openProperty]);
 
   return {
     userName: user?.name?.trim() || 'Owner',

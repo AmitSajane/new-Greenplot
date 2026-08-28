@@ -27,6 +27,7 @@ import SoilAdvisoryScreen from '../screens/SoilAdvisoryScreen';
 import SchemesNewsListScreen from '../screens/farmerHome/SchemesNewsListScreen';
 import type { NewsItem } from '../screens/farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../screens/farmerHome/constants/schemeCatalog';
+import type { FarmListing } from '../context/FarmListingsContext';
 import SettingsStack from './SettingsStack';
 
 export type OwnerHomeStackParamList = {
@@ -36,7 +37,12 @@ export type OwnerHomeStackParamList = {
   SoilAdvisory: undefined;
   NotificationsCenter: undefined;
   SoilTest: undefined;
-  AddLeaseOffer: { landId: string; landTitle?: string };
+  // Either an existing land (`landId`) gets a new offer added to it, or — the
+  // "Continue with Lease Offer" path from AddFarmScreen — a not-yet-created
+  // land (`draftLand`) is created together with the offer once published.
+  AddLeaseOffer:
+    | { landId: string; landTitle?: string; draftLand?: undefined }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
   LeaseRequests: undefined;
   AgreementSign: { agreementId: string };
   AddFarm:

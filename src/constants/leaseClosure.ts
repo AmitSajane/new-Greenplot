@@ -77,6 +77,48 @@ export const CLOSURE_STATUS_TONE: Record<LeaseClosureStatus, 'green' | 'amber' |
   cancelled: 'red',
 };
 
+/** Human-readable label per `ClosureHistoryEntry.action` string (see the
+ *  `pushHistory(...)` call sites in LeaseContext) — used to render each
+ *  closure-workflow step as one "Recent activity" entry, on both homes. */
+export const CLOSURE_HISTORY_ACTION_LABELS: Record<string, string> = {
+  closure_requested: 'Requested lease closure',
+  owner_accepted: 'Accepted closure request',
+  owner_rejected: 'Rejected closure request',
+  owner_proposed_new_date: 'Proposed a different handover date',
+  owner_accepted_with_settlement: 'Accepted closure — settlement required',
+  notice_waived: 'Waived the notice period',
+  settlement_updated: 'Updated settlement figures',
+  settlement_confirmed: 'Confirmed settlement',
+  standing_crop_resolved: 'Resolved the standing crop',
+  handover_photos_added: 'Added handover photos',
+  handover_notes_added: 'Added handover notes',
+  farmer_confirmed_handover: 'Confirmed land handover',
+  owner_confirmed_receipt: 'Confirmed land received',
+  lease_closed: 'Finalized lease closure',
+  closure_cancelled: 'Cancelled closure request',
+};
+
+/** Does this closure currently need the land owner to do something —
+ *  respond to the request, confirm the settlement, confirm they've received
+ *  the land back, or finalize the closure? Used to split "Action required"
+ *  (still needs owner input) from "Recent activity" (already acted on) on
+ *  Owner Home. Mirrors the stage order `LeaseClosureScreen` walks through. */
+export function closureNeedsOwnerAction(closure: LeaseClosure): boolean {
+  switch (closure.status) {
+    case 'requested':
+    case 'under_review':
+      return !closure.ownerResponse;
+    case 'settlement_pending':
+      return !closure.settlementConfirmed;
+    case 'handover_pending':
+      return !closure.ownerConfirmedAt;
+    case 'ready_for_closure':
+      return true; // someone still needs to finalize it
+    default:
+      return false; // closed / rejected / cancelled
+  }
+}
+
 /** requested_at + notice_period_days, unless the owner has waived it. */
 export function computeEligibleClosureDate(requestedAt: string, noticePeriodDays: number): string {
   const d = new Date(requestedAt);
