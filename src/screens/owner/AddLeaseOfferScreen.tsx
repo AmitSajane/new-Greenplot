@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -14,10 +15,18 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { LEASE_TYPES, LEASE_TYPE_MAP, LeaseField, LeaseTypeId, summarizeOffer } from '../../constants/leaseTypes';
 import { useLeases } from '../../context/LeaseContext';
+import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
 import { colors } from '../../theme/tokens';
 import { formatDateLabel } from '../../utils';
 
-type ParamList = { AddLeaseOffer: { landId: string; landTitle?: string } };
+// Either an existing land (`landId`) gets a new offer, or — reached from
+// AddFarmScreen's "Continue with Lease Offer" — a not-yet-created land
+// (`draftLand`) is created together with the offer once Publish is pressed.
+type ParamList = {
+  AddLeaseOffer:
+    | { landId: string; landTitle?: string; draftLand?: undefined }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
+};
 
 const TENURES = ['1 year', '2 years', '3 years', '5 years', '10 years'];
 
@@ -36,8 +45,9 @@ function defaultsFor(typeId: LeaseTypeId): Record<string, string | number> {
 export default function AddLeaseOfferScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<ParamList, 'AddLeaseOffer'>>();
-  const { landId, landTitle } = route.params;
+  const { landId, landTitle, draftLand } = route.params;
   const { addOffer, getOffersByLand, removeOffer } = useLeases();
+  const { addListing } = useFarmListings();
 
   const [typeId, setTypeId] = useState<LeaseTypeId>('fixed_rent');
   const [terms, setTerms] = useState<Record<string, string | number>>(() => defaultsFor('fixed_rent'));
@@ -52,9 +62,11 @@ export default function AddLeaseOfferScreen() {
   // outside `terms` — `selectType` resets `terms` via defaultsFor() on every
   // type switch, which would otherwise wipe out a deposit already typed in.
   const [securityDeposit, setSecurityDeposit] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const def = LEASE_TYPE_MAP[typeId];
-  const existing = getOffersByLand(landId);
+  // Draft mode has no landId yet, so there can't be any offers to show.
+  const existing = landId ? getOffersByLand(landId) : [];
 
   const selectType = useCallback((id: LeaseTypeId) => {
     setTypeId(id);
@@ -71,16 +83,39 @@ export default function AddLeaseOfferScreen() {
   );
 
   const previewOffer = useMemo(
-    () => summarizeOffer({ id: 'preview', landId, typeId, terms: termsWithDeposit(), tenure, availableFrom, createdAt: '' }),
+    () => summarizeOffer({ id: 'preview', landId: landId || 'draft', typeId, terms: termsWithDeposit(), tenure, availableFrom, createdAt: '' }),
     [landId, typeId, termsWithDeposit, tenure, availableFrom],
   );
 
-  const publish = useCallback(() => {
-    addOffer({ landId, typeId, terms: termsWithDeposit(), tenure, availableFrom });
-    Alert.alert('Offer added ✓', `${def.name} offer published for this land.`, [
-      { text: 'OK', onPress: () => navigation.popToTop() },
-    ]);
-  }, [addOffer, landId, typeId, termsWithDeposit, tenure, availableFrom, def.name, navigation]);
+  // In draft mode this is the ONLY place the land gets created — guarded by
+  // `submitting` (and the button disabling itself below) so a double-tap, or
+  // coming back to AddFarmScreen and choosing "Continue with Lease Offer"
+  // again, can never create it twice.
+  const publish = useCallback(async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    let targetLandId = landId;
+    try {
+      if (!targetLandId && draftLand) {
+        targetLandId = await addListing(draftLand);
+      }
+      if (!targetLandId) throw new Error('Missing land to attach this offer to.');
+      addOffer({ landId: targetLandId, typeId, terms: termsWithDeposit(), tenure, availableFrom });
+    } catch (e) {
+      setSubmitting(false);
+      const reason = e instanceof Error ? e.message : (e as { message?: string })?.message;
+      Alert.alert('Could not publish', reason || 'Please check your connection and try again.');
+      return;
+    }
+    setSubmitting(false);
+    Alert.alert(
+      draftLand ? 'Land Published ✓' : 'Offer added ✓',
+      draftLand
+        ? `${def.name} offer published — your land is now live for farmers to apply.`
+        : `${def.name} offer published for this land.`,
+      [{ text: 'OK', onPress: () => navigation.popToTop() }],
+    );
+  }, [submitting, landId, draftLand, addListing, addOffer, typeId, termsWithDeposit, tenure, availableFrom, def.name, navigation]);
 
   const renderField = (f: LeaseField) => {
     const val = terms[f.key];
@@ -187,11 +222,20 @@ export default function AddLeaseOfferScreen() {
         </TouchableOpacity>
         <View>
           <Text style={styles.headerSub}>Lease offers</Text>
-          <Text style={styles.headerTitle}>{landTitle || 'Your land'}</Text>
+          <Text style={styles.headerTitle}>{landTitle || draftLand?.title || 'Your land'}</Text>
         </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        {/* Draft mode: the land itself doesn't exist yet — make that explicit
+            so it's clear nothing is saved (land or offer) until Publish. */}
+        {!!draftLand && (
+          <View style={styles.draftBanner}>
+            <Ionicons name="information-circle" size={17} color="#0B5ED7" />
+            <Text style={styles.draftBannerText}>Creating land + offer together — nothing is saved until you Publish.</Text>
+          </View>
+        )}
+
         {/* existing offers */}
         {existing.length > 0 && (
           <View style={styles.existing}>
@@ -290,9 +334,20 @@ export default function AddLeaseOfferScreen() {
           <Text style={styles.previewText}>Farmer sees: <Text style={styles.previewBold}>{previewOffer}</Text></Text>
         </View>
 
-        <TouchableOpacity style={styles.publishBtn} onPress={publish} activeOpacity={0.85}>
-          <Ionicons name="add-circle" size={18} color="#fff" />
-          <Text style={styles.publishText}>Publish this offer</Text>
+        <TouchableOpacity
+          style={[styles.publishBtn, submitting && styles.publishBtnDisabled]}
+          onPress={publish}
+          activeOpacity={0.85}
+          disabled={submitting}
+        >
+          {submitting ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <>
+              <Ionicons name="add-circle" size={18} color="#fff" />
+              <Text style={styles.publishText}>{draftLand ? 'Publish Land & Offer' : 'Publish this offer'}</Text>
+            </>
+          )}
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -306,6 +361,8 @@ const styles = StyleSheet.create({
   headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: '600', letterSpacing: 0.5, textTransform: 'uppercase' },
   headerTitle: { fontSize: 18, fontWeight: '800', color: '#fff' },
   scroll: { padding: 14, paddingBottom: 32 },
+  draftBanner: { flexDirection: 'row', alignItems: 'flex-start', gap: 9, backgroundColor: '#E7F0FF', borderWidth: 1, borderColor: '#BFD8FF', borderRadius: 12, padding: 12, marginBottom: 14 },
+  draftBannerText: { flex: 1, fontSize: 11.5, color: '#0A4FB4', fontWeight: '600', lineHeight: 16 },
   sectionLabel: { fontSize: 11, fontWeight: '800', color: G.n4, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 9, marginTop: 4 },
   existing: { marginBottom: 14 },
   offerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderWidth: 1, borderColor: G.n7, borderRadius: 12, padding: 11, marginBottom: 8 },
@@ -343,5 +400,6 @@ const styles = StyleSheet.create({
   previewText: { flex: 1, fontSize: 11, color: G.g2 },
   previewBold: { fontWeight: '800', color: G.g1 },
   publishBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: G.g2, borderRadius: 12, paddingVertical: 14, marginTop: 14 },
+  publishBtnDisabled: { opacity: 0.7 },
   publishText: { color: '#fff', fontSize: 14, fontWeight: '800' },
 });

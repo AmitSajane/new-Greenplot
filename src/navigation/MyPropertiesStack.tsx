@@ -12,6 +12,7 @@ import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
 import LeaseClosureScreen from '../screens/leaseClosure/LeaseClosureScreen';
 import NotificationsCenterScreen from '../screens/NotificationsCenterScreen';
+import type { FarmListing } from '../context/FarmListingsContext';
 import SettingsStack from './SettingsStack';
 
 export type MyPropertiesStackParamList = {
@@ -20,7 +21,10 @@ export type MyPropertiesStackParamList = {
   LeaseTypeDetails: { propertyId: string; selectedLeaseType?: string };
   LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
-  AddLeaseOffer: { landId: string; landTitle?: string };
+  // See OwnerHomeStack's AddLeaseOffer — same draft-land-vs-existing-land shape.
+  AddLeaseOffer:
+    | { landId: string; landTitle?: string; draftLand?: undefined }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
   AddFarm: { editListingId: string };
   CropDetails: { cropCycleId: string };
   AgreementDetails: { agreementId: string };

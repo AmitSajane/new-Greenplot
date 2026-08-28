@@ -157,12 +157,8 @@ export const ownerHomeStyles = StyleSheet.create({
   toolIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginBottom: 6 },
   toolLabel: { fontSize: 10, fontWeight: '700', color: colors.textPrimary },
 
-  // Activity
-  actRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F4F8F5' },
-  actDot: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  actTitle: { fontSize: 11, fontWeight: '700', color: '#1C2E18' },
-  actSub: { fontSize: 10, color: colors.textSecondary },
-  actTime: { fontSize: 9, color: colors.textMuted, marginLeft: 'auto' },
+  // Activity — now rendered as alertRow-style cards (see below); only the
+  // empty state keeps its own styling.
   actEmpty: { alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 20 },
   actEmptyText: { fontSize: 11, fontWeight: '600', color: colors.textSecondary },
 
