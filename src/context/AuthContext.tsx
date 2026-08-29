@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
 import { User, UserRole } from '../types/auth';
 import {
   verifyOTP,
@@ -172,65 +172,96 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [],
   );
 
+  // De-dupes concurrent calls for the same user. Every sign-in path below
+  // calls this explicitly right after the Supabase call succeeds, but that
+  // same Supabase call (signInWithPassword / signUp / setSession) also fires
+  // the onAuthStateChange listener further down, which calls this again for
+  // the identical uid — so one login was doing two full profile fetches back
+  // to back. Reusing the first call's in-flight promise instead of starting
+  // a second one removes that duplicate round trip without having to trust
+  // that the listener alone always fires promptly (it's kept as the backup
+  // path for e.g. token refreshes that don't go through these functions).
+  const inFlightLoad = useRef<{ uid: string; promise: Promise<void> } | null>(null);
+
   // Build the app User from a Supabase session + the profiles row.
-  const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
-    if (!supabase) return;
+  const loadUserFromSession = useCallback((uid: string, authUser?: SupabaseUser | null): Promise<void> => {
+    if (!supabase) return Promise.resolve();
+    if (inFlightLoad.current?.uid === uid) {
+      console.log('[LOGIN] loadUserFromSession() de-duped — reusing in-flight call for', uid);
+      return inFlightLoad.current.promise;
+    }
 
-    const metadata = authUser?.user_metadata as { name?: string; phone?: string } | undefined;
-    const fallbackPhone = cleanPhone(metadata?.phone || authUser?.phone || authUser?.email || '');
-    const fallbackName = metadata?.name?.trim() || '';
+    // TEMP DEBUG LOGGING — remove once the slow-login issue is found.
+    const tStart = Date.now();
+    console.log('[LOGIN] loadUserFromSession() started for', uid);
 
-    const profileResult = await supabase
-      .from('profiles')
-      .select('name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
-      .eq('id', uid)
-      .single();
+    const promise = (async () => {
+      const metadata = authUser?.user_metadata as { name?: string; phone?: string } | undefined;
+      const fallbackPhone = cleanPhone(metadata?.phone || authUser?.phone || authUser?.email || '');
+      const fallbackName = metadata?.name?.trim() || '';
 
-    let profile = profileResult.data as ProfileRow | null;
-
-    if (profileResult.error || !profile) {
-      const minimalProfileResult = await supabase
+      console.log(`[LOGIN]   fetching profiles row at +${Date.now() - tStart}ms`);
+      const profileResult = await supabase!
         .from('profiles')
-        .select('name, role, phone')
+        .select('name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
         .eq('id', uid)
         .single();
+      console.log(`[LOGIN]   profiles row returned at +${Date.now() - tStart}ms, error=`, profileResult.error?.message || null);
 
-      profile = minimalProfileResult.data as typeof profile;
-    }
+      let profile = profileResult.data as ProfileRow | null;
 
-    if (!profile) {
-      const recoveredProfile: ProfileRow = {
-        id: uid,
-        name: fallbackName,
-        role: 'farmer',
-        phone: fallbackPhone,
-      };
+      if (profileResult.error || !profile) {
+        const minimalProfileResult = await supabase!
+          .from('profiles')
+          .select('name, role, phone')
+          .eq('id', uid)
+          .single();
 
-      await saveOwnProfile(recoveredProfile);
+        profile = minimalProfileResult.data as typeof profile;
+      }
+
+      if (!profile) {
+        const recoveredProfile: ProfileRow = {
+          id: uid,
+          name: fallbackName,
+          role: 'farmer',
+          phone: fallbackPhone,
+        };
+
+        await saveOwnProfile(recoveredProfile);
+
+        setUser({
+          id: recoveredProfile.id,
+          name: recoveredProfile.name || '',
+          role: recoveredProfile.role || 'farmer',
+          email: authUser?.email || undefined,
+          phoneNumber: recoveredProfile.phone || '',
+        });
+        return;
+      }
 
       setUser({
-        id: recoveredProfile.id,
-        name: recoveredProfile.name || '',
-        role: recoveredProfile.role || 'farmer',
+        id: uid,
+        name: profile.name?.trim() || fallbackName,
+        role: profile.role || 'farmer',
         email: authUser?.email || undefined,
-        phoneNumber: recoveredProfile.phone || '',
+        phoneNumber: profile.phone || fallbackPhone,
+        location: profile.location || undefined,
+        district: profile.district || undefined,
+        state: profile.state || undefined,
+        hasWhatsapp: profile.has_whatsapp ?? undefined,
+        acceptedTermsAndPoliciesAt: profile.accepted_terms_and_policies || undefined,
+        avatarUrl: profile.avatar_url || undefined,
       });
-      return;
-    }
-
-    setUser({
-      id: uid,
-      name: profile.name?.trim() || fallbackName,
-      role: profile.role || 'farmer',
-      email: authUser?.email || undefined,
-      phoneNumber: profile.phone || fallbackPhone,
-      location: profile.location || undefined,
-      district: profile.district || undefined,
-      state: profile.state || undefined,
-      hasWhatsapp: profile.has_whatsapp ?? undefined,
-      acceptedTermsAndPoliciesAt: profile.accepted_terms_and_policies || undefined,
-      avatarUrl: profile.avatar_url || undefined,
+      console.log(`[LOGIN]   loadUserFromSession() setUser() done at +${Date.now() - tStart}ms`);
+    })().finally(() => {
+      // Only clear if we're still the current entry — a genuinely later
+      // call (new sign-in) may already have replaced it.
+      if (inFlightLoad.current?.promise === promise) inFlightLoad.current = null;
     });
+
+    inFlightLoad.current = { uid, promise };
+    return promise;
   }, [saveOwnProfile]);
 
   // Restore a saved Supabase session on launch + react to auth changes.
@@ -475,13 +506,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       setIsLoading(true);
+      // TEMP DEBUG LOGGING — remove once the slow-login issue is found.
+      const t0 = Date.now();
+      const elapsed = () => `${Date.now() - t0}ms`;
       try {
+        console.log(`[LOGIN] calling signInWithPassword() at ${elapsed()}`);
         const { data, error } = await supabase.auth.signInWithPassword({
           email: phoneToEmail(digits),
           password: phoneToPassword(digits),
         });
+        console.log(`[LOGIN] signInWithPassword() returned at ${elapsed()}, error=`, error?.message || null);
         if (error || !data.user) {
+          console.log(`[LOGIN] sign-in failed, checking findProfileByPhone() at ${elapsed()}`);
           const existingProfile = await findProfileByPhone(digits);
+          console.log(`[LOGIN] findProfileByPhone() returned at ${elapsed()}, found=`, !!existingProfile);
           if (existingProfile) {
             return {
               success: false,
@@ -491,7 +529,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           return { success: false, error: 'No account found for this number. Please create one.', isNewUser: true };
         }
+        console.log(`[LOGIN] calling loadUserFromSession() at ${elapsed()}`);
         await loadUserFromSession(data.user.id, data.user);
+        console.log(`[LOGIN] loadUserFromSession() returned at ${elapsed()} — DONE`);
         return { success: true };
       } finally {
         setIsLoading(false);
@@ -545,9 +585,28 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // a stale/broken session behind that then broke a later login for the
   // FIRST account (looked like "Account not found" even though the account
   // and profile were both fine). Awaiting it closes that race.
+  //
+  // Guarded two ways so a slow/flaky network can never strand someone
+  // logged in with no feedback: a timeout in case signOut() just hangs, and
+  // try/catch in case it throws — either way we still fall through and
+  // clear the local session below, same as the session-restore guard above.
   const logout = useCallback(async () => {
-    if (supabase) await supabase.auth.signOut();
-    setUser(null);
+    setIsLoading(true);
+    try {
+      if (supabase) {
+        try {
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+          ]);
+        } catch {
+          // Server-side sign-out failing shouldn't block logging out locally.
+        }
+      }
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   return (
