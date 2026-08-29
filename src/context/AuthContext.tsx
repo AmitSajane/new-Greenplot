@@ -172,7 +172,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [],
   );
 
-  // Build the app User from a Supabase session + the profiles row.
+  // Build the app User from a Supabase session + the profiles row. Always
+  // does a fresh read — sign-up/onboarding rely on that to see a profile row
+  // they just wrote a moment earlier, so this must never serve a cached or
+  // in-flight result from before that write.
   const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
     if (!supabase) return;
 
@@ -234,29 +237,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [saveOwnProfile]);
 
   // Restore a saved Supabase session on launch + react to auth changes.
+  //
+  // Driven entirely by onAuthStateChange, including its own guaranteed first
+  // event — INITIAL_SESSION, fired exactly once per subscription with
+  // whatever session (or none) was already saved from a previous launch —
+  // rather than ALSO calling getSession() separately. A previous version
+  // called getSession() here too, which raced its own loadUserFromSession
+  // call against the one this same INITIAL_SESSION event fires below: same
+  // session, two concurrent profile fetches, every single app open.
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
-    supabase.auth.getSession().then(async ({ data }) => {
-      // Wait for the user's profile to actually finish loading before marking
-      // auth ready — otherwise "ready" can fire while `user` is still null,
-      // and anything that reads `user?.id` at that instant sees nobody logged in.
-      // Guarded two ways so a flaky profile load can never block startup forever:
-      // a timeout in case the request just hangs, and try/finally in case it
-      // throws — either way, authReady still gets set.
-      try {
-        if (data.session?.user) {
-          await Promise.race([
-            loadUserFromSession(data.session.user.id, data.session.user),
-            new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
-          ]);
-        }
-      } catch {
-        // Profile load failed — fall through and mark ready anyway below.
-      } finally {
-        setAuthReady(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        (async () => {
+          // Wait for the user's profile to actually finish loading before
+          // marking auth ready — otherwise "ready" can fire while `user` is
+          // still null, and anything that reads `user?.id` at that instant
+          // sees nobody logged in. Guarded two ways so a flaky profile load
+          // can never block startup forever: a timeout in case the request
+          // just hangs, and try/finally in case it throws — either way,
+          // authReady still gets set.
+          try {
+            const authUser = session?.user;
+            if (authUser) {
+              let profileLoaded = false;
+              await Promise.race([
+                loadUserFromSession(authUser.id, authUser).then(() => {
+                  profileLoaded = true;
+                }),
+                new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+              ]);
+              // The timeout won, not the real load — on a slow backend this
+              // can take much longer than 4s. Rather than mark auth ready
+              // with `user` still null (which drops an already-logged-in
+              // person onto the onboarding screen until the slow load
+              // eventually finishes in the background), show a minimal
+              // session-derived profile right away; loadUserFromSession
+              // silently upgrades it to the full profile once it resolves.
+              if (!profileLoaded) {
+                const metadata = authUser.user_metadata as { name?: string; phone?: string } | undefined;
+                setUser(prev =>
+                  prev ?? {
+                    id: authUser.id,
+                    name: metadata?.name?.trim() || '',
+                    role: 'farmer',
+                    email: authUser.email || undefined,
+                    phoneNumber: cleanPhone(metadata?.phone || authUser.phone || authUser.email || ''),
+                  },
+                );
+              }
+            }
+          } catch {
+            // Profile load failed — fall through and mark ready anyway below.
+          } finally {
+            setAuthReady(true);
+          }
+        })();
+        return;
       }
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) loadUserFromSession(session.user.id, session.user);
       else setUser(null);
     });
@@ -538,15 +576,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [user, saveOwnProfile],
   );
 
-  // Awaits signOut() before clearing local user state. Previously this fired
-  // signOut() without waiting and cleared the user immediately — if a login
-  // for a DIFFERENT account started before that signOut had actually
-  // finished on Supabase's side, the two session writes could race, leaving
-  // a stale/broken session behind that then broke a later login for the
-  // FIRST account (looked like "Account not found" even though the account
-  // and profile were both fine). Awaiting it closes that race.
+  // Awaits signOut() (bounded by a timeout) before clearing local user state.
+  // Previously this fired signOut() without waiting at all and cleared the
+  // user immediately — if a login for a DIFFERENT account started before
+  // that signOut had actually finished on Supabase's side, the two session
+  // writes could race, leaving a stale/broken session behind that then broke
+  // a later login for the FIRST account (looked like "Account not found"
+  // even though the account and profile were both fine). Awaiting it — still
+  // the normal path — closes that race. The timeout only matters when
+  // Supabase's Auth service itself is slow or unresponsive: it stops logout
+  // from hanging indefinitely instead of ever completing; signOut() keeps
+  // running in the background regardless of which one wins.
   const logout = useCallback(async () => {
-    if (supabase) await supabase.auth.signOut();
+    if (supabase) {
+      await Promise.race([supabase.auth.signOut(), new Promise<void>(resolve => setTimeout(resolve, 6000))]);
+    }
     setUser(null);
   }, []);
 

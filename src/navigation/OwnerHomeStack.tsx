@@ -41,8 +41,8 @@ export type OwnerHomeStackParamList = {
   // "Continue with Lease Offer" path from AddFarmScreen — a not-yet-created
   // land (`draftLand`) is created together with the offer once published.
   AddLeaseOffer:
-    | { landId: string; landTitle?: string; draftLand?: undefined }
-    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
+    | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   LeaseRequests: undefined;
   AgreementSign: { agreementId: string };
   AddFarm:

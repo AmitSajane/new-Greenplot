@@ -17,15 +17,17 @@ import { LEASE_TYPES, LEASE_TYPE_MAP, LeaseField, LeaseTypeId, summarizeOffer } 
 import { useLeases } from '../../context/LeaseContext';
 import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
 import { colors } from '../../theme/tokens';
-import { formatDateLabel } from '../../utils';
+import { formatDateLabel, parseDateLabel } from '../../utils';
 
 // Either an existing land (`landId`) gets a new offer, or — reached from
 // AddFarmScreen's "Continue with Lease Offer" — a not-yet-created land
 // (`draftLand`) is created together with the offer once Publish is pressed.
+// `initialAvailableFrom` carries over the date already picked on that
+// screen, so the owner isn't asked for it twice.
 type ParamList = {
   AddLeaseOffer:
-    | { landId: string; landTitle?: string; draftLand?: undefined }
-    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
+    | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
 };
 
 const TENURES = ['1 year', '2 years', '3 years', '5 years', '10 years'];
@@ -45,7 +47,7 @@ function defaultsFor(typeId: LeaseTypeId): Record<string, string | number> {
 export default function AddLeaseOfferScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<ParamList, 'AddLeaseOffer'>>();
-  const { landId, landTitle, draftLand } = route.params;
+  const { landId, landTitle, draftLand, initialAvailableFrom } = route.params;
   const { addOffer, getOffersByLand, removeOffer } = useLeases();
   const { addListing } = useFarmListings();
 
@@ -54,8 +56,10 @@ export default function AddLeaseOfferScreen() {
   const [tenure, setTenure] = useState('3 years');
   // Picked via calendar (not typed) so this same date can become the
   // agreement's actual lease start date once the farmer signs, instead of
-  // the sign date always being used.
-  const [availableFromDate, setAvailableFromDate] = useState(new Date());
+  // the sign date always being used. Pre-filled from AddFarmScreen's own
+  // "Available from" field when this came from "Continue with Lease Offer",
+  // rather than resetting to today.
+  const [availableFromDate, setAvailableFromDate] = useState(() => parseDateLabel(initialAvailableFrom) || new Date());
   const [showAvailableFromPicker, setShowAvailableFromPicker] = useState(false);
   const availableFrom = formatDateLabel(availableFromDate);
   // Common to every lease type (like tenure/availableFrom above), so it lives

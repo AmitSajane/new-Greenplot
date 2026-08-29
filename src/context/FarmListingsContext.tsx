@@ -199,8 +199,12 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
     // Wait for the session restore to finish before the first fetch, and
     // re-fetch on `user?.id` so switching accounts inside the same running
     // app also gets fresh data instead of reusing the previous account's.
+    // Skip the fetch specifically on logout (id → undefined, `authReady`
+    // already true) — nothing renders this data once signed out, and the
+    // next login re-fetches it anyway, so it was just a wasted round-trip
+    // fired at the exact moment logout speed matters.
     if (!isSupabaseConfigured || !authReady) return;
-    refetchLands();
+    if (user?.id) refetchLands();
     return landsApi.subscribe(refetchLands);
   }, [refetchLands, authReady, user?.id]);
 

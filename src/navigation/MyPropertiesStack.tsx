@@ -23,8 +23,8 @@ export type MyPropertiesStackParamList = {
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
   // See OwnerHomeStack's AddLeaseOffer — same draft-land-vs-existing-land shape.
   AddLeaseOffer:
-    | { landId: string; landTitle?: string; draftLand?: undefined }
-    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
+    | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   AddFarm: { editListingId: string };
   CropDetails: { cropCycleId: string };
   AgreementDetails: { agreementId: string };
