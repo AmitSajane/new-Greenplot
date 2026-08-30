@@ -108,9 +108,14 @@ export default function ProfileOnboardingScreen() {
 
     // Returning user → phone-only login.
     if (mode === 'login') {
+      // TEMP DEBUG LOGGING — remove once the slow-login issue is found.
+      // Watch these in the Metro terminal (the window running `npx react-native start`).
+      const t0 = Date.now();
+      console.log(`[LOGIN] button pressed, phone=${phone}, t=0ms`);
       setSubmitting(true);
       const res = await loginWithPhone(phone);
       setSubmitting(false);
+      console.log(`[LOGIN] loginWithPhone() returned after ${Date.now() - t0}ms →`, res);
       if (!res.success) {
         Alert.alert(
           'Account not found',

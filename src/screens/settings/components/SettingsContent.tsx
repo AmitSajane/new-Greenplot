@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors } from '../../../theme/tokens';
@@ -25,6 +25,7 @@ const PREFERENCE_ITEMS: PreferenceItem[] = [
 export const SettingsContent: React.FC<SettingsViewModel> = ({
   user,
   onLogout,
+  loggingOut,
   onLanguagePress,
   onWebsitePress,
   onLegalPress,
@@ -89,9 +90,18 @@ export const SettingsContent: React.FC<SettingsViewModel> = ({
           <Icon name="chevron-right" size={24} color={colors.textMuted} />
         </TouchableOpacity>
       </View>
-      <TouchableOpacity style={styles.logoutButton} onPress={onLogout} activeOpacity={0.8}>
-        <Icon name="logout" size={24} color={colors.surface} />
-        <Text style={styles.logoutText}>Logout</Text>
+      <TouchableOpacity
+        style={[styles.logoutButton, loggingOut && { opacity: 0.6 }]}
+        onPress={onLogout}
+        activeOpacity={0.8}
+        disabled={loggingOut}
+      >
+        {loggingOut ? (
+          <ActivityIndicator size="small" color={colors.surface} />
+        ) : (
+          <Icon name="logout" size={24} color={colors.surface} />
+        )}
+        <Text style={styles.logoutText}>{loggingOut ? 'Logging out…' : 'Logout'}</Text>
       </TouchableOpacity>
     </ScrollView>
   </SafeAreaView>

@@ -175,7 +175,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Build the app User from a Supabase session + the profiles row. Always
   // does a fresh read — sign-up/onboarding rely on that to see a profile row
   // they just wrote a moment earlier, so this must never serve a cached or
-  // in-flight result from before that write.
+  // in-flight result from before that write. (An earlier version of this
+  // function de-duped concurrent calls with an in-flight-promise cache —
+  // removed after it caused exactly that: onboarding's own read-back reused
+  // a premature result from onAuthStateChange's listener, fetched before the
+  // just-written profile row existed, so new sign-ups could land with the
+  // wrong role. The startup double-fetch that cache was meant to avoid is
+  // now fixed structurally below instead — see the effect's own comment.)
   const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
     if (!supabase) return;
 
@@ -513,13 +519,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
 
       setIsLoading(true);
+      // TEMP DEBUG LOGGING — remove once the slow-login issue is found.
+      const t0 = Date.now();
+      const elapsed = () => `${Date.now() - t0}ms`;
       try {
+        console.log(`[LOGIN] calling signInWithPassword() at ${elapsed()}`);
         const { data, error } = await supabase.auth.signInWithPassword({
           email: phoneToEmail(digits),
           password: phoneToPassword(digits),
         });
+        console.log(`[LOGIN] signInWithPassword() returned at ${elapsed()}, error=`, error?.message || null);
         if (error || !data.user) {
+          console.log(`[LOGIN] sign-in failed, checking findProfileByPhone() at ${elapsed()}`);
           const existingProfile = await findProfileByPhone(digits);
+          console.log(`[LOGIN] findProfileByPhone() returned at ${elapsed()}, found=`, !!existingProfile);
           if (existingProfile) {
             return {
               success: false,
@@ -529,7 +542,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           }
           return { success: false, error: 'No account found for this number. Please create one.', isNewUser: true };
         }
+        console.log(`[LOGIN] calling loadUserFromSession() at ${elapsed()}`);
         await loadUserFromSession(data.user.id, data.user);
+        console.log(`[LOGIN] loadUserFromSession() returned at ${elapsed()} — DONE`);
         return { success: true };
       } finally {
         setIsLoading(false);
@@ -576,22 +591,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [user, saveOwnProfile],
   );
 
-  // Awaits signOut() (bounded by a timeout) before clearing local user state.
-  // Previously this fired signOut() without waiting at all and cleared the
-  // user immediately — if a login for a DIFFERENT account started before
-  // that signOut had actually finished on Supabase's side, the two session
-  // writes could race, leaving a stale/broken session behind that then broke
-  // a later login for the FIRST account (looked like "Account not found"
-  // even though the account and profile were both fine). Awaiting it — still
-  // the normal path — closes that race. The timeout only matters when
-  // Supabase's Auth service itself is slow or unresponsive: it stops logout
-  // from hanging indefinitely instead of ever completing; signOut() keeps
-  // running in the background regardless of which one wins.
+  // Awaits signOut() before clearing local user state. Previously this fired
+  // signOut() without waiting and cleared the user immediately — if a login
+  // for a DIFFERENT account started before that signOut had actually
+  // finished on Supabase's side, the two session writes could race, leaving
+  // a stale/broken session behind that then broke a later login for the
+  // FIRST account (looked like "Account not found" even though the account
+  // and profile were both fine). Awaiting it closes that race.
+  //
+  // Guarded two ways so a slow/flaky network can never strand someone
+  // logged in with no feedback: a timeout in case signOut() just hangs, and
+  // try/catch in case it throws — either way we still fall through and
+  // clear the local session below, same as the session-restore guard above.
   const logout = useCallback(async () => {
-    if (supabase) {
-      await Promise.race([supabase.auth.signOut(), new Promise<void>(resolve => setTimeout(resolve, 6000))]);
+    setIsLoading(true);
+    try {
+      if (supabase) {
+        try {
+          await Promise.race([
+            supabase.auth.signOut(),
+            new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+          ]);
+        } catch {
+          // Server-side sign-out failing shouldn't block logging out locally.
+        }
+      }
+      setUser(null);
+    } finally {
+      setIsLoading(false);
     }
-    setUser(null);
   }, []);
 
   return (

@@ -33,8 +33,16 @@ export const notificationsApi = {
   subscribe(userId: string, onChange: () => void): () => void {
     if (!supabase || !userId) return () => {};
     const client = supabase;
+    // Unique per call, not just per user: client.removeChannel() only forgets
+    // a channel after an async unsubscribe round trip finishes. If this
+    // screen unmounts and remounts (e.g. the user navigates away and back)
+    // before that finishes, client.channel() with a fixed name would hand
+    // back that same still-subscribed channel — and calling .on() on an
+    // already-subscribed channel throws "cannot add `postgres_changes`
+    // callbacks ... after `subscribe()`". A unique topic per call means a
+    // leftover channel from a previous mount can never collide with this one.
     const channel = client
-      .channel(`notifications-${userId}`)
+      .channel(`notifications-${userId}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },

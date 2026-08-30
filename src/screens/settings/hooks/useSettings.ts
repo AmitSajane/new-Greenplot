@@ -8,7 +8,7 @@ import { SettingsStackParamList } from '../../../navigation/SettingsStack';
 type SettingsNavProp = NativeStackNavigationProp<SettingsStackParamList, 'SettingsMain'>;
 
 export function useSettings() {
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const settingsNav = useNavigation<SettingsNavProp>();
 
   const handleLogout = useCallback(() => {
@@ -19,6 +19,10 @@ export function useSettings() {
         style: 'destructive',
         // Just clear the session — AppNavigator swaps to the onboarding/login
         // screen automatically when `user` becomes null (no manual reset).
+        // `isLoading` (exposed below) drives the button's spinner while this
+        // is in flight, and `logout()` itself now always resolves — even on
+        // a hung/failed network call — so this can never leave the button
+        // stuck showing a spinner forever.
         onPress: () => logout(),
       },
     ]);
@@ -49,6 +53,7 @@ export function useSettings() {
   return {
     user,
     onLogout: handleLogout,
+    loggingOut: isLoading,
     onLanguagePress,
     onWebsitePress,
     onLegalPress,
