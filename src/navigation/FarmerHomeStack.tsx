@@ -6,6 +6,7 @@ import AllAvailableLandsScreen from '../screens/farmer/AllAvailableLandsScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
+import ClosureRequestedScreen from '../screens/leaseClosure/ClosureRequestedScreen';
 import LeaseClosureScreen from '../screens/leaseClosure/LeaseClosureScreen';
 import MyActiveLeasesScreen from '../screens/leases/myActiveLeases';
 import LeaseTypeDetailsScreen from '../screens/LeaseTypeDetailsScreen';
@@ -41,6 +42,10 @@ export type FarmerHomeStackParamList = {
   LeaseAgreements: undefined;
   AgreementDetails: { agreementId: string };
   LeaseClosureRequest: { leaseId: string };
+  // Step 1 (request + owner response) — every entry point lands here first.
+  ClosureRequested: { closureId: string };
+  // Step 2 (settlement onward) — reached only by pushing forward from
+  // ClosureRequested, so back always returns there, not to whatever opened it.
   LeaseClosure: { closureId: string };
   MyActiveLeases: undefined;
   LeaseTypeDetails: { selectedLeaseType?: string; propertyId?: string };
@@ -112,6 +117,11 @@ export default function FarmerHomeStack() {
         name="LeaseClosureRequest"
         component={RequestLeaseClosureScreen}
         options={{ title: 'Request Lease Closure' }}
+      />
+      <Stack.Screen
+        name="ClosureRequested"
+        component={ClosureRequestedScreen}
+        options={{ title: 'Closure Requested' }}
       />
       <Stack.Screen
         name="LeaseClosure"

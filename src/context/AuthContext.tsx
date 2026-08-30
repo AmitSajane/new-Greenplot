@@ -181,6 +181,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // a second one removes that duplicate round trip without having to trust
   // that the listener alone always fires promptly (it's kept as the backup
   // path for e.g. token refreshes that don't go through these functions).
+  // Only collapses calls that are genuinely concurrent — the entry is
+  // cleared the moment a call finishes, so sign-up/onboarding reading back a
+  // profile it just wrote always gets a fresh read, never a stale one.
   const inFlightLoad = useRef<{ uid: string; promise: Promise<void> } | null>(null);
 
   // Build the app User from a Supabase session + the profiles row.
@@ -265,29 +268,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [saveOwnProfile]);
 
   // Restore a saved Supabase session on launch + react to auth changes.
+  //
+  // Driven entirely by onAuthStateChange, including its own guaranteed first
+  // event — INITIAL_SESSION, fired exactly once per subscription with
+  // whatever session (or none) was already saved from a previous launch —
+  // rather than ALSO calling getSession() separately. A previous version
+  // called getSession() here too, which raced its own loadUserFromSession
+  // call against the one this same INITIAL_SESSION event fires below: same
+  // session, two concurrent profile fetches, every single app open.
   useEffect(() => {
     if (!isSupabaseConfigured || !supabase) return;
-    supabase.auth.getSession().then(async ({ data }) => {
-      // Wait for the user's profile to actually finish loading before marking
-      // auth ready — otherwise "ready" can fire while `user` is still null,
-      // and anything that reads `user?.id` at that instant sees nobody logged in.
-      // Guarded two ways so a flaky profile load can never block startup forever:
-      // a timeout in case the request just hangs, and try/finally in case it
-      // throws — either way, authReady still gets set.
-      try {
-        if (data.session?.user) {
-          await Promise.race([
-            loadUserFromSession(data.session.user.id, data.session.user),
-            new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
-          ]);
-        }
-      } catch {
-        // Profile load failed — fall through and mark ready anyway below.
-      } finally {
-        setAuthReady(true);
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION') {
+        (async () => {
+          // Wait for the user's profile to actually finish loading before
+          // marking auth ready — otherwise "ready" can fire while `user` is
+          // still null, and anything that reads `user?.id` at that instant
+          // sees nobody logged in. Guarded two ways so a flaky profile load
+          // can never block startup forever: a timeout in case the request
+          // just hangs, and try/finally in case it throws — either way,
+          // authReady still gets set.
+          try {
+            const authUser = session?.user;
+            if (authUser) {
+              let profileLoaded = false;
+              await Promise.race([
+                loadUserFromSession(authUser.id, authUser).then(() => {
+                  profileLoaded = true;
+                }),
+                new Promise<void>(resolve => setTimeout(() => resolve(), 4000)),
+              ]);
+              // The timeout won, not the real load — on a slow backend this
+              // can take much longer than 4s. Rather than mark auth ready
+              // with `user` still null (which drops an already-logged-in
+              // person onto the onboarding screen until the slow load
+              // eventually finishes in the background), show a minimal
+              // session-derived profile right away; loadUserFromSession
+              // silently upgrades it to the full profile once it resolves.
+              if (!profileLoaded) {
+                const metadata = authUser.user_metadata as { name?: string; phone?: string } | undefined;
+                setUser(prev =>
+                  prev ?? {
+                    id: authUser.id,
+                    name: metadata?.name?.trim() || '',
+                    role: 'farmer',
+                    email: authUser.email || undefined,
+                    phoneNumber: cleanPhone(metadata?.phone || authUser.phone || authUser.email || ''),
+                  },
+                );
+              }
+            }
+          } catch {
+            // Profile load failed — fall through and mark ready anyway below.
+          } finally {
+            setAuthReady(true);
+          }
+        })();
+        return;
       }
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) loadUserFromSession(session.user.id, session.user);
       else setUser(null);
     });

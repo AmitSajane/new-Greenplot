@@ -98,11 +98,15 @@ export interface StoryItem {
 }
 
 /** Storage-conscious upload limits (see product rules). Sizes are upper
- * bounds enforced after auto-resize/compression, not hard minimums. */
+ * bounds enforced after auto-resize/compression, not hard minimums.
+ * No file-size ceiling on any media type — our storage bucket has no
+ * per-file cap set (it falls back to Supabase's project-wide default,
+ * 50 MB/file), so there's nothing client-side worth rejecting on size
+ * alone. Duration limits (video/voice) are unrelated and still enforced. */
 export const MEDIA_RULES = {
-  photo: { maxBytes: 1024 * 1024 },
-  video: { minSec: 10, maxSec: 15, maxBytes: 5 * 1024 * 1024 },
-  voice: { maxSec: 60, maxBytes: 3 * 1024 * 1024 },
+  photo: { maxBytes: Infinity },
+  video: { minSec: 10, maxSec: 15, maxBytes: Infinity },
+  voice: { maxSec: 60, maxBytes: Infinity },
   story: { expiryHours: 24, maxPerDay: 3 },
 } as const;
 

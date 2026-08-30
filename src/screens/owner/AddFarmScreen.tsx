@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { OwnerHomeStackParamList } from '../../navigation/OwnerHomeStack';
 import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
@@ -62,42 +63,41 @@ const WATER_SOURCE_OPTIONS = [
 
 const TENURE_OPTIONS = ['1 year', '2 years', '3 years', '5 years', '10 years', '15 years'];
 
+// Labels match leaseTypes.ts's canonical LEASE_TYPE_MAP names exactly (see
+// LEASE_TYPE_TO_ID below) so a land published "without a lease offer" shows
+// farmers the exact same lease-type name the owner picked here — this used
+// to carry "Share Cropping" (a duplicate of "Crop Share") and "Fixed +
+// Share" (renamed to "Flexible Share"), which didn't match.
 const LEASE_TYPE_OPTIONS = [
   'Fixed Rent',
-  'Share Cropping',
-  'Revenue Share',
   'Crop Share',
-  'Fixed + Share',
+  'Revenue Share',
+  'Flexible Share',
   'Custom Agreement',
 ];
 
 const CROP_OPTIONS = ['Wheat', 'Rice', 'Cotton', 'Sugarcane', 'Pulses'];
 
-// Maps this screen's own lease-type option labels (a separate, plain-English
-// list from leaseTypes.ts's canonical LeaseTypeId enum) onto a real offer
-// type, so "List Without Lease Offer" can synthesize one real, appliable
-// LeaseOffer from what's already been typed in above — reusing the exact
-// same LeaseOffer shape AddLeaseOfferScreen publishes, so nothing downstream
-// (LeaseOptionsSection, applyForLease, agreements) needs to know this offer
-// wasn't hand-built by the owner.
+// Maps this screen's lease-type option labels onto leaseTypes.ts's canonical
+// LeaseTypeId, so "List Without Lease Offer" can synthesize one real,
+// appliable LeaseOffer from what's already been typed in above — reusing the
+// exact same LeaseOffer shape AddLeaseOfferScreen publishes, so nothing
+// downstream (LeaseOptionsSection, applyForLease, agreements) needs to know
+// this offer wasn't hand-built by the owner.
 const LEASE_TYPE_TO_ID: Record<string, LeaseTypeId> = {
   'Fixed Rent': 'fixed_rent',
-  'Share Cropping': 'crop_share',
   'Crop Share': 'crop_share',
   'Revenue Share': 'revenue_share',
-  'Fixed + Share': 'flexible_share',
+  'Flexible Share': 'flexible_share',
   'Custom Agreement': 'custom',
 };
 
-/** `pricePerYear` here is the TOTAL annual rent for the whole plot (this
- *  form's "Price per Year" field), while `fixed_rent`/`flexible_share`
- *  offers are priced per acre — divide it out so the synthesized offer's
- *  numbers read correctly wherever a farmer sees them. */
-function basicOfferFromFarmForm(input: { leaseType: string; tenure: string; pricePerYear: string; acres: string }) {
+/** This form's "Price per Year" is entered as a PER-ACRE rate, matching
+ *  `fixed_rent`/`flexible_share`'s own per-acre fields — used directly, no
+ *  division by acres. */
+function basicOfferFromFarmForm(input: { leaseType: string; tenure: string; pricePerYear: string; availableFrom: string }) {
   const typeId: LeaseTypeId = LEASE_TYPE_TO_ID[input.leaseType] || 'fixed_rent';
-  const totalPerYear = Number(input.pricePerYear.replace(/[^\d.]/g, '')) || 0;
-  const acresNum = parseFloat(input.acres) || 0;
-  const perAcre = acresNum > 0 ? Math.round(totalPerYear / acresNum) : totalPerYear;
+  const perAcre = Number(input.pricePerYear.replace(/[^\d.]/g, '')) || 0;
 
   const terms: Record<string, string | number> =
     typeId === 'crop_share' ? { harvestSplit: 50, inputSplit: 50 }
@@ -106,7 +106,7 @@ function basicOfferFromFarmForm(input: { leaseType: string; tenure: string; pric
     : typeId === 'custom' ? { clauses: 'As described in the land listing.' }
     : { ratePerAcre: perAcre, installments: 'Full upfront' }; // fixed_rent
 
-  return { typeId, terms, tenure: input.tenure || '1 year', availableFrom: formatDateLabel(new Date()) };
+  return { typeId, terms, tenure: input.tenure || '1 year', availableFrom: input.availableFrom || formatDateLabel(new Date()) };
 }
 
 interface MediaItem {
@@ -155,6 +155,11 @@ export default function AddFarmScreen() {
   const [tenure, setTenure] = useState('');
   const [leaseType, setLeaseType] = useState('');
   const [pricePerYear, setPricePerYear] = useState('');
+  // Picked via calendar (not typed), matching AddLeaseOfferScreen's own
+  // "Available from" field — carried through to whichever submit path is
+  // taken instead of always defaulting to "today".
+  const [availableFromDate, setAvailableFromDate] = useState(new Date());
+  const [showAvailableFromPicker, setShowAvailableFromPicker] = useState(false);
   const [description, setDescription] = useState('');
   const [showSoilPicker, setShowSoilPicker] = useState(false);
   const [showTenurePicker, setShowTenurePicker] = useState(false);
@@ -490,14 +495,17 @@ export default function AddFarmScreen() {
       Alert.alert('Could not publish', reason || 'Please check your connection and try again.');
       return;
     }
-    addOffer({ landId: newLandId, ...basicOfferFromFarmForm({ leaseType, tenure, pricePerYear: listingData.pricePerYear, acres }) });
+    addOffer({
+      landId: newLandId,
+      ...basicOfferFromFarmForm({ leaseType, tenure, pricePerYear: listingData.pricePerYear, availableFrom: formatDateLabel(availableFromDate) }),
+    });
     setSubmitting(false);
     Alert.alert(
       'Land Published ✓',
       'Farmers can already apply using a basic offer generated from your Tenure, Lease Type & Price/Year. Add a detailed offer anytime from My Properties.',
       [{ text: 'Go to Home', onPress: () => navigation.popToTop() }],
     );
-  }, [submitting, buildListingData, addListing, addOffer, leaseType, tenure, acres, navigation]);
+  }, [submitting, buildListingData, addListing, addOffer, leaseType, tenure, availableFromDate, navigation]);
 
   // "Continue with Lease Offer" — does NOT create the land. It hands the
   // validated form data to AddLeaseOfferScreen as a draft, which creates the
@@ -509,8 +517,12 @@ export default function AddFarmScreen() {
     if (submitting) return;
     const listingData = buildListingData();
     if (!listingData) return;
-    navigation.replace('AddLeaseOffer', { draftLand: listingData as Omit<FarmListing, 'id' | 'createdAt'>, landTitle: title });
-  }, [submitting, buildListingData, navigation, title]);
+    navigation.replace('AddLeaseOffer', {
+      draftLand: listingData as Omit<FarmListing, 'id' | 'createdAt'>,
+      landTitle: title,
+      initialAvailableFrom: formatDateLabel(availableFromDate),
+    });
+  }, [submitting, buildListingData, navigation, title, availableFromDate]);
 
   const handlePrimarySubmit = isEditMode ? handleSaveEdit : handleSelfFarmedSubmit;
 
@@ -1114,6 +1126,34 @@ export default function AddFarmScreen() {
             </View>
           )}
 
+          {!selfFarmed && !isEditMode && (
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Available From</Text>
+              <Text style={styles.hintText}>When can a tenant start this lease?</Text>
+              <TouchableOpacity
+                style={styles.dateInput}
+                onPress={() => setShowAvailableFromPicker(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Choose available-from date"
+              >
+                <Ionicons name="calendar-outline" size={18} color={colors.textSecondary} />
+                <Text style={styles.dateInputText}>{formatDateLabel(availableFromDate)}</Text>
+              </TouchableOpacity>
+              {showAvailableFromPicker && (
+                <DateTimePicker
+                  value={availableFromDate}
+                  mode="date"
+                  display="default"
+                  minimumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    setShowAvailableFromPicker(false);
+                    if (event.type !== 'dismissed' && selectedDate) setAvailableFromDate(selectedDate);
+                  }}
+                />
+              )}
+            </View>
+          )}
+
           {!isEditMode && (
             <View style={styles.formGroup}>
               <Text style={styles.label}>Description (Optional)</Text>
@@ -1438,6 +1478,21 @@ const styles = StyleSheet.create({
   },
   placeholder: {
     color: colors.textMuted,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  dateInputText: {
+    fontSize: 15,
+    color: colors.textPrimary,
   },
   photoUpload: {
     backgroundColor: colors.surface,

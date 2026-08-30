@@ -52,6 +52,11 @@ export default function FarmDetailScreen() {
     );
   }
 
+  // "Best crops to grow" — the owner's multi-select from Add New Farm Listing.
+  // Falls back to `currentCrop` (single crop) for older listings saved before
+  // the full list was persisted.
+  const bestCrops = farm.crops?.length ? farm.crops : farm.currentCrop ? [farm.currentCrop] : [];
+
   const handleContactOwner = () => {
     Alert.alert('Contact Owner', 'Are you sure you want to contact the owner?', [
       { text: 'Cancel', style: 'cancel' },
@@ -156,14 +161,14 @@ export default function FarmDetailScreen() {
         )}
 
         {/* Crop & Care Schedule */}
-        {(farm.currentCrop ||
+        {(bestCrops.length > 0 ||
           farm.irrigationSchedule ||
           farm.pesticideSchedule ||
           farm.expectedHarvest) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Crop & Care Schedule</Text>
-            {farm.currentCrop && (
-              <Text style={styles.description}>Current Crop: {farm.currentCrop}</Text>
+            {bestCrops.length > 0 && (
+              <Text style={styles.description}>Best Crops to Grow: {bestCrops.join(', ')}</Text>
             )}
             {farm.irrigationSchedule && (
               <Text style={styles.description}>Irrigation: {farm.irrigationSchedule}</Text>

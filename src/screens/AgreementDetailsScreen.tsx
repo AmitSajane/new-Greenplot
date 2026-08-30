@@ -374,7 +374,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
                 <TouchableOpacity
                   style={styles.closureButton}
                   activeOpacity={0.85}
-                  onPress={() => (navigation as any).navigate('LeaseClosure', { closureId: closure.id })}
+                  onPress={() => (navigation as any).navigate('ClosureRequested', { closureId: closure.id })}
                 >
                   <Icon name="arrow-forward" size={18} color={colors.surface} />
                   <Text style={styles.closureButtonText}>{closureOpen ? 'Manage closure' : 'View closure details'}</Text>

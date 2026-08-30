@@ -10,6 +10,7 @@ import LeaseLandScreen from '../screens/LeaseLandScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
+import ClosureRequestedScreen from '../screens/leaseClosure/ClosureRequestedScreen';
 import LeaseClosureScreen from '../screens/leaseClosure/LeaseClosureScreen';
 import AIAssistantScreen from '../screens/AIAssistantScreen';
 import SatelliteMapScreen from '../screens/satelliteMap';
@@ -41,8 +42,8 @@ export type OwnerHomeStackParamList = {
   // "Continue with Lease Offer" path from AddFarmScreen — a not-yet-created
   // land (`draftLand`) is created together with the offer once published.
   AddLeaseOffer:
-    | { landId: string; landTitle?: string; draftLand?: undefined }
-    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined };
+    | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
+    | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   LeaseRequests: undefined;
   AgreementSign: { agreementId: string };
   AddFarm:
@@ -63,6 +64,10 @@ export type OwnerHomeStackParamList = {
   LeaseAgreements: undefined;
   AgreementDetails: { agreementId: string };
   LeaseClosureRequest: { leaseId: string };
+  // Step 1 (request + owner response) — every entry point lands here first.
+  ClosureRequested: { closureId: string };
+  // Step 2 (settlement onward) — reached only by pushing forward from
+  // ClosureRequested, so back always returns there, not to whatever opened it.
   LeaseClosure: { closureId: string };
   AIAssistant: undefined;
   SatelliteMap: { returnTo?: string } | undefined;
@@ -146,6 +151,11 @@ export default function OwnerHomeStack() {
         name="LeaseClosureRequest"
         component={RequestLeaseClosureScreen}
         options={{ title: 'Request Lease Closure' }}
+      />
+      <Stack.Screen
+        name="ClosureRequested"
+        component={ClosureRequestedScreen}
+        options={{ title: 'Closure Requested' }}
       />
       <Stack.Screen
         name="LeaseClosure"

@@ -159,8 +159,12 @@ export function LeaseProvider({ children }: { children: ReactNode }) {
     // Also re-runs on `user?.id` so switching accounts inside the same running
     // app (no full reload) triggers a fresh fetch instead of reusing whatever
     // the previous account's session happened to load.
+    // Skip the fetch specifically on logout (id → undefined, `authReady`
+    // already true) — RLS would return it empty anyway with no session, and
+    // nothing renders this data once signed out, so it was just a wasted
+    // round-trip fired at the exact moment logout speed matters.
     if (!isSupabaseConfigured || !authReady) return;
-    refetch();
+    if (user?.id) refetch();
     const unsubLease = leaseApi.subscribe(refetch); // any change on any phone → refetch
     const unsubClosure = leaseClosureApi.subscribe(refetch);
     return () => {
