@@ -35,6 +35,8 @@ export interface FarmListing {
   plotGeoJSON?: any;
   areaAcres?: number;
   currentCrop?: string;
+  /** "Best crops to grow" — the owner's multi-select from Add New Farm Listing. */
+  crops?: string[];
   waterSource?: string;
   irrigationSchedule?: string;
   pesticideSchedule?: string;

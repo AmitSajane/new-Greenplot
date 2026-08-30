@@ -200,7 +200,7 @@ export function useOwnerHome() {
               title: `${closuresNeedingAction.length} closure action${closuresNeedingAction.length === 1 ? '' : 's'}`,
               sub: 'A lease closure needs your input',
               actionLabel: 'Review',
-              onPress: () => navigation.navigate('LeaseClosure', { closureId: closuresNeedingAction[0].id }),
+              onPress: () => navigation.navigate('ClosureRequested', { closureId: closuresNeedingAction[0].id }),
             },
           ]
         : []),
@@ -379,7 +379,7 @@ export function useOwnerHome() {
               sub: `${c.landTitle} · ${c.farmerName}`,
               time: relativeTime(h.createdAt),
               actionLabel: 'View',
-              onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+              onPress: () => navigation.navigate('ClosureRequested', { closureId: c.id }),
               ts,
             });
           });

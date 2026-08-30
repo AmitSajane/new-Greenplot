@@ -303,7 +303,7 @@ export function useFarmerHome() {
             sub: `${c.landTitle} · ${c.reason}`,
             time: relativeTime(c.requestedAt),
             actionLabel: 'Manage',
-            onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+            onPress: () => navigation.navigate('ClosureRequested', { closureId: c.id }),
             ts: requestedTs,
           });
         }
@@ -318,7 +318,7 @@ export function useFarmerHome() {
               sub: `${c.landTitle} · closure completed`,
               time: relativeTime(c.updatedAt),
               actionLabel: 'View',
-              onPress: () => navigation.navigate('LeaseClosure', { closureId: c.id }),
+              onPress: () => navigation.navigate('ClosureRequested', { closureId: c.id }),
               ts: closedTs,
             });
           }

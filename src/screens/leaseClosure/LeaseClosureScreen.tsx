@@ -1,7 +1,9 @@
 /**
- * Lease Closure hub — Steps 2–7 of the closure workflow (notice period,
- * owner response, settlement, standing crops, handover, final closure) plus
- * the audit trail. Reached from AgreementDetailsScreen once a closure exists.
+ * Lease Closure — progress: Steps 4–7 of the closure workflow (settlement,
+ * standing crops, handover, final closure) plus the audit trail. Reached by
+ * pressing "View closure progress" on ClosureRequestedScreen (Step 1–3:
+ * the request itself, notice period, and the owner's response) — never
+ * navigated to directly, so the back button always lands back there.
  */
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
@@ -17,7 +19,7 @@ import {
   isNoticeSatisfied,
   STANDING_CROP_OPTIONS,
 } from '../../constants/leaseClosure';
-import type { OwnerClosureResponse, StandingCropOption } from '../../types/lease';
+import type { StandingCropOption } from '../../types/lease';
 import { colors } from '../../theme/tokens';
 
 // Defensive optional require, same convention as AddFarmScreen.
@@ -56,15 +58,12 @@ export default function LeaseClosureScreen() {
   const { closureId } = route.params;
   const { user } = useAuth();
   const {
-    closures, getHistoryForClosure, respondToClosure, waiveNoticePeriod, updateSettlement, confirmSettlement,
-    resolveStandingCrop, addHandoverPhotos, setHandoverNotes, confirmHandover, finalizeClosure, cancelClosure,
+    closures, getHistoryForClosure, updateSettlement, confirmSettlement,
+    resolveStandingCrop, addHandoverPhotos, setHandoverNotes, confirmHandover, finalizeClosure,
   } = useLeases();
   const closure = closures.find(c => c.id === closureId);
 
   // All hooks declared unconditionally, before the "not found" early return.
-  const [respondMode, setRespondMode] = useState<OwnerClosureResponse | null>(null);
-  const [respondComment, setRespondComment] = useState('');
-  const [respondDate, setRespondDate] = useState('');
   const [rentText, setRentText] = useState(() => String(closure?.pendingRent ?? ''));
   const [waterText, setWaterText] = useState(() => String(closure?.pendingWater ?? ''));
   const [electricityText, setElectricityText] = useState(() => String(closure?.pendingElectricity ?? ''));
@@ -81,21 +80,6 @@ export default function LeaseClosureScreen() {
 
   const isFarmer = !!closure && user?.id === closure.farmerId;
   const role: 'farmer' | 'owner' = isFarmer ? 'farmer' : 'owner';
-
-  const handleRespond = useCallback(
-    (response: OwnerClosureResponse) => {
-      if (!closure || !user) return;
-      respondToClosure(
-        closure.id, response,
-        { ownerId: closure.ownerId, farmerId: closure.farmerId, landTitle: closure.landTitle },
-        { comments: respondComment.trim() || undefined, proposedDate: response === 'proposed_new_date' ? respondDate.trim() || undefined : undefined },
-      );
-      setRespondMode(null);
-      setRespondComment('');
-      setRespondDate('');
-    },
-    [closure, user, respondToClosure, respondComment, respondDate],
-  );
 
   const saveSettlementFigures = useCallback(() => {
     if (!closure || !user) return;
@@ -187,14 +171,6 @@ export default function LeaseClosureScreen() {
     );
   }, [closure, user, isFarmer, role, confirmHandover]);
 
-  const onWithdraw = useCallback(() => {
-    if (!closure || !user) return;
-    Alert.alert('Withdraw closure request?', 'This cancels your request — you can submit a new one later.', [
-      { text: 'No', style: 'cancel' },
-      { text: 'Withdraw', style: 'destructive', onPress: () => cancelClosure(closure.id, { userId: user.id, role }) },
-    ]);
-  }, [closure, user, role, cancelClosure]);
-
   const onCloseLease = useCallback(() => {
     if (!closure || !user) return;
     Alert.alert(
@@ -225,8 +201,13 @@ export default function LeaseClosureScreen() {
   const settlement = computeSettlement(closure);
   const noticeOk = isNoticeSatisfied(closure);
   const ownerAccepted = !!closure.ownerResponse && closure.ownerResponse !== 'rejected';
+  // Settlement only applies when the owner specifically chose "Accept, settle
+  // first" — a plain "Accept" means there's nothing to settle, so the
+  // Settlement card (and its gate on closing the lease) are skipped entirely.
+  const needsSettlement = closure.ownerResponse === 'accepted_with_settlement';
+  const settlementOk = !needsSettlement || closure.settlementConfirmed;
   const terminal = closure.status === 'closed' || closure.status === 'rejected' || closure.status === 'cancelled';
-  const readyToClose = !terminal && ownerAccepted && noticeOk && closure.settlementConfirmed && closure.standingCropResolved && !!closure.farmerConfirmedAt && !!closure.ownerConfirmedAt;
+  const readyToClose = !terminal && ownerAccepted && noticeOk && settlementOk && closure.standingCropResolved && !!closure.farmerConfirmedAt && !!closure.ownerConfirmedAt;
 
   const renderHandoverBlock = (who: 'farmer' | 'owner') => {
     const photos = who === 'farmer' ? closure.farmerPhotos : closure.ownerPhotos;
@@ -266,15 +247,20 @@ export default function LeaseClosureScreen() {
               {who === 'farmer' ? 'Handed over' : 'Received'} on {new Date(confirmedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
             </Text>
           </View>
-        ) : (
-          editable && (
+        ) : editable ? (
+          // The owner can't confirm receipt before the farmer has actually
+          // confirmed handing the land over — receiving something that
+          // hasn't been handed over yet doesn't make sense.
+          who === 'owner' && !closure.farmerConfirmedAt ? (
+            <Text style={styles.help}>Waiting for the farmer to confirm handover first.</Text>
+          ) : (
             <TouchableOpacity style={styles.confirmBtn} onPress={onConfirmHandover}>
               <Text style={styles.confirmBtnText}>
                 {who === 'farmer' ? 'I confirm that I have handed over the land.' : 'I confirm that I have received the land.'}
               </Text>
             </TouchableOpacity>
           )
-        )}
+        ) : null}
       </View>
     );
   };
@@ -292,81 +278,8 @@ export default function LeaseClosureScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-        {/* Step 1 recap + Step 2: notice period */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Closure Request & Notice Period</Text>
-          <Row label="Reason" value={closure.reason} />
-          {!!closure.comments && <Row label="Comments" value={closure.comments} />}
-          <Row label="Requested" value={new Date(closure.requestedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} />
-          <Row label="Proposed handover date" value={closure.proposedHandoverDate} />
-          <Row label="Notice period" value={closure.noticeWaived ? 'Waived' : `${closure.noticePeriodDays} days`} />
-          <Row label="Eligible closure date" value={closure.eligibleClosureDate || '—'} />
-          {!isFarmer && !closure.noticeWaived && !terminal && (
-            <TouchableOpacity style={styles.linkBtn} onPress={() => waiveNoticePeriod(closure.id, closure.ownerId)}>
-              <Text style={styles.linkBtnText}>Waive notice period (mutual agreement)</Text>
-            </TouchableOpacity>
-          )}
-          {isFarmer && closure.status === 'requested' && (
-            <TouchableOpacity style={styles.withdrawBtn} onPress={onWithdraw}>
-              <Text style={styles.withdrawBtnText}>Withdraw request</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {/* Step 3: owner response */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Land Owner Response</Text>
-          {closure.ownerResponse ? (
-            <>
-              <Row label="Response" value={closure.ownerResponse.replace(/_/g, ' ')} />
-              {!!closure.ownerResponseComments && <Row label="Comments" value={closure.ownerResponseComments} />}
-              {!!closure.ownerProposedDate && <Row label="Proposed date" value={closure.ownerProposedDate} />}
-            </>
-          ) : isFarmer ? (
-            <Text style={styles.help}>Waiting for the land owner to respond.</Text>
-          ) : (
-            <>
-              <View style={styles.respondGrid}>
-                <TouchableOpacity style={[styles.respondBtn, styles.respondAccept]} onPress={() => handleRespond('accepted')}>
-                  <Ionicons name="checkmark" size={16} color="#fff" />
-                  <Text style={styles.respondBtnTextLight}>Accept</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.respondBtn, styles.respondAccept]} onPress={() => handleRespond('accepted_with_settlement')}>
-                  <Ionicons name="cash-outline" size={16} color="#fff" />
-                  <Text style={styles.respondBtnTextLight}>Accept, settle first</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.respondBtn, styles.respondNeutral]} onPress={() => setRespondMode(m => (m === 'proposed_new_date' ? null : 'proposed_new_date'))}>
-                  <Ionicons name="calendar-outline" size={16} color={G.g2} />
-                  <Text style={styles.respondBtnText}>Propose date</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.respondBtn, styles.respondReject]} onPress={() => setRespondMode(m => (m === 'rejected' ? null : 'rejected'))}>
-                  <Ionicons name="close" size={16} color="#C02828" />
-                  <Text style={styles.respondBtnTextReject}>Reject</Text>
-                </TouchableOpacity>
-              </View>
-              {respondMode === 'proposed_new_date' && (
-                <View style={styles.inlineComposer}>
-                  <TextInput style={styles.input} placeholder="Proposed date, e.g. 30 Sep 2026" placeholderTextColor="#9EB8A8" value={respondDate} onChangeText={setRespondDate} />
-                  <TextInput style={[styles.input, styles.multiline]} placeholder="Comments (optional)" placeholderTextColor="#9EB8A8" multiline value={respondComment} onChangeText={setRespondComment} />
-                  <TouchableOpacity style={styles.confirmBtn} disabled={!respondDate.trim()} onPress={() => handleRespond('proposed_new_date')}>
-                    <Text style={styles.confirmBtnText}>Send proposed date</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-              {respondMode === 'rejected' && (
-                <View style={styles.inlineComposer}>
-                  <TextInput style={[styles.input, styles.multiline]} placeholder="Reason for rejecting (required)" placeholderTextColor="#9EB8A8" multiline value={respondComment} onChangeText={setRespondComment} />
-                  <TouchableOpacity style={[styles.confirmBtn, styles.confirmBtnReject]} disabled={!respondComment.trim()} onPress={() => handleRespond('rejected')}>
-                    <Text style={styles.confirmBtnText}>Confirm rejection</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Step 4: settlement */}
-        {ownerAccepted && (
+        {/* Step 4: settlement — only when the owner chose "Accept, settle first" */}
+        {needsSettlement && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Settlement</Text>
             {!isFarmer && !closure.settlementConfirmed ? (
@@ -443,11 +356,13 @@ export default function LeaseClosureScreen() {
         {ownerAccepted && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Existing / Standing Crops</Text>
+            {/* Only the land owner decides how a standing crop is handled —
+                the farmer just sees whichever option gets recorded. */}
             {STANDING_CROP_OPTIONS.map(opt => (
               <TouchableOpacity
                 key={opt.id}
                 style={styles.optionRow}
-                disabled={closure.standingCropResolved}
+                disabled={closure.standingCropResolved || isFarmer}
                 onPress={() => setCropOption(opt.id)}
               >
                 <Ionicons name={(closure.standingCropResolved ? closure.standingCropOption : cropOption) === opt.id ? 'radio-button-on' : 'radio-button-off'} size={18} color={G.g2} />
@@ -463,6 +378,8 @@ export default function LeaseClosureScreen() {
                 {!!closure.standingCropNotes && <Row label="Notes" value={closure.standingCropNotes} />}
                 <View style={styles.doneRow}><Ionicons name="checkmark-circle" size={16} color={G.g3} /><Text style={styles.doneText}>Recorded</Text></View>
               </>
+            ) : isFarmer ? (
+              <Text style={styles.help}>Waiting for the land owner to record the standing-crop arrangement.</Text>
             ) : (
               <>
                 {cropOption === 'harvest_by_deadline' && (
@@ -491,7 +408,7 @@ export default function LeaseClosureScreen() {
           <Text style={styles.cardTitle}>Final Closure</Text>
           <GateRow ok={ownerAccepted} label="Closure accepted or mutually agreed" />
           <GateRow ok={noticeOk} label="Notice period completed or waived" />
-          <GateRow ok={closure.settlementConfirmed} label="Financial settlement completed or recorded" />
+          {needsSettlement && <GateRow ok={closure.settlementConfirmed} label="Financial settlement completed or recorded" />}
           <GateRow ok={closure.standingCropResolved} label="Standing crop issue resolved" />
           <GateRow ok={!!closure.farmerConfirmedAt && !!closure.ownerConfirmedAt} label="Land handover completed by both parties" />
           {terminal ? (
@@ -500,10 +417,16 @@ export default function LeaseClosureScreen() {
               <Text style={styles.doneText}>{CLOSURE_STATUS_LABELS[closure.status]}</Text>
             </View>
           ) : readyToClose ? (
-            <TouchableOpacity style={styles.closeLeaseBtn} onPress={onCloseLease}>
-              <Ionicons name="checkmark-done" size={18} color="#fff" />
-              <Text style={styles.closeLeaseBtnText}>Close lease</Text>
-            </TouchableOpacity>
+            // Finalizing is the owner's call — the farmer just sees the same
+            // "Closed" status above (the `terminal` branch) once it happens.
+            isFarmer ? (
+              <Text style={styles.help}>Everything is complete — waiting for the land owner to close the lease.</Text>
+            ) : (
+              <TouchableOpacity style={styles.closeLeaseBtn} onPress={onCloseLease}>
+                <Ionicons name="checkmark-done" size={18} color="#fff" />
+                <Text style={styles.closeLeaseBtnText}>Close lease</Text>
+              </TouchableOpacity>
+            )
           ) : (
             <Text style={styles.help}>Complete every step above to close this lease.</Text>
           )}
@@ -562,23 +485,8 @@ const styles = StyleSheet.create({
 
   totalsBox: { backgroundColor: G.n8, borderRadius: 10, padding: 10, marginTop: 12 },
 
-  respondGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  respondBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 10, paddingVertical: 9, paddingHorizontal: 12, borderWidth: 1, borderColor: 'transparent' },
-  respondAccept: { backgroundColor: G.g2 },
-  respondNeutral: { backgroundColor: '#fff', borderColor: G.n7 },
-  respondReject: { backgroundColor: '#FDECEC', borderColor: '#F5C6C6' },
-  respondBtnText: { fontSize: 12, fontWeight: '700', color: G.g2 },
-  respondBtnTextLight: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  respondBtnTextReject: { fontSize: 12, fontWeight: '700', color: '#C02828' },
-  inlineComposer: { marginTop: 10, gap: 8 },
-
   confirmBtn: { backgroundColor: G.g2, borderRadius: 10, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
-  confirmBtnReject: { backgroundColor: '#C02828' },
   confirmBtnText: { color: '#fff', fontSize: 13, fontWeight: '800' },
-  linkBtn: { marginTop: 10 },
-  linkBtnText: { fontSize: 12, fontWeight: '700', color: G.g3 },
-  withdrawBtn: { marginTop: 10, alignSelf: 'flex-start' },
-  withdrawBtnText: { fontSize: 12, fontWeight: '700', color: '#C02828' },
 
   optionRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: G.n8 },
   optionLabel: { fontSize: 13, fontWeight: '700', color: G.n2 },
