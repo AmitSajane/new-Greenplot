@@ -199,6 +199,7 @@ export default function LeaseClosureScreen() {
 
   const history = getHistoryForClosure(closure.id);
   const settlement = computeSettlement(closure);
+  const selectedStandingCrop = STANDING_CROP_OPTIONS.find(o => o.id === closure.standingCropOption);
   const noticeOk = isNoticeSatisfied(closure);
   const ownerAccepted = !!closure.ownerResponse && closure.ownerResponse !== 'rejected';
   // Settlement only applies when the owner specifically chose "Accept, settle
@@ -352,34 +353,47 @@ export default function LeaseClosureScreen() {
           </View>
         )}
 
-        {/* Step 5: standing crops */}
-        {ownerAccepted && (
+        {/* Step 5: standing crops — only the land owner decides how a
+            standing crop is handled. Until it's recorded, the farmer doesn't
+            see this section at all rather than a placeholder "waiting" card;
+            once recorded, both sides see the same read-only result. */}
+        {ownerAccepted && (!isFarmer || closure.standingCropResolved) && (
           <View style={styles.card}>
             <Text style={styles.cardTitle}>Existing / Standing Crops</Text>
-            {/* Only the land owner decides how a standing crop is handled —
-                the farmer just sees whichever option gets recorded. */}
-            {STANDING_CROP_OPTIONS.map(opt => (
-              <TouchableOpacity
-                key={opt.id}
-                style={styles.optionRow}
-                disabled={closure.standingCropResolved || isFarmer}
-                onPress={() => setCropOption(opt.id)}
-              >
-                <Ionicons name={(closure.standingCropResolved ? closure.standingCropOption : cropOption) === opt.id ? 'radio-button-on' : 'radio-button-off'} size={18} color={G.g2} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.optionLabel}>{opt.label}</Text>
-                  <Text style={styles.optionHelp}>{opt.help}</Text>
+            {isFarmer ? (
+              // Farmer only needs to know what was decided, not the other
+              // options that weren't picked.
+              selectedStandingCrop && (
+                <View style={styles.optionRow}>
+                  <Ionicons name="checkmark-circle" size={18} color={G.g2} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optionLabel}>{selectedStandingCrop.label}</Text>
+                    <Text style={styles.optionHelp}>{selectedStandingCrop.help}</Text>
+                  </View>
                 </View>
-              </TouchableOpacity>
-            ))}
+              )
+            ) : (
+              STANDING_CROP_OPTIONS.map(opt => (
+                <TouchableOpacity
+                  key={opt.id}
+                  style={styles.optionRow}
+                  disabled={closure.standingCropResolved}
+                  onPress={() => setCropOption(opt.id)}
+                >
+                  <Ionicons name={(closure.standingCropResolved ? closure.standingCropOption : cropOption) === opt.id ? 'radio-button-on' : 'radio-button-off'} size={18} color={G.g2} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.optionLabel}>{opt.label}</Text>
+                    <Text style={styles.optionHelp}>{opt.help}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
             {closure.standingCropResolved ? (
               <>
                 {!!closure.standingCropDeadline && <Row label="Deadline" value={closure.standingCropDeadline} />}
                 {!!closure.standingCropNotes && <Row label="Notes" value={closure.standingCropNotes} />}
                 <View style={styles.doneRow}><Ionicons name="checkmark-circle" size={16} color={G.g3} /><Text style={styles.doneText}>Recorded</Text></View>
               </>
-            ) : isFarmer ? (
-              <Text style={styles.help}>Waiting for the land owner to record the standing-crop arrangement.</Text>
             ) : (
               <>
                 {cropOption === 'harvest_by_deadline' && (

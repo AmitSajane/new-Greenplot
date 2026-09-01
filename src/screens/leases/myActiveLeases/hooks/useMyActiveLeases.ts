@@ -21,7 +21,12 @@ export function useMyActiveLeases({ navigation }: Props) {
 
   // Only this farmer's own active leases, agreements, and requests — everyone
   // else's data comes back from the same fetch and must be filtered out here.
-  const myActiveLeases = useMemo(() => activeLeases.filter((l) => l.farmerId === farmerId), [activeLeases, farmerId]);
+  // `status === 'active'` excludes leases closed via the Lease Closure
+  // flow — once closed, it shouldn't linger here labelled "Active" forever.
+  const myActiveLeases = useMemo(
+    () => activeLeases.filter((l) => l.farmerId === farmerId && l.status === 'active'),
+    [activeLeases, farmerId],
+  );
   const myAgreements = useMemo(() => agreements.filter((a) => a.farmerId === farmerId), [agreements, farmerId]);
   const myRequests = useMemo(() => requests.filter((r) => r.farmerId === farmerId), [requests, farmerId]);
 

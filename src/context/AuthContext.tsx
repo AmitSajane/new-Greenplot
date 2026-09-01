@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { User, UserRole } from '../types/auth';
 import {
   verifyOTP,
@@ -172,99 +172,74 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     [],
   );
 
-  // De-dupes concurrent calls for the same user. Every sign-in path below
-  // calls this explicitly right after the Supabase call succeeds, but that
-  // same Supabase call (signInWithPassword / signUp / setSession) also fires
-  // the onAuthStateChange listener further down, which calls this again for
-  // the identical uid — so one login was doing two full profile fetches back
-  // to back. Reusing the first call's in-flight promise instead of starting
-  // a second one removes that duplicate round trip without having to trust
-  // that the listener alone always fires promptly (it's kept as the backup
-  // path for e.g. token refreshes that don't go through these functions).
-  // Only collapses calls that are genuinely concurrent — the entry is
-  // cleared the moment a call finishes, so sign-up/onboarding reading back a
-  // profile it just wrote always gets a fresh read, never a stale one.
-  const inFlightLoad = useRef<{ uid: string; promise: Promise<void> } | null>(null);
+  // Build the app User from a Supabase session + the profiles row. Always
+  // does a fresh read — sign-up/onboarding rely on that to see a profile row
+  // they just wrote a moment earlier, so this must never serve a cached or
+  // in-flight result from before that write. (An earlier version of this
+  // function de-duped concurrent calls with an in-flight-promise cache —
+  // removed after it caused exactly that: onboarding's own read-back reused
+  // a premature result from onAuthStateChange's listener, fetched before the
+  // just-written profile row existed, so new sign-ups could land with the
+  // wrong role. The startup double-fetch that cache was meant to avoid is
+  // now fixed structurally below instead — see the effect's own comment.)
+  const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
+    if (!supabase) return;
 
-  // Build the app User from a Supabase session + the profiles row.
-  const loadUserFromSession = useCallback((uid: string, authUser?: SupabaseUser | null): Promise<void> => {
-    if (!supabase) return Promise.resolve();
-    if (inFlightLoad.current?.uid === uid) {
-      console.log('[LOGIN] loadUserFromSession() de-duped — reusing in-flight call for', uid);
-      return inFlightLoad.current.promise;
-    }
+    const metadata = authUser?.user_metadata as { name?: string; phone?: string } | undefined;
+    const fallbackPhone = cleanPhone(metadata?.phone || authUser?.phone || authUser?.email || '');
+    const fallbackName = metadata?.name?.trim() || '';
 
-    // TEMP DEBUG LOGGING — remove once the slow-login issue is found.
-    const tStart = Date.now();
-    console.log('[LOGIN] loadUserFromSession() started for', uid);
+    const profileResult = await supabase
+      .from('profiles')
+      .select('name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
+      .eq('id', uid)
+      .single();
 
-    const promise = (async () => {
-      const metadata = authUser?.user_metadata as { name?: string; phone?: string } | undefined;
-      const fallbackPhone = cleanPhone(metadata?.phone || authUser?.phone || authUser?.email || '');
-      const fallbackName = metadata?.name?.trim() || '';
+    let profile = profileResult.data as ProfileRow | null;
 
-      console.log(`[LOGIN]   fetching profiles row at +${Date.now() - tStart}ms`);
-      const profileResult = await supabase!
+    if (profileResult.error || !profile) {
+      const minimalProfileResult = await supabase
         .from('profiles')
-        .select('name, role, phone, location, district, state, has_whatsapp, accepted_terms_and_policies, avatar_url')
+        .select('name, role, phone')
         .eq('id', uid)
         .single();
-      console.log(`[LOGIN]   profiles row returned at +${Date.now() - tStart}ms, error=`, profileResult.error?.message || null);
 
-      let profile = profileResult.data as ProfileRow | null;
+      profile = minimalProfileResult.data as typeof profile;
+    }
 
-      if (profileResult.error || !profile) {
-        const minimalProfileResult = await supabase!
-          .from('profiles')
-          .select('name, role, phone')
-          .eq('id', uid)
-          .single();
+    if (!profile) {
+      const recoveredProfile: ProfileRow = {
+        id: uid,
+        name: fallbackName,
+        role: 'farmer',
+        phone: fallbackPhone,
+      };
 
-        profile = minimalProfileResult.data as typeof profile;
-      }
-
-      if (!profile) {
-        const recoveredProfile: ProfileRow = {
-          id: uid,
-          name: fallbackName,
-          role: 'farmer',
-          phone: fallbackPhone,
-        };
-
-        await saveOwnProfile(recoveredProfile);
-
-        setUser({
-          id: recoveredProfile.id,
-          name: recoveredProfile.name || '',
-          role: recoveredProfile.role || 'farmer',
-          email: authUser?.email || undefined,
-          phoneNumber: recoveredProfile.phone || '',
-        });
-        return;
-      }
+      await saveOwnProfile(recoveredProfile);
 
       setUser({
-        id: uid,
-        name: profile.name?.trim() || fallbackName,
-        role: profile.role || 'farmer',
+        id: recoveredProfile.id,
+        name: recoveredProfile.name || '',
+        role: recoveredProfile.role || 'farmer',
         email: authUser?.email || undefined,
-        phoneNumber: profile.phone || fallbackPhone,
-        location: profile.location || undefined,
-        district: profile.district || undefined,
-        state: profile.state || undefined,
-        hasWhatsapp: profile.has_whatsapp ?? undefined,
-        acceptedTermsAndPoliciesAt: profile.accepted_terms_and_policies || undefined,
-        avatarUrl: profile.avatar_url || undefined,
+        phoneNumber: recoveredProfile.phone || '',
       });
-      console.log(`[LOGIN]   loadUserFromSession() setUser() done at +${Date.now() - tStart}ms`);
-    })().finally(() => {
-      // Only clear if we're still the current entry — a genuinely later
-      // call (new sign-in) may already have replaced it.
-      if (inFlightLoad.current?.promise === promise) inFlightLoad.current = null;
-    });
+      return;
+    }
 
-    inFlightLoad.current = { uid, promise };
-    return promise;
+    setUser({
+      id: uid,
+      name: profile.name?.trim() || fallbackName,
+      role: profile.role || 'farmer',
+      email: authUser?.email || undefined,
+      phoneNumber: profile.phone || fallbackPhone,
+      location: profile.location || undefined,
+      district: profile.district || undefined,
+      state: profile.state || undefined,
+      hasWhatsapp: profile.has_whatsapp ?? undefined,
+      acceptedTermsAndPoliciesAt: profile.accepted_terms_and_policies || undefined,
+      avatarUrl: profile.avatar_url || undefined,
+    });
   }, [saveOwnProfile]);
 
   // Restore a saved Supabase session on launch + react to auth changes.

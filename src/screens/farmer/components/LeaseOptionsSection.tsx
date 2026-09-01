@@ -87,14 +87,19 @@ export const LeaseOptionsSection = React.memo(({ landId, landTitle, ownerId, own
   const stateFor = useMemo(
     () =>
       (offer: LeaseOffer): OfferState => {
-        if (activeLeases.some(l => l.offerId === offer.id)) return 'active';
-        const ag = agreements.find(a => a.offerId === offer.id);
-        if (ag && ag.status === 'active') return 'active';
+        // Only a currently-active lease blocks re-applying — once it's
+        // closed via the Lease Closure flow, the farmer can apply again for
+        // the same offer. (Not `agreement.status === 'active'` on its own:
+        // closing a lease updates the ActiveLease row but not the original
+        // Agreement's own status, so that field alone would still read
+        // "active" forever after closure.)
+        if (activeLeases.some(l => l.offerId === offer.id && l.farmerId === farmerId && l.status === 'active')) return 'active';
+        const ag = agreements.find(a => a.offerId === offer.id && a.farmerId === farmerId);
         if (ag && !ag.farmerSigned) return 'sign';
         if (myRequests.some(r => r.offerId === offer.id && r.status === 'pending')) return 'applied';
         return 'apply';
       },
-    [activeLeases, agreements, myRequests],
+    [activeLeases, agreements, myRequests, farmerId],
   );
 
   const onApply = useCallback(
