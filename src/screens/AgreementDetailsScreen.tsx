@@ -75,6 +75,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
   const isFarmer = !!record && user?.id === record.farmerId;
 
   const [profilesById, setProfilesById] = useState<Record<string, FarmerProfile>>({});
+  const [showRoles, setShowRoles] = useState(false);
   useEffect(() => {
     if (!record) return;
     profilesApi.fetchFarmersByIds([record.farmerId, record.ownerId]).then((rows) => {
@@ -226,13 +227,18 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
           </View>
         </View>
 
-        {/* Terms & Conditions Section */}
+        {/* Roles & Responsibilities Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
+          <TouchableOpacity
+            style={[styles.sectionHeader, styles.sectionHeaderToggle]}
+            activeOpacity={0.7}
+            onPress={() => setShowRoles(prev => !prev)}
+          >
             <Icon name="gavel" size={20} color={colors.primary} />
-            <Text style={styles.sectionTitle}>Terms & Conditions</Text>
-          </View>
-          {termsClauses.map(clause => {
+            <Text style={[styles.sectionTitle, styles.sectionHeaderToggleTitle]}>Roles & Responsibilities</Text>
+            <Icon name={showRoles ? 'expand-less' : 'expand-more'} size={22} color={colors.textSecondary} />
+          </TouchableOpacity>
+          {showRoles && termsClauses.map(clause => {
             const badge = ROLE_BADGE[clause.role];
             return (
               <View key={clause.id} style={styles.termsClause}>
@@ -526,6 +532,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.textPrimary,
+  },
+  sectionHeaderToggle: {
+    justifyContent: 'space-between',
+  },
+  sectionHeaderToggleTitle: {
+    flex: 1,
   },
   mapContainer: {
     position: 'relative',

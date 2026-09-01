@@ -175,13 +175,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Build the app User from a Supabase session + the profiles row. Always
   // does a fresh read — sign-up/onboarding rely on that to see a profile row
   // they just wrote a moment earlier, so this must never serve a cached or
-  // in-flight result from before that write. (An earlier version of this
-  // function de-duped concurrent calls with an in-flight-promise cache —
-  // removed after it caused exactly that: onboarding's own read-back reused
-  // a premature result from onAuthStateChange's listener, fetched before the
-  // just-written profile row existed, so new sign-ups could land with the
-  // wrong role. The startup double-fetch that cache was meant to avoid is
-  // now fixed structurally below instead — see the effect's own comment.)
+  // in-flight result from before that write. (A caching version of this
+  // function keeps getting re-proposed on feature/darshan-aug-changes — it's
+  // been removed twice now, both times for the same reason: onboarding's own
+  // read-back reuses a premature result from onAuthStateChange's listener,
+  // fetched before the just-written profile row existed, so new sign-ups can
+  // land with the wrong role. A later comment on that branch claimed the
+  // cache "always gets a fresh read, never a stale one" once a call
+  // finishes — true only AFTER the promise settles; while it's still
+  // pending, which is exactly the window the race lives in, a second caller
+  // gets that same pending, pre-write promise. The startup double-fetch that
+  // caching was meant to avoid is fixed structurally below instead — see the
+  // effect's own comment.)
   const loadUserFromSession = useCallback(async (uid: string, authUser?: SupabaseUser | null) => {
     if (!supabase) return;
 
