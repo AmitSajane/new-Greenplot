@@ -62,8 +62,16 @@ export default function ClosureRequestedScreen() {
       setRespondMode(null);
       setRespondComment('');
       setRespondDate('');
+      // Accepting (with or without settling first) moves straight into the
+      // progress screen — no reason to make the owner tap "View closure
+      // progress" separately right after they just chose to proceed.
+      // Rejecting or proposing a new date stays here, since there's nothing
+      // to manage yet.
+      if (response === 'accepted' || response === 'accepted_with_settlement') {
+        navigation.navigate('LeaseClosure', { closureId: closure.id });
+      }
     },
-    [closure, user, respondToClosure, respondComment, respondDate],
+    [closure, user, respondToClosure, respondComment, respondDate, navigation],
   );
 
   const onWithdraw = useCallback(() => {
