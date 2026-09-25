@@ -13,12 +13,30 @@ import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../../theme/tokens';
 import { useCropCycles } from '../../../context/CropCycleContext';
+import { useLeases } from '../../../context/LeaseContext';
 import { useAuth } from '../../../context/AuthContext';
 import { workJobApi } from '../services/workJobApi';
 import { useCropActivities } from '../hooks/useCropActivities';
 import { CropActivity, CropActivityType } from '../types';
 
-type CropDetailsRoute = RouteProp<{ CropDetails: { cropCycleId: string } }, 'CropDetails'>;
+type CropDetailsRoute = RouteProp<
+  {
+    CropDetails: {
+      cropCycleId?: string;
+      // Fallback plot descriptor — lets "View Details" open even when no crop
+      // has been added yet for this plot/lease, instead of only working once
+      // a crop cycle already exists.
+      landId?: string;
+      farmerId?: string;
+      leaseId?: string;
+      ownerId?: string;
+      plotName?: string;
+      ownerLabel?: string;
+      areaAcres?: number;
+    };
+  },
+  'CropDetails'
+>;
 
 const ACTIVITY_TYPES: CropActivityType[] = ['sowing', 'irrigation', 'fertilizer', 'weeding', 'pest', 'harvest', 'other'];
 
@@ -46,15 +64,28 @@ const activityLabel = (a: Pick<CropActivity, 'type' | 'title'>) =>
 export default function CropDetailsScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<CropDetailsRoute>();
-  const { cropCycleId } = route.params;
+  const {
+    cropCycleId: routeCropCycleId,
+    landId, farmerId, leaseId, ownerId, plotName, ownerLabel, areaAcres,
+  } = route.params;
   const { user } = useAuth();
   const [jobCount, setJobCount] = useState(0);
-  const { getCropCycleById } = useCropCycles();
+  const { getCropCycleById, getCropCycleByLand } = useCropCycles();
+  const { activeLeases } = useLeases();
 
-  const crop = getCropCycleById(cropCycleId);
+  // A cropCycleId is passed once a crop actually exists; otherwise resolve by
+  // plot (and lease, when leased) so "View Details" still opens for a plot
+  // with no crop added yet — see the `!crop` branch below.
+  const crop = routeCropCycleId
+    ? getCropCycleById(routeCropCycleId)
+    : landId && farmerId
+    ? getCropCycleByLand(landId, farmerId, leaseId)
+    : undefined;
+  const cropCycleId = crop?.cropCycleId || '';
   const { activities, addActivity } = useCropActivities(cropCycleId, crop?.farmerId, crop?.ownerId);
 
   useEffect(() => {
+    if (!cropCycleId) return;
     workJobApi.getJobsByCropCycle(cropCycleId).then((jobs) => setJobCount(jobs.length));
   }, [cropCycleId]);
 
@@ -105,6 +136,43 @@ export default function CropDetailsScreen() {
   };
 
   if (!crop) {
+    // No crop cycle exists for this plot yet — still show its details, just
+    // with a "not added" message instead of erroring, since the caller (My
+    // Crops & Plots) shows a "View Details" button for every plot regardless
+    // of whether a crop has been added.
+    if (plotName) {
+      return (
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+              <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
+            </TouchableOpacity>
+            <Text style={styles.title}>Crop Details</Text>
+          </View>
+          <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+            <View style={styles.card}>
+              <Text style={styles.plotName}>{plotName}</Text>
+              {typeof areaAcres === 'number' && (
+                <View style={styles.row}>
+                  <Ionicons name="resize-outline" size={18} color={colors.primary} />
+                  <Text style={styles.rowText}>{areaAcres} Acres</Text>
+                </View>
+              )}
+              {!!ownerLabel && (
+                <View style={styles.row}>
+                  <Ionicons name="person-outline" size={18} color={colors.primary} />
+                  <Text style={styles.rowText}>Landlord: {ownerLabel}</Text>
+                </View>
+              )}
+            </View>
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Crop</Text>
+              <Text style={styles.errorText}>Crops not added</Text>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
     return (
       <SafeAreaView style={styles.safeArea}>
         <Text style={styles.errorText}>Crop not found</Text>
@@ -119,7 +187,13 @@ export default function CropDetailsScreen() {
   // treat it as leased when a *different* person owns it.
   const leased = !!crop.ownerId && crop.ownerId !== crop.farmerId;
   const isOwner = leased && !!user && user.id === crop.ownerId;
-  const canLog = !!user && user.id === crop.farmerId;
+  // Own land has no leaseId and is always loggable. A leased plot is only
+  // loggable while its lease is still active — once closed, activity/work
+  // logging stops immediately (real-time via LeaseContext), even though the
+  // past history stays visible.
+  const lease = crop.leaseId ? activeLeases.find((l) => l.id === crop.leaseId) : undefined;
+  const leaseClosed = !!crop.leaseId && lease?.status !== 'active';
+  const canLog = !!user && user.id === crop.farmerId && !leaseClosed;
 
   const hasLoggedSowing = activities.some((a) => a.type === 'sowing');
   const sorted = [...activities].sort((a, b) => a.date.localeCompare(b.date));
@@ -193,7 +267,7 @@ export default function CropDetailsScreen() {
             leased && (
               <View style={styles.viewOnlyRow}>
                 <Ionicons name="lock-closed-outline" size={14} color={colors.textMuted} />
-                <Text style={styles.viewOnlyText}>View only</Text>
+                <Text style={styles.viewOnlyText}>{leaseClosed ? 'Lease closed — view only' : 'View only'}</Text>
               </View>
             )
           )}

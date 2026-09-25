@@ -60,6 +60,9 @@ interface PlotTarget {
   plotName: string;
   ownerId: string;
   ownerLabel: string;
+  /** Set only for leased plots — scopes the crop cycle to this specific
+   *  lease term so a new lease on the same land starts with no crop data. */
+  leaseId?: string;
 }
 
 export default function MyCropsScreen() {
@@ -78,10 +81,18 @@ export default function MyCropsScreen() {
     () => listings.filter((l) => l.selfFarmed && l.ownerId === user?.id),
     [listings, user?.id],
   );
+  // Only currently-active leases can have crops added/edited here — a closed
+  // lease shows up read-only under `myCompletedLeases` instead, so it never
+  // looks like farming is still ongoing on land that's been handed back.
   const myLeases = useMemo(
-    () => activeLeases.filter((l) => l.farmerId === user?.id),
+    () => activeLeases.filter((l) => l.farmerId === user?.id && l.status === 'active'),
     [activeLeases, user?.id],
   );
+  const myCompletedLeases = useMemo(
+    () => activeLeases.filter((l) => l.farmerId === user?.id && l.status === 'closed'),
+    [activeLeases, user?.id],
+  );
+  const myLeasedPlots = useMemo(() => [...myLeases, ...myCompletedLeases], [myLeases, myCompletedLeases]);
 
   const overview = useMemo(() => {
     const ownArea = myOwnLands.reduce((sum, l) => sum + (parseFloat(l.acres) || 0), 0);
@@ -112,7 +123,7 @@ export default function MyCropsScreen() {
   };
 
   const openCropSheet = (target: PlotTarget) => {
-    const existing = user ? getCropCycleByLand(target.landId, user.id) : undefined;
+    const existing = user ? getCropCycleByLand(target.landId, user.id, target.leaseId) : undefined;
     if (existing) {
       const known = KNOWN_CROPS.includes(existing.cropName);
       setIsEditing(true);
@@ -136,24 +147,34 @@ export default function MyCropsScreen() {
     setShowDatePicker(false);
   };
 
-  const handleSaveCrop = () => {
-    if (!sheetTarget || !user) return;
+  const [saving, setSaving] = useState(false);
+
+  const handleSaveCrop = async () => {
+    if (!sheetTarget || !user || saving) return;
     const listing = getListingById(sheetTarget.landId);
     const cropName = draftCrop === 'Other' ? draftCustomCrop.trim() || 'Other' : draftCrop;
-    saveCropCycle({
-      landId: sheetTarget.landId,
-      farmerId: user.id,
-      ownerId: sheetTarget.ownerId,
-      plotName: sheetTarget.plotName,
-      areaAcres: listing ? parseFloat(listing.acres) || 0 : 0,
-      landlord: sheetTarget.ownerLabel,
-      cropName,
-      sownDate: formatDateLabel(draftSownDate),
-      healthStatus: draftStatus,
-      healthNote: draftNote.trim() || undefined,
-    });
-    closeCropSheet();
-    showToast(isEditing ? 'Crop updated' : 'Crop saved');
+    setSaving(true);
+    try {
+      await saveCropCycle({
+        landId: sheetTarget.landId,
+        leaseId: sheetTarget.leaseId,
+        farmerId: user.id,
+        ownerId: sheetTarget.ownerId,
+        plotName: sheetTarget.plotName,
+        areaAcres: listing ? parseFloat(listing.acres) || 0 : 0,
+        landlord: sheetTarget.ownerLabel,
+        cropName,
+        sownDate: formatDateLabel(draftSownDate),
+        healthStatus: draftStatus,
+        healthNote: draftNote.trim() || undefined,
+      });
+      closeCropSheet();
+      showToast(isEditing ? 'Crop updated' : 'Crop saved');
+    } catch (err: any) {
+      Alert.alert('Could not save crop', err?.message || 'Something went wrong. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditCropPress = (target: PlotTarget) => {
@@ -177,9 +198,13 @@ export default function MyCropsScreen() {
         {
           text: 'Remove',
           style: 'destructive',
-          onPress: () => {
-            removeCropCycle(target.landId, user.id);
-            showToast('Crop removed');
+          onPress: async () => {
+            try {
+              await removeCropCycle(target.landId, user.id, target.leaseId);
+              showToast('Crop removed');
+            } catch (err: any) {
+              Alert.alert('Could not remove crop', err?.message || 'Something went wrong. Please try again.');
+            }
           },
         },
       ],
@@ -207,18 +232,23 @@ export default function MyCropsScreen() {
     ownerLabel: string;
     imageUrl?: string;
     onEditPress?: () => void;
+    leaseId?: string;
+    /** Lease has been closed — crop for this term is shown read-only, no
+     *  add/edit/remove, so it can't look like farming is still ongoing. */
+    completed?: boolean;
   }) => {
-    const crop = user ? getCropCycleByLand(opts.landId, user.id) : undefined;
+    const crop = user ? getCropCycleByLand(opts.landId, user.id, opts.leaseId) : undefined;
     const statusMeta = crop ? STATUS_META[crop.healthStatus ?? 'healthy'] : null;
     const target: PlotTarget = {
       landId: opts.landId,
       plotName: opts.plotName,
       ownerId: opts.ownerId,
       ownerLabel: opts.ownerLabel,
+      leaseId: opts.leaseId,
     };
 
     return (
-      <View key={opts.landId} style={[styles.plotCard, shadow.card]}>
+      <View key={opts.leaseId ?? opts.landId} style={[styles.plotCard, shadow.card]}>
         {!!opts.imageUrl && <Image source={{ uri: opts.imageUrl }} style={styles.plotImage} />}
         <View style={styles.plotCardBody}>
         <View style={styles.plotHeaderRow}>
@@ -228,6 +258,11 @@ export default function MyCropsScreen() {
             <Text style={styles.plotLeaseMeta}>{opts.metaLine2}</Text>
           </View>
           <View style={styles.plotHeaderActions}>
+            {opts.completed && (
+              <View style={styles.completedPill}>
+                <Text style={styles.completedPillText}>COMPLETED</Text>
+              </View>
+            )}
             <View style={styles.areaPill}>
               <Text style={styles.areaPillText}>{opts.areaAcres.toFixed(1)} Acres</Text>
             </View>
@@ -270,24 +305,26 @@ export default function MyCropsScreen() {
                 </Text>
               </View>
 
-              <View style={styles.panelActions}>
-                <TouchableOpacity
-                  style={styles.panelIconBtn}
-                  onPress={() => handleEditCropPress(target)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit crop"
-                >
-                  <Icon name="pencil-outline" size={15} color={colors.textSecondary} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.panelIconBtn}
-                  onPress={() => handleRemoveCropPress(target)}
-                  accessibilityRole="button"
-                  accessibilityLabel="Remove crop"
-                >
-                  <Icon name="trash-outline" size={15} color={colors.danger} />
-                </TouchableOpacity>
-              </View>
+              {!opts.completed && (
+                <View style={styles.panelActions}>
+                  <TouchableOpacity
+                    style={styles.panelIconBtn}
+                    onPress={() => handleEditCropPress(target)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit crop"
+                  >
+                    <Icon name="pencil-outline" size={15} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.panelIconBtn}
+                    onPress={() => handleRemoveCropPress(target)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove crop"
+                  >
+                    <Icon name="trash-outline" size={15} color={colors.danger} />
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
 
             <TouchableOpacity
@@ -303,16 +340,43 @@ export default function MyCropsScreen() {
         ) : (
           <View style={styles.emptyCrop}>
             <Text style={styles.emptyCropText}>
-              <Text style={styles.emptyCropBold}>No crop added</Text> for this plot yet
+              {opts.completed ? (
+                'No crop was recorded for this lease'
+              ) : (
+                <>
+                  <Text style={styles.emptyCropBold}>No crop added</Text> for this plot yet
+                </>
+              )}
             </Text>
+            {!opts.completed && (
+              <TouchableOpacity
+                style={styles.addCropBtn}
+                onPress={() => openCropSheet(target)}
+                accessibilityRole="button"
+                accessibilityLabel={`Add crop for ${opts.plotName}`}
+              >
+                <Icon name="add" size={17} color="#FFFFFF" />
+                <Text style={styles.addCropBtnText}>ADD CROP</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
-              style={styles.addCropBtn}
-              onPress={() => openCropSheet(target)}
+              style={[styles.viewDetailsBtn, styles.viewDetailsBtnSpaced]}
               accessibilityRole="button"
-              accessibilityLabel={`Add crop for ${opts.plotName}`}
+              accessibilityLabel={`View details for ${opts.plotName}`}
+              onPress={() =>
+                navigation.navigate('CropDetails', {
+                  landId: opts.landId,
+                  farmerId: user?.id,
+                  leaseId: opts.leaseId,
+                  ownerId: opts.ownerId,
+                  plotName: opts.plotName,
+                  ownerLabel: opts.ownerLabel,
+                  areaAcres: opts.areaAcres,
+                })
+              }
             >
-              <Icon name="add" size={17} color="#FFFFFF" />
-              <Text style={styles.addCropBtnText}>ADD CROP</Text>
+              <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
+              <Icon name="arrow-forward" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -322,7 +386,7 @@ export default function MyCropsScreen() {
   };
 
   const isOwn = activeTab === 'own';
-  const activeList = isOwn ? myOwnLands : myLeases;
+  const activeList = isOwn ? myOwnLands : myLeasedPlots;
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -399,7 +463,7 @@ export default function MyCropsScreen() {
             <Icon name="document-text-outline" size={18} color={!isOwn ? '#FFFFFF' : colors.textSecondary} />
             <Text style={[styles.tabBtnText, !isOwn && styles.tabBtnTextActive]}>Leased Land</Text>
             <View style={[styles.tabCountBadge, !isOwn && styles.tabCountBadgeActive]}>
-              <Text style={[styles.tabCountText, !isOwn && styles.tabCountTextActive]}>{myLeases.length}</Text>
+              <Text style={[styles.tabCountText, !isOwn && styles.tabCountTextActive]}>{myLeasedPlots.length}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -461,17 +525,22 @@ export default function MyCropsScreen() {
           )}
 
         {!isOwn &&
-          myLeases.map((lease) => {
+          myLeasedPlots.map((lease) => {
             const listing = getListingById(lease.landId);
+            const completed = lease.status === 'closed';
             return renderPlotCard({
               landId: lease.landId,
               plotName: lease.landTitle,
               areaAcres: listing ? parseFloat(listing.acres) || 0 : 0,
               metaLine1: `Landlord: ${lease.ownerName}`,
-              metaLine2: `${lease.typeName} Lease · since ${lease.startDate}`,
+              metaLine2: completed
+                ? `${lease.typeName} Lease · closed`
+                : `${lease.typeName} Lease · since ${lease.startDate}`,
               ownerId: lease.ownerId,
               ownerLabel: lease.ownerName,
               imageUrl: listing?.imageUrl || undefined,
+              leaseId: lease.id,
+              completed,
             });
           })}
       </ScrollView>
@@ -575,8 +644,8 @@ export default function MyCropsScreen() {
                 multiline
               />
 
-              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveCrop}>
-                <Text style={styles.saveBtnText}>SAVE CROP</Text>
+              <TouchableOpacity style={styles.saveBtn} onPress={handleSaveCrop} disabled={saving}>
+                <Text style={styles.saveBtnText}>{saving ? 'SAVING…' : 'SAVE CROP'}</Text>
               </TouchableOpacity>
               <Text style={styles.sheetHelp}>
                 {sheetTarget?.ownerId === user?.id
@@ -902,6 +971,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  completedPill: {
+    backgroundColor: colors.softBlue,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  completedPillText: {
+    color: '#2D6CDF',
+    fontWeight: '800',
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+  },
   areaPill: {
     backgroundColor: '#E9F2FF',
     borderRadius: radius.pill,
@@ -1050,6 +1132,11 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '900',
     letterSpacing: 1,
+  },
+  viewDetailsBtnSpaced: {
+    marginTop: spacing.md,
+    paddingHorizontal: spacing.xl,
+    alignSelf: 'stretch',
   },
 
   modalRoot: {

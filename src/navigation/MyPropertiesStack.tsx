@@ -18,7 +18,11 @@ import SettingsStack from './SettingsStack';
 
 export type MyPropertiesStackParamList = {
   MyPropertiesList: undefined;
-  PropertyDetails: { propertyId: string };
+  // `viewHistory` is set only when opened from the Completed tab on My
+  // Properties — it's what lets a closed lease's crop details show there but
+  // stay hidden when the same (now-available-again) property is opened from
+  // the Available tab.
+  PropertyDetails: { propertyId: string; viewHistory?: boolean };
   LeaseTypeDetails: { propertyId: string; selectedLeaseType?: string };
   LeaseDetailView: { leaseTypeId: string; leaseTypeTitle: string; propertyId?: string };
   CompareLeases: { selectedLeaseTypeId?: string; propertyId?: string };
@@ -27,7 +31,16 @@ export type MyPropertiesStackParamList = {
     | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
     | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   AddFarm: { editListingId: string };
-  CropDetails: { cropCycleId: string };
+  CropDetails: {
+    cropCycleId?: string;
+    landId?: string;
+    farmerId?: string;
+    leaseId?: string;
+    ownerId?: string;
+    plotName?: string;
+    ownerLabel?: string;
+    areaAcres?: number;
+  };
   AgreementDetails: { agreementId: string };
   LeaseClosureRequest: { leaseId: string };
   // Step 1 (request + owner response) — every entry point lands here first.

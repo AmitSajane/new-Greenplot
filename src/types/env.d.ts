@@ -16,4 +16,5 @@ declare module '@env' {
   export const GEMINI_API_KEY: string | undefined;
   export const GEMINI_MODEL: string | undefined;
   export const HOT_UPDATER_BASE_URL: string | undefined;
+  export const RAZORPAY_KEY_ID: string | undefined;
 }

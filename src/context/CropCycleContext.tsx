@@ -11,9 +11,14 @@ const uid = (p: string) => `${p}_${Date.now()}_${Math.random().toString(16).slic
 interface CropCycleContextType {
   cropCycles: CropCycle[];
   getCropCycleById: (cropCycleId: string) => CropCycle | undefined;
-  getCropCycleByLand: (landId: string, farmerId: string) => CropCycle | undefined;
-  saveCropCycle: (input: SaveCropCycleInput) => void;
-  removeCropCycle: (landId: string, farmerId: string) => void;
+  /** `leaseId` scopes the match to one specific lease term — pass it whenever
+   *  the plot is leased so a new lease on the same land never picks up a
+   *  previous lease's crop cycle. Omit only for self-farmed (own) land. */
+  getCropCycleByLand: (landId: string, farmerId: string, leaseId?: string) => CropCycle | undefined;
+  /** Resolves once the save has actually landed (or rejects with the real
+   *  error) — callers should await this before telling the user it saved. */
+  saveCropCycle: (input: SaveCropCycleInput) => Promise<void>;
+  removeCropCycle: (landId: string, farmerId: string, leaseId?: string) => Promise<void>;
 }
 
 const CropCycleContext = createContext<CropCycleContextType | undefined>(undefined);
@@ -42,20 +47,31 @@ export function CropCycleProvider({ children }: { children: ReactNode }) {
   );
 
   const getCropCycleByLand = useCallback(
-    (landId: string, farmerId: string) =>
-      cropCycles.find((c) => c.landId === landId && c.farmerId === farmerId && c.status === 'active'),
+    (landId: string, farmerId: string, leaseId?: string) =>
+      cropCycles.find(
+        (c) =>
+          c.landId === landId &&
+          c.farmerId === farmerId &&
+          c.status === 'active' &&
+          (leaseId ? c.leaseId === leaseId : !c.leaseId),
+      ),
     [cropCycles],
   );
 
   const saveCropCycle = useCallback(
-    (input: SaveCropCycleInput) => {
+    async (input: SaveCropCycleInput) => {
       if (supabase) {
-        cropCycleApi.save(input).then(refetch).catch(() => {});
+        await cropCycleApi.save(input);
+        await refetch();
         return;
       }
       setCropCycles((prev) => {
         const existing = prev.find(
-          (c) => c.landId === input.landId && c.farmerId === input.farmerId && c.status === 'active',
+          (c) =>
+            c.landId === input.landId &&
+            c.farmerId === input.farmerId &&
+            c.status === 'active' &&
+            (input.leaseId ? c.leaseId === input.leaseId : !c.leaseId),
         );
         if (existing) {
           return prev.map((c) => (c.cropCycleId === existing.cropCycleId ? { ...c, ...input } : c));
@@ -67,13 +83,22 @@ export function CropCycleProvider({ children }: { children: ReactNode }) {
   );
 
   const removeCropCycle = useCallback(
-    (landId: string, farmerId: string) => {
+    async (landId: string, farmerId: string, leaseId?: string) => {
       if (supabase) {
-        cropCycleApi.remove(landId, farmerId).then(refetch).catch(() => {});
+        await cropCycleApi.remove(landId, farmerId, leaseId);
+        await refetch();
         return;
       }
       setCropCycles((prev) =>
-        prev.filter((c) => !(c.landId === landId && c.farmerId === farmerId && c.status === 'active')),
+        prev.filter(
+          (c) =>
+            !(
+              c.landId === landId &&
+              c.farmerId === farmerId &&
+              c.status === 'active' &&
+              (leaseId ? c.leaseId === leaseId : !c.leaseId)
+            ),
+        ),
       );
     },
     [refetch],

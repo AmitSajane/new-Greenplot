@@ -27,6 +27,12 @@ export function useMyActiveLeases({ navigation }: Props) {
     () => activeLeases.filter((l) => l.farmerId === farmerId && l.status === 'active'),
     [activeLeases, farmerId],
   );
+  // Leases closed via the Lease Closure flow — shown under the "Completed"
+  // filter instead of vanishing once no longer "Active".
+  const myCompletedLeases = useMemo(
+    () => activeLeases.filter((l) => l.farmerId === farmerId && l.status === 'closed'),
+    [activeLeases, farmerId],
+  );
   const myAgreements = useMemo(() => agreements.filter((a) => a.farmerId === farmerId), [agreements, farmerId]);
   const myRequests = useMemo(() => requests.filter((r) => r.farmerId === farmerId), [requests, farmerId]);
 
@@ -50,6 +56,17 @@ export function useMyActiveLeases({ navigation }: Props) {
       acresLabel: '',
       rentLabel: l.termsSummary,
       status: 'Active',
+      expiresInLabel: `Since ${l.startDate}`,
+      image: DEFAULT_LEASE_IMAGE,
+    }));
+    const completed: LeaseListItem[] = myCompletedLeases.map((l) => ({
+      id: l.id,
+      title: l.landTitle,
+      ownerName: l.ownerName,
+      locationLabel: `${l.typeName} lease · closed`,
+      acresLabel: '',
+      rentLabel: l.termsSummary,
+      status: 'Completed',
       expiresInLabel: `Since ${l.startDate}`,
       image: DEFAULT_LEASE_IMAGE,
     }));
@@ -91,8 +108,8 @@ export function useMyActiveLeases({ navigation }: Props) {
         status: 'Rejected',
         image: DEFAULT_LEASE_IMAGE,
       }));
-    return [...toSign, ...active, ...pending, ...rejected];
-  }, [myActiveLeases, myAgreements, myRequests]);
+    return [...toSign, ...active, ...completed, ...pending, ...rejected];
+  }, [myActiveLeases, myCompletedLeases, myAgreements, myRequests]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -107,7 +124,7 @@ export function useMyActiveLeases({ navigation }: Props) {
     });
   }, [filter, query, realItems]);
 
-  const filterKeys: LeaseFilterKey[] = ['All', 'Active', 'Pending', 'Rejected', 'Expired'];
+  const filterKeys: LeaseFilterKey[] = ['All', 'Active', 'Completed', 'Pending', 'Rejected', 'Expired'];
 
   return {
     canGoBack: navigation.canGoBack(),

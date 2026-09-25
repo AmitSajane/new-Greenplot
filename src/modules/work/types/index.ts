@@ -61,6 +61,10 @@ export type CropHealthStatus = 'healthy' | 'needs_water' | 'pest_alert';
 export interface CropCycle {
   cropCycleId: string;
   landId: string;
+  /** The specific lease term this cycle belongs to (undefined for self-farmed/own land).
+   *  Scopes lookups so a new lease on the same land never inherits a previous
+   *  lease's crop data. */
+  leaseId?: string;
   farmerId: string;
   ownerId?: string;
   cropName: string;

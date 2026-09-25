@@ -3,7 +3,7 @@ import { Image, ImageSourcePropType, StyleSheet, Text, TouchableOpacity, View } 
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing, statusTones } from '../../theme/tokens';
 
-export type LeaseStatus = 'Active' | 'Pending' | 'Expired' | 'Rejected';
+export type LeaseStatus = 'Active' | 'Pending' | 'Expired' | 'Rejected' | 'Completed';
 
 export type LeaseListItem = {
   id: string;
@@ -32,6 +32,8 @@ const statusStyle = (status: LeaseStatus) => {
       return { bg: colors.border, fg: colors.textSecondary };
     case 'Rejected':
       return { bg: statusTones.danger.bg, fg: statusTones.danger.fg };
+    case 'Completed':
+      return { bg: colors.softBlue, fg: '#2D6CDF' };
   }
 };
 

@@ -19,6 +19,7 @@ import { WorkType } from '../types';
 import { requirePermission } from '../../../middleware/permissions/checkRolePermission';
 import { useAuth } from '../../../context/AuthContext';
 import { useCropCycles } from '../../../context/CropCycleContext';
+import { useLeases } from '../../../context/LeaseContext';
 
 const WORK_TYPES: WorkType[] = [
   'Harvesting',
@@ -45,9 +46,17 @@ export default function CreateWorkScreen() {
   const route = useRoute<CreateWorkRoute>();
   const { user } = useAuth();
   const { cropCycles } = useCropCycles();
+  const { activeLeases } = useLeases();
+  // Excludes a crop cycle whose lease has since closed — work can't be
+  // created against a plot the farmer no longer has access to.
   const myCropCycles = useMemo(
-    () => cropCycles.filter((c) => c.farmerId === user?.id && c.status === 'active'),
-    [cropCycles, user?.id],
+    () =>
+      cropCycles.filter((c) => {
+        if (c.farmerId !== user?.id || c.status !== 'active') return false;
+        if (!c.leaseId) return true;
+        return activeLeases.find((l) => l.id === c.leaseId)?.status === 'active';
+      }),
+    [cropCycles, activeLeases, user?.id],
   );
   const cropCycleId = route.params?.cropCycleId;
   const [loading, setLoading] = useState(false);

@@ -1,9 +1,12 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { Alert, View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../../theme/tokens';
+import { isRazorpayConfigured } from '../../../config/env';
+import { paymentsApi, RazorpayOrder } from '../../../services/paymentsApi';
+import { RazorpayCheckout, RazorpaySuccess } from '../../payments';
 
 const MOCK_WORKERS = [
   { id: '1', name: 'Ramu', days: 5, wagePerDay: 400, total: 2000, status: 'paid' },
@@ -16,6 +19,65 @@ export default function PaymentSummaryScreen() {
   const route = useRoute<any>();
   const jobId = route.params?.jobId;
   const totalPayable = MOCK_WORKERS.reduce((sum, w) => sum + w.total, 0);
+
+  const [order, setOrder] = useState<RazorpayOrder | null>(null);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
+
+  // Pays the pending total as one lump sum — Razorpay test-mode checkout,
+  // verified server-side before anything is recorded as paid (see
+  // supabase/functions/verify-razorpay-payment). Splitting this per-worker
+  // (so each laborer is paid individually, with the platform's commission
+  // held back) needs Razorpay Route + a linked account per laborer, which
+  // isn't wired up yet — see the payments module README.
+  const onPayAll = async () => {
+    if (!isRazorpayConfigured) {
+      Alert.alert(
+        'Payments not set up',
+        'Add RAZORPAY_KEY_ID to .env and deploy the payment edge functions to enable this — see supabase/functions/README.md.',
+      );
+      return;
+    }
+    setPlacingOrder(true);
+    try {
+      const newOrder = await paymentsApi.createOrder({
+        amountPaise: totalPayable * 100,
+        context: 'labor_wage',
+        contextId: jobId,
+      });
+      if (!newOrder) {
+        Alert.alert('Could not start payment', 'Please try again.');
+        return;
+      }
+      setOrder(newOrder);
+      setCheckoutVisible(true);
+    } catch (e) {
+      Alert.alert('Could not start payment', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
+
+  const onCheckoutSuccess = async (payload: RazorpaySuccess) => {
+    setCheckoutVisible(false);
+    try {
+      const result = await paymentsApi.verifyPayment(payload);
+      const verified = result?.verified ?? false;
+      Alert.alert(
+        verified ? 'Payment received' : 'Could not verify payment',
+        verified
+          ? `₹${totalPayable.toLocaleString()} paid successfully.`
+          : 'Razorpay reported success but the signature did not verify — contact support before assuming this is paid.',
+      );
+    } catch (e) {
+      Alert.alert('Verification failed', e instanceof Error ? e.message : 'Please contact support.');
+    }
+  };
+
+  const onCheckoutError = (message: string) => {
+    setCheckoutVisible(false);
+    Alert.alert('Payment failed', message);
+  };
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -45,11 +107,25 @@ export default function PaymentSummaryScreen() {
             </View>
           </View>
         ))}
-        <TouchableOpacity style={styles.payBtn} activeOpacity={0.9}>
+        <TouchableOpacity
+          style={[styles.payBtn, placingOrder && styles.payBtnDisabled]}
+          activeOpacity={0.9}
+          onPress={onPayAll}
+          disabled={placingOrder}
+        >
           <Ionicons name="wallet" size={22} color={colors.surface} />
-          <Text style={styles.payBtnText}>Pay all</Text>
+          <Text style={styles.payBtnText}>{placingOrder ? 'Starting payment…' : 'Pay all'}</Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <RazorpayCheckout
+        visible={checkoutVisible}
+        order={order}
+        description={`Labor wages${jobId ? ` · Job ${jobId}` : ''}`}
+        onSuccess={onCheckoutSuccess}
+        onDismiss={() => setCheckoutVisible(false)}
+        onError={onCheckoutError}
+      />
     </SafeAreaView>
   );
 }
@@ -107,5 +183,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     marginTop: spacing.xl,
   },
+  payBtnDisabled: { opacity: 0.6 },
   payBtnText: { fontSize: 16, fontWeight: '700', color: colors.surface },
 });

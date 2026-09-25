@@ -18,6 +18,8 @@ import { FarmerHomeStackParamList } from '../navigation/FarmerHomeStack';
 import { useLeases } from '../context/LeaseContext';
 import { useFarmListings } from '../context/FarmListingsContext';
 import { useAuth } from '../context/AuthContext';
+import { useCropCycles } from '../context/CropCycleContext';
+import { useCropActivities } from '../modules/work/hooks/useCropActivities';
 import { profilesApi, FarmerProfile } from '../services/profilesApi';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 import { buildTermsAndConditions, TermsClauseRole, TermsSourceRecord } from '../constants/leaseTermsAndConditions';
@@ -82,6 +84,14 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
       setProfilesById(Object.fromEntries(rows.map((r) => [r.id, r])));
     });
   }, [record?.farmerId, record?.ownerId]);
+
+  // Crop activity for this specific lease term — scoped by leaseId so a
+  // completed/closed lease still shows exactly what happened during it, and a
+  // later re-lease of the same land never mixes in this history.
+  const { getCropCycleByLand } = useCropCycles();
+  const cropCycle =
+    record && activeLease ? getCropCycleByLand(record.landId, record.farmerId, activeLease.id) : undefined;
+  const { activities: cropActivities } = useCropActivities(cropCycle?.cropCycleId || '', cropCycle?.farmerId, cropCycle?.ownerId);
 
   if (!record) {
     return (
@@ -424,6 +434,46 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Crop Activity — scoped to this lease term via cropCycle.leaseId, so a
+            closed lease keeps showing exactly what was recorded during it. */}
+        {cropCycle && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Icon name="grass" size={20} color={colors.primary} />
+              <Text style={styles.sectionTitle}>Crop Activity</Text>
+            </View>
+            <View style={styles.infoGrid}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Crop</Text>
+                <Text style={styles.infoValue}>{cropCycle.cropName}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Sown</Text>
+                <Text style={styles.infoValue}>{cropCycle.sownDate || '—'}</Text>
+              </View>
+            </View>
+            {cropActivities.length === 0 ? (
+              <Text style={styles.comingSoon}>No crop activity recorded for this lease yet.</Text>
+            ) : (
+              [...cropActivities]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map((a, i) => (
+                  <View
+                    key={a.activityId}
+                    style={[styles.historyRow, i === cropActivities.length - 1 && styles.historyRowLast]}
+                  >
+                    <View style={styles.historyDot} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.historyLabel}>{a.type === 'other' && a.title ? a.title : a.type}</Text>
+                      {!!a.note && <Text style={styles.historyDetails}>{a.note}</Text>}
+                      <Text style={styles.historyDate}>{a.date}</Text>
+                    </View>
+                  </View>
+                ))
+            )}
+          </View>
+        )}
 
         {/* Agreement History Section — full audit trail: creation, signing, and
             every recorded closure action, oldest first. */}

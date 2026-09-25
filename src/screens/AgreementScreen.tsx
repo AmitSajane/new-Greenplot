@@ -11,6 +11,9 @@ import { supabase } from '../services/supabase';
 import { storageApi } from '../services/storageApi';
 import { SignaturePadModal } from '../components/organisms/SignaturePadModal';
 import { buildTermsAndConditions, TermsClauseRole } from '../constants/leaseTermsAndConditions';
+import { isRazorpayConfigured } from '../config/env';
+import { paymentsApi, RazorpayOrder } from '../services/paymentsApi';
+import { RazorpayCheckout, RazorpaySuccess } from '../modules/payments';
 
 type ParamList = { AgreementSign: { agreementId: string } };
 
@@ -49,7 +52,7 @@ export default function AgreementScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<RouteProp<ParamList, 'AgreementSign'>>();
   const { user } = useAuth();
-  const { getAgreementById, signAgreementAsFarmer } = useLeases();
+  const { getAgreementById, signAgreementAsFarmer, offers } = useLeases();
 
   const agreement = getAgreementById(route.params.agreementId);
   const isOwnerViewer = (user as { role?: string })?.role === 'owner';
@@ -60,22 +63,83 @@ export default function AgreementScreen() {
   // sign button — reading comes before signing, not after.
   const [agreedToTerms, setAgreedToTerms] = useState(false);
 
+  // Deposit amount: read from the owner's offer when they set one.
+  // TODO(mock data): most seeded/test offers don't have securityDeposit set
+  // yet, so this falls back to a fixed test amount — enough to exercise the
+  // Razorpay test-mode flow end-to-end. Remove the fallback once offers
+  // reliably carry a real deposit.
+  const offer = offers.find(o => o.id === agreement?.offerId);
+  const configuredDepositRupees = Number(offer?.terms.securityDeposit) || 0;
+  const MOCK_DEPOSIT_RUPEES = 5000;
+  const depositRupees = configuredDepositRupees > 0 ? configuredDepositRupees : MOCK_DEPOSIT_RUPEES;
+  const isMockDeposit = configuredDepositRupees <= 0;
+
+  // Signature drawn but the deposit hasn't been verified yet → held here so
+  // "retry payment" doesn't force the farmer to re-draw it.
+  const [pendingSignatureUrl, setPendingSignatureUrl] = useState<string | null>(null);
+  const [startingPayment, setStartingPayment] = useState(false);
+  const [order, setOrder] = useState<RazorpayOrder | null>(null);
+  const [checkoutVisible, setCheckoutVisible] = useState(false);
+
   const onSign = useCallback(() => {
     if (!agreement || !agreedToTerms) return;
-    Alert.alert('Sign this agreement?', 'By signing, you draw your signature to accept the lease terms shown above.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Continue', onPress: () => setPadOpen(true) },
-    ]);
-  }, [agreement, agreedToTerms]);
+    Alert.alert(
+      'Sign & pay security deposit?',
+      `By signing, you draw your signature to accept the lease terms above, then pay the ₹${depositRupees.toLocaleString()} security deposit to activate the lease.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Continue', onPress: () => setPadOpen(true) },
+      ],
+    );
+  }, [agreement, agreedToTerms, depositRupees]);
 
   const closePad = useCallback(() => {
     if (signing) return; // don't let a stray tap dismiss mid-upload
     setPadOpen(false);
   }, [signing]);
 
+  // Opens Razorpay test-mode checkout for the security deposit. Only once
+  // that payment is verified server-side (see onCheckoutSuccess) do we
+  // actually record the signature + activate the lease — signing the
+  // agreement on its own no longer activates it.
+  const startDepositPayment = useCallback(
+    async (signatureUrl: string) => {
+      if (!agreement) return;
+      if (!isRazorpayConfigured) {
+        Alert.alert(
+          'Payments not set up',
+          'Add RAZORPAY_KEY_ID to .env and deploy the payment edge functions — see supabase/functions/README.md.',
+        );
+        return;
+      }
+      setPendingSignatureUrl(signatureUrl);
+      setStartingPayment(true);
+      try {
+        const newOrder = await paymentsApi.createOrder({
+          amountPaise: depositRupees * 100,
+          context: 'lease_rent',
+          contextId: agreement.id,
+          payeeId: agreement.ownerId,
+        });
+        if (!newOrder) {
+          Alert.alert('Could not start payment', 'Please try again.');
+          return;
+        }
+        setOrder(newOrder);
+        setCheckoutVisible(true);
+      } catch (e) {
+        Alert.alert('Could not start payment', e instanceof Error ? e.message : 'Please try again.');
+      } finally {
+        setStartingPayment(false);
+      }
+    },
+    [agreement, depositRupees],
+  );
+
   // Farmer finished drawing → `dataUri` is a full "data:image/png;base64,…"
   // from the signature pad. Upload it (Supabase mode) or keep it as-is (mock
-  // mode, nowhere to upload to) then record the signature on the agreement.
+  // mode, nowhere to upload to), close the pad, then move straight into the
+  // deposit payment step — signing alone doesn't finalize anything yet.
   const handleSignatureCaptured = useCallback(
     async (dataUri: string) => {
       if (!agreement) return;
@@ -91,17 +155,47 @@ export default function AgreementScreen() {
           }
           signatureUrl = result.url;
         }
-        signAgreementAsFarmer(agreement.id, signatureUrl);
         setPadOpen(false);
-        Alert.alert('Lease booked ✓', 'Both parties have signed. Your lease is now active!', [
-          { text: 'View my lease', onPress: () => navigation.navigate('MyActiveLeases') },
-        ]);
+        await startDepositPayment(signatureUrl);
       } finally {
         setSigning(false);
       }
     },
-    [agreement, signAgreementAsFarmer, navigation, user?.id],
+    [agreement, startDepositPayment, user?.id],
   );
+
+  const onCheckoutSuccess = useCallback(
+    async (payload: RazorpaySuccess) => {
+      setCheckoutVisible(false);
+      if (!agreement || !pendingSignatureUrl) return;
+      try {
+        const result = await paymentsApi.verifyPayment(payload);
+        const verified = result?.verified ?? false;
+        if (!verified) {
+          Alert.alert(
+            'Could not verify payment',
+            'Razorpay reported success but the signature did not verify — try the payment again before assuming the deposit is paid.',
+          );
+          return;
+        }
+        signAgreementAsFarmer(agreement.id, pendingSignatureUrl);
+        setPendingSignatureUrl(null);
+        Alert.alert('Lease booked ✓', 'Security deposit paid and both parties have signed. Your lease is now active!', [
+          { text: 'View my lease', onPress: () => navigation.navigate('MyActiveLeases') },
+        ]);
+      } catch (e) {
+        Alert.alert('Verification failed', e instanceof Error ? e.message : 'Please contact support.');
+      }
+    },
+    [agreement, pendingSignatureUrl, signAgreementAsFarmer, navigation],
+  );
+
+  const onCheckoutDismiss = useCallback(() => setCheckoutVisible(false), []);
+
+  const onCheckoutError = useCallback((message: string) => {
+    setCheckoutVisible(false);
+    Alert.alert('Payment failed', message);
+  }, []);
 
   if (!agreement) {
     return (
@@ -135,7 +229,7 @@ export default function AgreementScreen() {
   const termsClauses = buildTermsAndConditions({ ...agreement, startDate: agreement.startDate || agreement.availableFrom });
   // Only the farmer is stopped by the unread-terms gate here — the owner's
   // side of this screen is a read-only wait state, never the sign action.
-  const needsTermsGate = !active && !isOwnerViewer && !agreement.farmerSigned;
+  const needsTermsGate = !active && !isOwnerViewer && !agreement.farmerSigned && !pendingSignatureUrl;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -225,6 +319,23 @@ export default function AgreementScreen() {
           />
         </View>
 
+        {/* Security deposit — the farmer pays this to activate the lease,
+            separate from signing (see onSign / startDepositPayment above). */}
+        {!isOwnerViewer && (
+          <>
+            <Text style={styles.sectionLabel}>Security deposit</Text>
+            <View style={styles.depositCard}>
+              <View>
+                <Text style={styles.depositAmount}>₹{depositRupees.toLocaleString()}</Text>
+                {isMockDeposit && <Text style={styles.depositNote}>Test amount — no deposit set on this offer</Text>}
+              </View>
+              <View style={[styles.depositBadge, active ? styles.depositBadgePaid : styles.depositBadgePending]}>
+                <Text style={styles.depositBadgeText}>{active ? 'Paid' : 'Pending'}</Text>
+              </View>
+            </View>
+          </>
+        )}
+
         {/* Action */}
         {active ? (
           <View style={styles.activeBox}>
@@ -234,13 +345,25 @@ export default function AgreementScreen() {
         ) : isOwnerViewer ? (
           <View style={styles.waitBox}>
             <Ionicons name="time-outline" size={18} color={G.a3} />
-            <Text style={styles.waitText}>You’ve signed. Waiting for {agreement.farmerName} to sign.</Text>
+            <Text style={styles.waitText}>You’ve signed. Waiting for {agreement.farmerName} to sign and pay the deposit.</Text>
           </View>
         ) : agreement.farmerSigned ? (
           <View style={styles.waitBox}>
             <Ionicons name="time-outline" size={18} color={G.a3} />
             <Text style={styles.waitText}>You’ve signed. Finalising the lease…</Text>
           </View>
+        ) : pendingSignatureUrl ? (
+          <TouchableOpacity
+            style={styles.signBtn}
+            onPress={() => startDepositPayment(pendingSignatureUrl)}
+            activeOpacity={0.85}
+            disabled={startingPayment}
+          >
+            <Ionicons name="wallet" size={18} color="#fff" />
+            <Text style={styles.signBtnText}>
+              {startingPayment ? 'Starting payment…' : `Pay ₹${depositRupees.toLocaleString()} deposit`}
+            </Text>
+          </TouchableOpacity>
         ) : (
           <TouchableOpacity
             style={[styles.signBtn, !agreedToTerms && styles.signBtnDisabled]}
@@ -260,6 +383,16 @@ export default function AgreementScreen() {
         saving={signing}
         onCancel={closePad}
         onSave={handleSignatureCaptured}
+      />
+
+      <RazorpayCheckout
+        visible={checkoutVisible}
+        order={order}
+        description={`Security deposit · ${agreement.landTitle}`}
+        prefill={{ name: agreement.farmerName }}
+        onSuccess={onCheckoutSuccess}
+        onDismiss={onCheckoutDismiss}
+        onError={onCheckoutError}
       />
     </SafeAreaView>
   );
@@ -294,6 +427,13 @@ const styles = StyleSheet.create({
   signedName: { fontSize: 13, fontWeight: '800', color: G.g2 },
   signatureImg: { width: '100%', height: 40, marginBottom: 4 },
   pendingName: { fontSize: 12, color: G.a3, fontWeight: '600' },
+  depositCard: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderWidth: 1, borderColor: G.n7, borderRadius: 12, padding: 14 },
+  depositAmount: { fontSize: 18, fontWeight: '800', color: G.g1 },
+  depositNote: { fontSize: 11, color: G.a3, marginTop: 2 },
+  depositBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  depositBadgePending: { backgroundColor: G.a7 },
+  depositBadgePaid: { backgroundColor: G.g7 },
+  depositBadgeText: { fontSize: 11, fontWeight: '800', color: G.n2 },
   signBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, backgroundColor: G.g2, borderRadius: 12, paddingVertical: 15, marginTop: 16 },
   signBtnDisabled: { backgroundColor: G.n6 },
   signBtnText: { color: '#fff', fontSize: 14, fontWeight: '800' },

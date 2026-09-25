@@ -23,6 +23,7 @@ import {
   GEMINI_API_KEY,
   GEMINI_MODEL,
   HOT_UPDATER_BASE_URL,
+  RAZORPAY_KEY_ID,
 } from '@env';
 
 /**
@@ -57,6 +58,9 @@ export const ENV = {
   // init --provider supabase` provisions the Supabase Edge Function and
   // prints its URL — see HOT_UPDATER_BASE_URL in .env.example.
   hotUpdaterBaseUrl: cleanEnv(HOT_UPDATER_BASE_URL),
+  // Razorpay PUBLIC key only (rzp_test_... / rzp_live_...) — the Key Secret
+  // stays server-side, see supabase/functions/README.md.
+  razorpayKeyId: cleanEnv(RAZORPAY_KEY_ID),
 };
 
 /** True once a Supabase project URL + anon key are present in .env. */
@@ -74,6 +78,10 @@ export const isWeatherConfigured = !!ENV.weatherApiKey;
 
 /** True once a Gemini key is present → Kisan Mitra uses real AI (else offline engine). */
 export const isGeminiConfigured = !!ENV.geminiApiKey;
+
+/** True once a Razorpay test/live Key ID is present → the "Pay" flow uses
+ *  real Razorpay checkout (else it's disabled with an explanatory alert). */
+export const isRazorpayConfigured = !!ENV.razorpayKeyId;
 
 /** True once an OTA update endpoint is configured → HotUpdater.wrap() checks
  *  for updates on launch (release builds only). False = OTA is a no-op and

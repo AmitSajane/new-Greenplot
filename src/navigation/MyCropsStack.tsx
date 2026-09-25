@@ -12,7 +12,16 @@ import SettingsStack from './SettingsStack';
 
 export type MyCropsStackParamList = {
   MyCrops: undefined;
-  CropDetails: { cropCycleId: string };
+  CropDetails: {
+    cropCycleId?: string;
+    landId?: string;
+    farmerId?: string;
+    leaseId?: string;
+    ownerId?: string;
+    plotName?: string;
+    ownerLabel?: string;
+    areaAcres?: number;
+  };
   CreateWork: { cropCycleId?: string };
   WorkList: undefined;
   WorkDetails: { jobId: string };

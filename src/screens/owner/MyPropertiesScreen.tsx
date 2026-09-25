@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -8,24 +8,59 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { colors, radius, spacing } from '../../theme/tokens';
 import { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 import { useFarmListings, FarmListing } from '../../context/FarmListingsContext';
+import { useLeases } from '../../context/LeaseContext';
 import { useAuth } from '../../context/AuthContext';
 import { AppHeader } from '../../components/molecules/AppHeader';
 import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
 import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
+import { Chip } from '../../components/atoms/Chip';
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
+
+type PropertyFilterKey = 'All' | 'Available' | 'Leased' | 'Completed';
+const FILTER_KEYS: PropertyFilterKey[] = ['All', 'Available', 'Leased', 'Completed'];
 
 export default function MyPropertiesScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { ownerListings, deleteListing } = useFarmListings();
+  const { activeLeases } = useLeases();
   const { user } = useAuth();
   const { i18n } = useTranslation();
   const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
   const [langOpen, setLangOpen] = useState(false);
+  const [filter, setFilter] = useState<PropertyFilterKey>('All');
 
   // Filter listings for current owner (in real app, filter by user.id)
   const myListings = ownerListings.filter(
     (listing) => listing.ownerId === user?.id || listing.status === 'active'
+  );
+
+  // Land that has at least one closed lease — used to tell "never leased"
+  // apart from "was leased, now vacant again" under the Completed filter,
+  // since a closed lease resets the listing's own status back to 'active'.
+  const closedLeaseLandIds = useMemo(
+    () => new Set(activeLeases.filter((l) => l.status === 'closed').map((l) => l.landId)),
+    [activeLeases],
+  );
+
+  const filteredListings = useMemo(
+    () =>
+      myListings.filter((p) => {
+        switch (filter) {
+          case 'Leased':
+            return p.status === 'leased';
+          case 'Completed':
+            return p.status !== 'leased' && closedLeaseLandIds.has(p.id);
+          case 'Available':
+            // A completed (closed-lease) property is available to lease again
+            // too, so it belongs here as well as under Completed — just
+            // without the COMPLETED badge (added only for the Completed tab).
+            return p.status === 'active';
+          default:
+            return true;
+        }
+      }),
+    [myListings, filter, closedLeaseLandIds],
   );
 
   const confirmDelete = (property: FarmListing) => {
@@ -53,7 +88,7 @@ export default function MyPropertiesScreen() {
         data={{
           variant: 'default',
           title: 'My Properties',
-          subtitle: `${myListings.length} active listings`,
+          subtitle: `${filteredListings.length} listings`,
           // sshowBack: navigation.canGoBack(),
           languageShort,
           name: user?.name,
@@ -66,24 +101,39 @@ export default function MyPropertiesScreen() {
         }}
       />
 
+      <View style={styles.filtersRow}>
+        {FILTER_KEYS.map((k) => (
+          <Chip key={k} label={k} selected={filter === k} onPress={() => setFilter(k)} />
+        ))}
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {myListings.length === 0 ? (
+        {filteredListings.length === 0 ? (
           <View style={styles.emptyState}>
             <Icon name="landscape" size={64} color={colors.textMuted} />
-            <Text style={styles.emptyStateTitle}>No Properties Listed</Text>
+            <Text style={styles.emptyStateTitle}>
+              {myListings.length === 0 ? 'No Properties Listed' : 'No properties match this filter'}
+            </Text>
             <Text style={styles.emptyStateText}>
-              Start by adding your first farm listing from the Home tab
+              {myListings.length === 0
+                ? 'Start by adding your first farm listing from the Home tab'
+                : 'Try a different filter.'}
             </Text>
           </View>
         ) : (
-          myListings.map((property) => (
+          filteredListings.map((property) => (
           <TouchableOpacity
             key={property.id}
             style={styles.propertyCard}
-            onPress={() => navigation.navigate('PropertyDetails', { propertyId: property.id })}
+            onPress={() =>
+              navigation.navigate('PropertyDetails', {
+                propertyId: property.id,
+                viewHistory: filter !== 'Available' && closedLeaseLandIds.has(property.id),
+              })
+            }
             activeOpacity={0.7}
           >
             <View style={styles.propertyHeader}>
@@ -94,29 +144,36 @@ export default function MyPropertiesScreen() {
                 </Text>
               </View>
               <View style={styles.badgeRow}>
-                <View
-                  style={[
-                    styles.statusBadge,
-                    property.status === 'leased'
-                      ? styles.statusLeased
-                      : property.status === 'active'
-                      ? styles.statusAvailable
-                      : styles.statusInactive,
-                  ]}
-                >
-                  <Text
+                {filter !== 'Completed' && (
+                  <View
                     style={[
-                      styles.statusText,
+                      styles.statusBadge,
                       property.status === 'leased'
-                        ? styles.statusTextLeased
+                        ? styles.statusLeased
                         : property.status === 'active'
-                        ? styles.statusTextAvailable
-                        : styles.statusTextInactive,
+                        ? styles.statusAvailable
+                        : styles.statusInactive,
                     ]}
                   >
-                    {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
-                  </Text>
-                </View>
+                    <Text
+                      style={[
+                        styles.statusText,
+                        property.status === 'leased'
+                          ? styles.statusTextLeased
+                          : property.status === 'active'
+                          ? styles.statusTextAvailable
+                          : styles.statusTextInactive,
+                      ]}
+                    >
+                      {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+                    </Text>
+                  </View>
+                )}
+                {filter !== 'Available' && property.status !== 'leased' && closedLeaseLandIds.has(property.id) && (
+                  <View style={styles.completedPill}>
+                    <Text style={styles.completedPillText}>COMPLETED</Text>
+                  </View>
+                )}
                 {property.status !== 'leased' && (
                   <TouchableOpacity
                     style={styles.editButton}
@@ -181,6 +238,24 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.xl,
+  },
+  filtersRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+  },
+  completedPill: {
+    backgroundColor: colors.softBlue,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+  },
+  completedPillText: {
+    color: '#2D6CDF',
+    fontWeight: '700',
+    fontSize: 12,
   },
   propertyCard: {
     backgroundColor: colors.surface,

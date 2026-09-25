@@ -58,7 +58,16 @@ export type OwnerHomeStackParamList = {
     | undefined;
   BudgetApprovals: undefined;
   MyCrops: undefined;
-  CropDetails: { cropCycleId: string };
+  CropDetails: {
+    cropCycleId?: string;
+    landId?: string;
+    farmerId?: string;
+    leaseId?: string;
+    ownerId?: string;
+    plotName?: string;
+    ownerLabel?: string;
+    areaAcres?: number;
+  };
   CreateWork: { cropCycleId?: string };
   LeaseLand: undefined;
   LeaseAgreements: undefined;

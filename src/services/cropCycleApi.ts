@@ -16,6 +16,7 @@ function db() {
 const rowToApp = (r: any): CropCycle => ({
   cropCycleId: r.id,
   landId: r.land_id,
+  leaseId: r.lease_id || undefined,
   farmerId: r.farmer_id,
   ownerId: r.owner_id || undefined,
   cropName: r.crop_name,
@@ -30,6 +31,10 @@ const rowToApp = (r: any): CropCycle => ({
 
 export interface SaveCropCycleInput {
   landId: string;
+  /** The active lease this cycle belongs to — omit for self-farmed/own land.
+   *  Scopes the lookup so re-leasing the same land never reuses a previous
+   *  lease's crop cycle. */
+  leaseId?: string;
   farmerId: string;
   ownerId?: string;
   plotName: string;
@@ -48,20 +53,24 @@ export const cropCycleApi = {
     return (data || []).map(rowToApp);
   },
 
-  /** Insert a new active cycle for (land, farmer), or update the existing one. */
+  /** Insert a new active cycle for (land, farmer, lease), or update the existing one.
+   *  Scoping by `lease_id` (when present) keeps a new lease term on the same
+   *  land from ever matching — and overwriting — a previous lease's cycle. */
   async save(input: SaveCropCycleInput): Promise<void> {
     const c = db();
-    const { data: existing, error: findError } = await c
+    let query = c
       .from('crop_cycles')
       .select('id')
       .eq('land_id', input.landId)
       .eq('farmer_id', input.farmerId)
-      .eq('status', 'active')
-      .maybeSingle();
+      .eq('status', 'active');
+    query = input.leaseId ? query.eq('lease_id', input.leaseId) : query.is('lease_id', null);
+    const { data: existing, error: findError } = await query.maybeSingle();
     if (findError) throw findError;
 
     const row = {
       land_id: input.landId,
+      lease_id: input.leaseId || null,
       farmer_id: input.farmerId,
       owner_id: input.ownerId || null,
       crop_name: input.cropName,
@@ -82,13 +91,15 @@ export const cropCycleApi = {
     }
   },
 
-  async remove(landId: string, farmerId: string): Promise<void> {
-    const { error } = await db()
+  async remove(landId: string, farmerId: string, leaseId?: string): Promise<void> {
+    let query = db()
       .from('crop_cycles')
       .delete()
       .eq('land_id', landId)
       .eq('farmer_id', farmerId)
       .eq('status', 'active');
+    query = leaseId ? query.eq('lease_id', leaseId) : query.is('lease_id', null);
+    const { error } = await query;
     if (error) throw error;
   },
 

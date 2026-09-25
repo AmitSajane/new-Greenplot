@@ -43,7 +43,7 @@ function getBestCrops(soilType: string): string[] {
 export default function PropertyDetailsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const route = useRoute<PropertyDetailsRoute>();
-  const { propertyId } = route.params;
+  const { propertyId, viewHistory } = route.params;
   const { getListingById } = useFarmListings();
   const { getOffersByLand, activeLeases } = useLeases();
   const { getCropCycleByLand } = useCropCycles();
@@ -52,11 +52,22 @@ export default function PropertyDetailsScreen() {
   const property = getListingById(propertyId);
 
   // This land's current active lease (if leased) → the tenant's crop cycle and the
-  // signed agreement, so the owner can view both.
-  const propertyLease = activeLeases.find((l) => l.landId === propertyId);
+  // signed agreement, so the owner can view both. With no active lease, only
+  // fall back to the most recently closed one when explicitly asked to via
+  // `viewHistory` (set when opened from My Properties' Completed tab) — an
+  // Available-tab open of the same (now-vacant) property should show nothing.
+  const propertyLease =
+    activeLeases.find((l) => l.landId === propertyId && l.status === 'active') ??
+    (viewHistory
+      ? activeLeases
+          .filter((l) => l.landId === propertyId && l.status === 'closed')
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
+      : undefined);
   const tenantFarmerId = propertyLease?.farmerId;
   const agreementId = propertyLease?.id;
-  const cropCycleId = tenantFarmerId ? getCropCycleByLand(propertyId, tenantFarmerId)?.cropCycleId : undefined;
+  const cropCycleId = tenantFarmerId
+    ? getCropCycleByLand(propertyId, tenantFarmerId, propertyLease?.id)?.cropCycleId
+    : undefined;
 
   const handleShare = async () => {
     if (!property) return;
