@@ -57,6 +57,12 @@ export default function FarmDetailScreen() {
   // the full list was persisted.
   const bestCrops = farm.crops?.length ? farm.crops : farm.currentCrop ? [farm.currentCrop] : [];
 
+  // True only for a farm that came through the new Farm Management pipeline
+  // (Operations Admin approved it AND made it available) — false for every
+  // legacy lease listing, so this screen renders exactly as it always has
+  // for those, no lease UI is removed from them.
+  const isManagedFarm = farm.verificationStatus === 'APPROVED' && farm.managementStatus === 'AVAILABLE_FOR_MANAGEMENT';
+
   const handleContactOwner = () => {
     Alert.alert('Contact Owner', 'Are you sure you want to contact the owner?', [
       { text: 'Cancel', style: 'cancel' },
@@ -81,13 +87,23 @@ export default function FarmDetailScreen() {
         {/* Title and Location */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>{farm.title}</Text>
-          {farm.verified && (
-            <View style={styles.verifiedBadge}>
-              <Ionicons name="shield-checkmark" size={14} color="#fff" />
-              <Text style={styles.verifiedText}>
-                Ownership Verified{farm.verifiedOwnerName ? ` · ${farm.verifiedOwnerName}` : ''}
-              </Text>
-            </View>
+          {isManagedFarm ? (
+            <>
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="shield-checkmark" size={14} color="#fff" />
+                <Text style={styles.verifiedText}>Verified by AgriArambh</Text>
+              </View>
+              <Text style={styles.availableText}>Available for Management</Text>
+            </>
+          ) : (
+            farm.verified && (
+              <View style={styles.verifiedBadge}>
+                <Ionicons name="shield-checkmark" size={14} color="#fff" />
+                <Text style={styles.verifiedText}>
+                  Ownership Verified{farm.verifiedOwnerName ? ` · ${farm.verifiedOwnerName}` : ''}
+                </Text>
+              </View>
+            )
           )}
           <View style={styles.locationRow}>
             <Ionicons name="location" size={18} color={colors.primary} />
@@ -116,17 +132,21 @@ export default function FarmDetailScreen() {
               <Text style={styles.detailLabel}>Water Source</Text>
             </View>
           )}
+          {!isManagedFarm && (
           <View style={[styles.detailCard, shadow.card]}>
             <Ionicons name="calendar-outline" size={24} color={colors.warning} />
             <Text style={styles.detailValue}>{farm.tenure}</Text>
             <Text style={styles.detailLabel}>Lease Period</Text>
           </View>
+          )}
+          {!isManagedFarm && (
           <View style={[styles.detailCard, shadow.card]}>
             <Ionicons name="cash-outline" size={24} color={colors.info} />
             <Text style={styles.detailValue}>{farm.pricePerYear}</Text>
             <Text style={styles.detailLabel}>Per Year</Text>
           </View>
-          {farm.leaseType && (
+          )}
+          {!isManagedFarm && farm.leaseType && (
             <TouchableOpacity
               style={[styles.detailCard, shadow.card, styles.leaseTypeCard]}
               onPress={() => {
@@ -200,13 +220,16 @@ export default function FarmDetailScreen() {
           </View>
         </View>
 
-        {/* Lease options (real offers the owner published) */}
-        <LeaseOptionsSection
-          landId={farmId}
-          landTitle={farm.title}
-          ownerId={farm.ownerId}
-          ownerName={farm.ownerName}
-        />
+        {/* Lease options (real offers the owner published) — not shown for a
+            Farm Management farm; Management Request (Step 4) replaces this. */}
+        {!isManagedFarm && (
+          <LeaseOptionsSection
+            landId={farmId}
+            landTitle={farm.title}
+            ownerId={farm.ownerId}
+            ownerName={farm.ownerName}
+          />
+        )}
 
         {/* Contact Button */}
         <TouchableOpacity
@@ -274,6 +297,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   verifiedText: { color: '#fff', fontSize: 12.5, fontWeight: '800' },
+  availableText: { color: colors.primary, fontSize: 13, fontWeight: '700', marginBottom: spacing.sm },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -47,11 +47,19 @@ export interface FarmListing {
   verifiedOwnerName?: string;
   // Uploaded photo/video URLs (Supabase Storage). imageUrl is the cover (first).
   mediaUrls?: string[];
+  // Raw Operations-Admin-driven Farm Management status ('DRAFT'/'PENDING_VERIFICATION'/
+  // 'APPROVED'/... and 'NOT_AVAILABLE'/'AVAILABLE_FOR_MANAGEMENT'/...) — set only by the
+  // separate admin portal's backend, never written from this app. Distinct from the
+  // client-derived ManagementStatus in src/utils/farmManagementStatus.ts.
+  verificationStatus?: string;
+  managementStatus?: string;
 }
 
 interface FarmListingsContextType {
   listings: FarmListing[];
   ownerListings: FarmListing[];
+  /** Farms Available for Management — DB-scoped (see landsApi.fetchAvailableForManagement), not client-filtered. */
+  availableForManagement: FarmListing[];
   addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => Promise<string>;
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
@@ -186,12 +194,24 @@ interface FarmListingsProviderProps {
 export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
   const { user, authReady } = useAuth();
   const [listings, setListings] = useState<FarmListing[]>(isSupabaseConfigured ? [] : INITIAL_LISTINGS);
+  // No real "approved for management" concept exists in mock mode's seed data,
+  // so this starts (and stays, off Supabase) empty rather than fabricating it.
+  const [availableForManagement, setAvailableForManagement] = useState<FarmListing[]>([]);
 
   // Supabase: hydrate lands once, then live-refetch on any realtime change.
   const refetchLands = useCallback(async () => {
     if (!supabase) return;
     try {
       setListings(await landsApi.fetchLands());
+    } catch {
+      /* keep last good state */
+    }
+  }, []);
+
+  const refetchAvailableForManagement = useCallback(async () => {
+    if (!supabase) return;
+    try {
+      setAvailableForManagement(await landsApi.fetchAvailableForManagement());
     } catch {
       /* keep last good state */
     }
@@ -206,9 +226,18 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
     // next login re-fetches it anyway, so it was just a wasted round-trip
     // fired at the exact moment logout speed matters.
     if (!isSupabaseConfigured || !authReady) return;
-    if (user?.id) refetchLands();
-    return landsApi.subscribe(refetchLands);
-  }, [refetchLands, authReady, user?.id]);
+    if (user?.id) {
+      refetchLands();
+      refetchAvailableForManagement();
+    }
+    // `lands_available_for_management` is a view over `lands`, so the same
+    // realtime channel (watching the base table) covers both refetches —
+    // no separate subscription needed.
+    return landsApi.subscribe(() => {
+      refetchLands();
+      refetchAvailableForManagement();
+    });
+  }, [refetchLands, refetchAvailableForManagement, authReady, user?.id]);
 
   const addListing = useCallback(
     async (listing: Omit<FarmListing, 'id' | 'createdAt'>) => {
@@ -303,6 +332,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
       value={{
         listings,
         ownerListings,
+        availableForManagement,
         addListing,
         updateListing,
         deleteListing,

@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import FarmerHomeScreen from '../screens/farmerHome';
 import FarmDetailScreen from '../screens/farmer/FarmDetailScreen';
 import AllAvailableLandsScreen from '../screens/farmer/AllAvailableLandsScreen';
+import FarmsAvailableForManagementScreen from '../screens/farmer/FarmsAvailableForManagementScreen';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
@@ -36,6 +37,7 @@ export type FarmerHomeStackParamList = {
   FarmDetail: { farmId: string };
   AgreementSign: { agreementId: string };
   AllAvailableLands: undefined;
+  FarmsAvailableForManagement: undefined;
   LandListing: undefined;
   LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
   LeaseStatus: undefined;
@@ -91,6 +93,11 @@ export default function FarmerHomeStack() {
         name="AllAvailableLands"
         component={AllAvailableLandsScreen}
         options={{ title: 'All Available Lands' }}
+      />
+      <Stack.Screen
+        name="FarmsAvailableForManagement"
+        component={FarmsAvailableForManagementScreen}
+        options={{ title: 'Farms Available for Management' }}
       />
       <Stack.Screen name="LeaseApplication" component={LeaseApplicationScreen} options={{ title: 'Lease Application' }} />
       <Stack.Screen name="LeaseStatus" component={LeaseStatusScreen} options={{ title: 'Lease Status' }} />

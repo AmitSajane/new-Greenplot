@@ -64,7 +64,7 @@ function FindLandSectionBase({ listings, onListingPress, onViewAll }: Props) {
 
   return (
     <View style={s.section}>
-      <SectionHeader icon="map" title="Find land to lease" linkLabel="View all" onLink={onViewAll} />
+      <SectionHeader icon="map" title="Explore Farms" linkLabel="View all" onLink={onViewAll} />
       <FlatList
         horizontal
         data={listings}

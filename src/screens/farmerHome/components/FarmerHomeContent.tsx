@@ -15,6 +15,7 @@ import {
   BrowseByCropSection,
   CropHealthSection,
   FarmSnapshot,
+  FarmsAvailableSection,
   FindLandSection,
   MarketTicker,
   QuickActionsSection,
@@ -86,6 +87,11 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
           listings={vm.featuredListings}
           onListingPress={vm.onListingPress}
           onViewAll={onAllLands}
+        />
+        <FarmsAvailableSection
+          farms={vm.availableFarms}
+          onFarmPress={vm.onAvailableFarmPress}
+          onViewAll={vm.onViewAllAvailableFarms}
         />
         <SchemesNewsSection
           items={vm.news}

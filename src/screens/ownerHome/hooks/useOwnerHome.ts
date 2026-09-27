@@ -12,14 +12,7 @@ import { FARMER_NEWS } from '../../farmerHome/constants/farmerDashboardData';
 import type { SchemeCategory } from '../../farmerHome/constants/schemeCatalog';
 import { activityVisual, relativeTime, type ActivityItem } from '../../../utils/activityFeed';
 import { CLOSURE_HISTORY_ACTION_LABELS, closureNeedsOwnerAction } from '../../../constants/leaseClosure';
-import {
-  buildPropertySnapshots,
-  formatCompactRupees,
-  formatRupees,
-  parseAcres,
-  parsePrice,
-  type PropertySnapshot,
-} from '../constants/ownerDashboardData';
+import { buildPropertySnapshots, parseAcres, type PropertySnapshot } from '../constants/ownerDashboardData';
 
 // Icon per closure-history action — mirrors CLOSURE_HISTORY_ACTION_LABELS'
 // keys, just picking a glyph instead of text.
@@ -66,7 +59,6 @@ export function useOwnerHome() {
   const { user } = useAuth();
   const { ownerListings } = useFarmListings();
   const { requests, activeLeases, closures, getHistoryForClosure } = useLeases();
-  const pendingLeaseRequests = requests.filter(r => r.status === 'pending').length;
   // Every closure (any stage — respond, confirm settlement, confirm
   // handover, finalize) currently waiting on this owner to do something.
   const closuresNeedingAction = useMemo(
@@ -114,64 +106,29 @@ export function useOwnerHome() {
 
   const portfolio = useMemo(() => {
     const lands = properties.length;
-    const leased = ownerListings.filter(l => l.status === 'leased').length;
+    const managed = properties.filter(p => p.status === 'managed').length;
+    const verified = properties.filter(p => p.status === 'verified' || p.status === 'managed').length;
     const acres = ownerListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
-    // The land model has no appraisal field. lastYearEarnings is the only
-    // persisted monetary value that represents each property's contribution.
-    const totalValue = ownerListings.reduce((sum, l) => sum + parsePrice(l.lastYearEarnings), 0);
     return {
-      valueDisplay: formatCompactRupees(totalValue),
       lands,
-      leased,
-      vacant: lands - leased,
+      verified,
+      managed,
       acresDisplay: acres % 1 === 0 ? String(acres) : acres.toFixed(1),
     };
   }, [properties, ownerListings]);
 
-  const revenue = useMemo(() => {
-    // pricePerYear is stored per listing. Monthly revenue is its annual value
-    // divided by 12, limited to lands currently marked as leased.
-    const annualRent = ownerListings
-      .filter(l => l.status === 'leased')
-      .reduce((sum, l) => sum + parsePrice(l.pricePerYear), 0);
-
-    // A payout is only shown when an active lease has both backend fields.
-    const next = activeLeases
-      .filter(l => l.ownerId === user?.id && l.rent && l.nextPayment)
-      .map(l => ({ ...l, dueAt: new Date(`${l.nextPayment}T00:00:00`).getTime() }))
-      .filter(l => Number.isFinite(l.dueAt) && l.dueAt >= new Date().setHours(0, 0, 0, 0))
-      .sort((a, b) => a.dueAt - b.dueAt)[0];
-
-    return {
-      thisMonthDisplay: formatRupees(annualRent / 12),
-      payoutAmountDisplay: next ? formatRupees(parsePrice(next.rent)) : null,
-      payoutDate: next
-        ? new Date(next.dueAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })
-        : null,
-    };
-  }, [activeLeases, ownerListings, user?.id]);
-
   const metrics = useMemo(() => {
-    const occupancyPct = portfolio.lands ? Math.round((portfolio.leased / portfolio.lands) * 100) : 0;
-
-    // Real average rent/acre across this owner's actually-leased land — weighted
-    // by acreage, not a flat average of per-listing rates.
-    const leasedListings = ownerListings.filter(l => l.status === 'leased');
-    const leasedAcres = leasedListings.reduce((sum, l) => sum + parseAcres(l.acres), 0);
-    const leasedRentTotal = leasedListings.reduce((sum, l) => sum + parsePrice(l.pricePerYear), 0);
-    const avgRentDisplay = leasedAcres > 0 ? `₹${Math.round(leasedRentTotal / leasedAcres).toLocaleString('en-IN')}` : '—';
-
+    const pending = properties.filter(p => p.status === 'pending_verification').length;
     return {
-      occupancyPct,
-      occupancySub: `${portfolio.leased} of ${portfolio.lands} leased`,
-      activeLeases: portfolio.leased,
-      avgRentDisplay,
+      verifiedCount: portfolio.verified,
+      managedCount: portfolio.managed,
+      pendingCount: pending,
     };
-  }, [portfolio, ownerListings]);
+  }, [portfolio, properties]);
 
-  // Only "Lease requests" is backed by real data. The other four (budget
-  // approvals, rent overdue, lease renewal, disease risk) are commented out
-  // rather than shown as fabricated numbers — see conversation notes:
+  // The other four (budget approvals, rent overdue, lease renewal, disease
+  // risk) are commented out rather than shown as fabricated numbers — see
+  // conversation notes:
   // - approvals: BudgetApprovalsScreen has no real table behind it at all.
   // - overdue/renewal: leases.next_payment / end_date exist in Supabase but
   //   are never populated or read anywhere in the app (no payments flow,
@@ -182,15 +139,6 @@ export function useOwnerHome() {
   // Re-enable each once its real data source is actually wired up.
   const actionItems: ActionItem[] = useMemo(
     () => [
-      {
-        id: 'leaseRequests',
-        tone: 'green',
-        icon: 'document-text',
-        title: pendingLeaseRequests > 0 ? `${pendingLeaseRequests} lease request${pendingLeaseRequests === 1 ? '' : 's'}` : 'Lease requests',
-        sub: pendingLeaseRequests > 0 ? 'Farmers want to lease your land' : 'No new requests',
-        actionLabel: 'Review',
-        onPress: () => navigation.navigate('LeaseRequests'),
-      },
       ...(closuresNeedingAction.length > 0
         ? [
             {
@@ -241,7 +189,7 @@ export function useOwnerHome() {
       //   onPress: () => navigation.navigate('MyCrops'),
       // },
     ],
-    [navigation, pendingLeaseRequests, closuresNeedingAction],
+    [navigation, closuresNeedingAction],
   );
 
   const tools: ToolItem[] = useMemo(
@@ -396,7 +344,6 @@ export function useOwnerHome() {
     locationLabel: user?.location?.trim() || '',
     hasNotifications: true,
     portfolio,
-    revenue,
     metrics,
     actionItems,
     properties,
@@ -412,12 +359,9 @@ export function useOwnerHome() {
     onWeatherPress: useCallback(() => navigation.navigate('WeatherDetail'), [navigation]),
     onAvatar: useCallback(() => navigation.navigate('Settings'), [navigation]),
     onPortfolioPress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onRevenuePress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onPayoutPress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onOccupancyPress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onActiveLeasesPress: useCallback(() => navigation.navigate('LeaseAgreements'), [navigation]),
-    onDuesPress: useCallback(() => goTab('MyProperties'), [goTab]),
-    onAvgRentPress: useCallback(() => goTab('MyProperties'), [goTab]),
+    onVerifiedPress: useCallback(() => goTab('MyProperties'), [goTab]),
+    onManagedPress: useCallback(() => goTab('MyProperties'), [goTab]),
+    onPendingPress: useCallback(() => goTab('MyProperties'), [goTab]),
     onActionViewAll: useCallback(() => navigation.navigate('NotificationsCenter'), [navigation]),
     onPropertiesViewAll: useCallback(() => goTab('MyProperties'), [goTab]),
     onPropertyPress: openProperty,

@@ -46,7 +46,7 @@ export interface FarmerListingCard {
 export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { getFeaturedListings, listings, getListingById } = useFarmListings();
+  const { getFeaturedListings, listings, getListingById, availableForManagement } = useFarmListings();
   const { activeLeases, requests, agreements, closures } = useLeases();
   const { cropCycles } = useCropCycles();
 
@@ -119,6 +119,19 @@ export function useFarmerHome() {
 
   const onListingPress = useCallback(
     (farmId: string) => navigation.navigate('FarmDetail', { farmId }),
+    [navigation],
+  );
+
+  // Reuses the same FarmDetail screen — "View Farm" for an AgriArambh-
+  // approved farm and "View Farm" for a legacy lease listing land on the
+  // exact same screen, which renders itself differently based on the
+  // farm's own verificationStatus/managementStatus (see FarmDetailScreen).
+  const onAvailableFarmPress = useCallback(
+    (farmId: string) => navigation.navigate('FarmDetail', { farmId }),
+    [navigation],
+  );
+  const onViewAllAvailableFarms = useCallback(
+    () => navigation.navigate('FarmsAvailableForManagement'),
     [navigation],
   );
 
@@ -195,6 +208,11 @@ export function useFarmerHome() {
         })),
     [getFeaturedListings],
   );
+
+  // "Farms Available for Management" — already DB-scoped to
+  // verified+available (see FarmListingsContext), just sliced for the
+  // dashboard's horizontal row.
+  const availableFarms = useMemo(() => availableForManagement.slice(0, 6), [availableForManagement]);
 
   // One real source feeding "Recent activity" below (same `notifications`
   // table NotificationsCenter reads — mirrors OwnerHome's own useOwnerHome).
@@ -350,6 +368,7 @@ export function useFarmerHome() {
 
     // Dynamic
     featuredListings,
+    availableFarms,
     activities,
     query,
     setQuery,
@@ -360,6 +379,8 @@ export function useFarmerHome() {
     onAction,
     onTickerPress,
     onListingPress,
+    onAvailableFarmPress,
+    onViewAllAvailableFarms,
     onOpenArticle,
     onOpenVideo,
     onSchemesMore,

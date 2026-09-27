@@ -41,6 +41,11 @@ const landToApp = (r: any): FarmListing => ({
   verified: r.verified ?? undefined,
   verifiedOwnerName: r.verified_owner || undefined,
   mediaUrls: Array.isArray(r.media) ? r.media : undefined,
+  // Raw Operations-Admin-driven status (from add_farm_management_verification.sql) —
+  // read-only here, never written by toRow(). Distinct from the client-derived
+  // ManagementStatus in src/utils/farmManagementStatus.ts.
+  verificationStatus: r.verification_status || undefined,
+  managementStatus: r.management_status || undefined,
 });
 
 const toRow = (l: Partial<FarmListing>) => {
@@ -81,6 +86,19 @@ export const landsApi = {
   // exceeds the cap themselves, which real-world usage is nowhere near.
   async fetchLands(): Promise<FarmListing[]> {
     const { data } = await db().from('lands').select('*').order('created_at', { ascending: false }).limit(500);
+    return (data || []).map(landToApp);
+  },
+
+  // Farmer-visible "Farms Available for Management" — scoped at the database
+  // level by the `lands_available_for_management` view (verification_status
+  // = 'APPROVED' and management_status = 'AVAILABLE_FOR_MANAGEMENT'), not by
+  // a client-side filter. See supabase/add_farm_management_farmer_view.sql.
+  async fetchAvailableForManagement(): Promise<FarmListing[]> {
+    const { data } = await db()
+      .from('lands_available_for_management')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(500);
     return (data || []).map(landToApp);
   },
 

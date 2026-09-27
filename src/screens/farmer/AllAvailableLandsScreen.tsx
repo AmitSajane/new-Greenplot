@@ -99,7 +99,7 @@ export default function AllAvailableLandsScreen() {
           {isLeased ? (
             <View style={styles.leasedBadge}>
               <Ionicons name="checkmark-circle" size={14} color={colors.primaryDark} />
-              <Text style={styles.leasedBadgeText}>Leased</Text>
+              <Text style={styles.leasedBadgeText}>Managed</Text>
             </View>
           ) : (
             <View style={styles.priceBadge}>
@@ -145,7 +145,7 @@ export default function AllAvailableLandsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <ScreenHeader title="All Available Lands" onBack={() => navigation.goBack()} buttonBackgroundColor="transparent" titleWeight="700" />
 
-      {/* Available / Leased toggle */}
+      {/* Available / Managed toggle */}
       <View style={styles.segment}>
         <TouchableOpacity
           style={[styles.segmentBtn, tab === 'available' && styles.segmentBtnActive]}
@@ -160,7 +160,7 @@ export default function AllAvailableLandsScreen() {
           onPress={() => setTab('leased')}
         >
           <Text style={[styles.segmentText, tab === 'leased' && styles.segmentTextActive]}>
-            Leased ({leasedListings.length})
+            Managed ({leasedListings.length})
           </Text>
         </TouchableOpacity>
       </View>
@@ -256,10 +256,10 @@ export default function AllAvailableLandsScreen() {
         <View style={styles.emptyState}>
           <Ionicons name="search-outline" size={64} color={colors.textMuted} />
           <Text style={styles.emptyStateTitle}>
-            {tab === 'leased' ? 'No leased lands yet' : 'No lands found'}
+            {tab === 'leased' ? 'No managed lands yet' : 'No lands found'}
           </Text>
           <Text style={styles.emptyStateText}>
-            {tab === 'leased' ? 'Lands will appear here once fully leased' : 'Try adjusting your search or filters'}
+            {tab === 'leased' ? 'Lands will appear here once fully managed' : 'Try adjusting your search or filters'}
           </Text>
         </View>
       ) : (

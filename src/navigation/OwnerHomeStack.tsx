@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import OwnerHomeScreen from '../screens/ownerHome';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
+import LandSubmittedScreen from '../screens/owner/LandSubmittedScreen';
 import BudgetApprovalsScreen from '../screens/owner/BudgetApprovalsScreen';
 import MyCropsScreen from '../screens/farmer/MyCropsScreen';
 import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
@@ -56,6 +57,7 @@ export type OwnerHomeStackParamList = {
         editListingId?: string;
       }
     | undefined;
+  LandSubmitted: { propertyId: string };
   BudgetApprovals: undefined;
   MyCrops: undefined;
   CropDetails: {
@@ -112,8 +114,13 @@ export default function OwnerHomeStack() {
         name="AddFarm"
         component={AddFarmScreen}
         options={{
-          title: 'Add Farm',
+          title: 'Add Land',
         }}
+      />
+      <Stack.Screen
+        name="LandSubmitted"
+        component={LandSubmittedScreen}
+        options={{ title: 'Land Submitted' }}
       />
       <Stack.Screen
         name="BudgetApprovals"

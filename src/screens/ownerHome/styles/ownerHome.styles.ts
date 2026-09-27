@@ -70,7 +70,6 @@ export const ownerHomeStyles = StyleSheet.create({
     paddingVertical: 13,
   },
   portLabel: { fontSize: 10, color: 'rgba(255,255,255,0.6)', fontWeight: '700', letterSpacing: 0.5, textTransform: 'uppercase' },
-  portVal: { fontSize: 30, fontWeight: '800', color: '#fff', lineHeight: 33, marginTop: 2 },
   portChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -106,17 +105,11 @@ export const ownerHomeStyles = StyleSheet.create({
 
   card: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#E8F0EC', borderRadius: 14 },
 
-  // Revenue
-  revRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', padding: 13 },
-  revLabel: { fontSize: 10, color: colors.textSecondary, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
-  revVal: { fontSize: 26, fontWeight: '800', color: '#092E18', marginTop: 2 },
+  // Revenue (revChip/spark* are pre-existing dead styles, left as-is)
   revChip: { fontSize: 10, fontWeight: '700', color: '#0F4A28', backgroundColor: '#E4F4EC', paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10, marginTop: 4, overflow: 'hidden', alignSelf: 'flex-start' },
   spark: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 40 },
   sparkBar: { width: 5, borderRadius: 2, backgroundColor: '#4CAF7A' },
   sparkBarHi: { backgroundColor: '#1A6B3A' },
-  payoutRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 13, borderTopWidth: 1, borderTopColor: '#E8F0EC', borderStyle: 'dashed', paddingVertical: 10 },
-  payoutText: { fontSize: 11, color: colors.textSecondary, flex: 1 },
-  payoutGo: { fontSize: 11, color: '#1A6B3A', fontWeight: '700' },
 
   // Metric tiles
   tilesWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
@@ -146,10 +139,6 @@ export const ownerHomeStyles = StyleSheet.create({
   statusChip: { paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
   statusText: { fontSize: 8, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.3 },
   propMeta: { fontSize: 10, color: colors.textSecondary, marginTop: 2 },
-  propRight: { alignItems: 'flex-end' },
-  propRent: { fontSize: 13, fontWeight: '800', color: '#0F4A28' },
-  propNext: { fontSize: 9, color: colors.textSecondary },
-  propCta: { fontSize: 11, fontWeight: '800', color: '#B87214' },
 
   // Tools
   toolsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

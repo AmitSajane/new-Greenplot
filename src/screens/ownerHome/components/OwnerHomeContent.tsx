@@ -39,13 +39,12 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           }}
         >
           <TouchableOpacity style={s.port} onPress={vm.onPortfolioPress} activeOpacity={0.9}>
-            <Text style={s.portLabel}>Total portfolio value</Text>
-            <Text style={s.portVal}>{vm.portfolio.valueDisplay}</Text>
+            <Text style={s.portLabel}>Farm Management overview</Text>
             <View style={s.portStats}>
               {[
                 ['Lands', vm.portfolio.lands],
-                ['Leased', vm.portfolio.leased],
-                ['Vacant', vm.portfolio.vacant],
+                ['Verified', vm.portfolio.verified],
+                ['Managed', vm.portfolio.managed],
                 ['Acres', vm.portfolio.acresDisplay],
               ].map(([label, value], i, arr) => (
                 <View key={label as string} style={[s.pst, i === arr.length - 1 && s.pstLast]}>
@@ -64,27 +63,6 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           onPress={vm.onWeatherPress}
         />
 
-        {/* ───────── Revenue ───────── */}
-        <View style={s.section}>
-          <View style={s.card}>
-            <TouchableOpacity style={s.revRow} onPress={vm.onRevenuePress} activeOpacity={0.8}>
-              <View>
-                <Text style={s.revLabel}>Revenue · this month</Text>
-                <Text style={s.revVal}>{vm.revenue.thisMonthDisplay}</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity style={s.payoutRow} onPress={vm.onPayoutPress} activeOpacity={0.8}>
-              <Ionicons name="calendar" size={16} color="#B87214" />
-              <Text style={s.payoutText}>
-                {vm.revenue.payoutAmountDisplay && vm.revenue.payoutDate ? (
-                  <>Next payout{' '}<Text style={{ fontWeight: '800', color: '#0D1509' }}>{vm.revenue.payoutAmountDisplay}</Text>{' '}· due {vm.revenue.payoutDate}</>
-                ) : 'No payout scheduled'}
-              </Text>
-              <Text style={s.payoutGo}>Details ›</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
         {/* ───────── Key metrics ───────── */}
         <View style={s.section}>
           <View style={s.sectionHead}>
@@ -95,32 +73,25 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           </View>
           <View style={s.tilesWrap}>
             <MetricTile
-              icon="pie-chart"
+              icon="shield-checkmark"
               t="green"
-              value={`${vm.metrics.occupancyPct}%`}
-              label="Occupancy"
-              sub={vm.metrics.occupancySub}
-              subColor={tone.green.fg}
-              onPress={vm.onOccupancyPress}
+              value={String(vm.metrics.verifiedCount)}
+              label="Verified lands"
+              onPress={vm.onVerifiedPress}
             />
             <MetricTile
-              icon="document-text"
+              icon="people"
               t="blue"
-              value={String(vm.metrics.activeLeases)}
-              label="Active leases"
-              onPress={vm.onActiveLeasesPress}
+              value={String(vm.metrics.managedCount)}
+              label="Managed farms"
+              onPress={vm.onManagedPress}
             />
-            {/* Pending dues tile hidden — leases.next_payment is never populated
-                anywhere in the app (no real payments-tracking flow exists yet),
-                so there's no real number to show here. Re-add once that's built. */}
             <MetricTile
-              icon="cash"
+              icon="time"
               t="amber"
-              value={vm.metrics.avgRentDisplay}
-              label="Avg rent / acre"
-              sub="per year"
-              subColor="#6B8074"
-              onPress={vm.onAvgRentPress}
+              value={String(vm.metrics.pendingCount)}
+              label="Pending verification"
+              onPress={vm.onPendingPress}
             />
           </View>
         </View>
@@ -158,7 +129,7 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
           <View style={s.sectionHead}>
             <View style={s.sectionTitleRow}>
               <Ionicons name="map" size={16} color="#1A6B3A" />
-              <Text style={s.sectionTitle}>My properties</Text>
+              <Text style={s.sectionTitle}>My Lands</Text>
             </View>
             <Text style={s.sectionLink} onPress={vm.onPropertiesViewAll}>
               All {vm.properties.length} ›
@@ -181,24 +152,17 @@ export const OwnerHomeContent: React.FC<OwnerHomeViewModel> = vm => {
                     <View
                       style={[
                         s.statusChip,
-                        { backgroundColor: p.status === 'leased' ? tone.green.bg : tone.amber.bg },
+                        { backgroundColor: p.status === 'managed' ? tone.green.bg : tone.amber.bg },
                       ]}
                     >
-                      <Text style={[s.statusText, { color: p.status === 'leased' ? tone.green.fg : tone.amber.fg }]}>
-                        {p.status}
+                      <Text style={[s.statusText, { color: p.status === 'managed' ? tone.green.fg : tone.amber.fg }]}>
+                        {p.statusLabel}
                       </Text>
                     </View>
                   </View>
                   <Text style={s.propMeta}>{p.meta}</Text>
-                </View>
-                <View style={s.propRight}>
-                  {p.status === 'leased' ? (
-                    <>
-                      <Text style={s.propRent}>{p.rentDisplay}</Text>
-                      {!!p.since && <Text style={s.propNext}>Since {p.since}</Text>}
-                    </>
-                  ) : (
-                    <Text style={s.propCta}>{p.ctaLabel} ›</Text>
+                  {!!p.assignedFarmerName && (
+                    <Text style={s.propMeta}>Assigned: {p.assignedFarmerName}</Text>
                   )}
                 </View>
               </TouchableOpacity>

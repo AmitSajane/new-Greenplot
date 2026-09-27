@@ -7,6 +7,7 @@ import LeaseDetailViewScreen from '../screens/LeaseDetailViewScreen';
 import CompareLeasesScreen from '../screens/CompareLeasesScreen';
 import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
+import LandSubmittedScreen from '../screens/owner/LandSubmittedScreen';
 import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
@@ -31,6 +32,7 @@ export type MyPropertiesStackParamList = {
     | { landId: string; landTitle?: string; draftLand?: undefined; initialAvailableFrom?: string }
     | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   AddFarm: { editListingId: string };
+  LandSubmitted: { propertyId: string };
   CropDetails: {
     cropCycleId?: string;
     landId?: string;
@@ -68,6 +70,7 @@ export default function MyPropertiesStack() {
       <Stack.Screen name="CompareLeases" component={CompareLeasesScreen} />
       <Stack.Screen name="AddLeaseOffer" component={AddLeaseOfferScreen} />
       <Stack.Screen name="AddFarm" component={AddFarmScreen} />
+      <Stack.Screen name="LandSubmitted" component={LandSubmittedScreen} options={{ title: 'Land Submitted' }} />
       <Stack.Screen name="CropDetails" component={CropDetailsScreen} options={{ title: 'Crop Details' }} />
       <Stack.Screen
         name="AgreementDetails"

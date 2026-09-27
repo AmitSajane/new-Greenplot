@@ -19,10 +19,16 @@ import MediaCarousel from '../../components/MediaCarousel';
 import { useLeases } from '../../context/LeaseContext';
 import { useCropCycles } from '../../context/CropCycleContext';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
-import { LEASE_TYPE_MAP, summarizeOffer } from '../../constants/leaseTypes';
+import { getManagementStatus, MANAGEMENT_STATUS_LABEL } from '../../utils/farmManagementStatus';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
-type LandDetailsTab = 'lease' | 'crop' | 'labor' | 'revenue';
+type LandDetailsTab = 'management' | 'crop' | 'labor' | 'revenue';
+
+const HEALTH_LABEL: Record<string, string> = {
+  healthy: 'Good',
+  needs_water: 'Needs Water',
+  pest_alert: 'Pest Alert',
+};
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'PropertyDetails'>;
 type PropertyDetailsRoute = RouteProp<MyPropertiesStackParamList, 'PropertyDetails'>;
@@ -45,9 +51,8 @@ export default function PropertyDetailsScreen() {
   const route = useRoute<PropertyDetailsRoute>();
   const { propertyId, viewHistory } = route.params;
   const { getListingById } = useFarmListings();
-  const { getOffersByLand, activeLeases } = useLeases();
+  const { activeLeases } = useLeases();
   const { getCropCycleByLand } = useCropCycles();
-  const offers = getOffersByLand(propertyId);
 
   const property = getListingById(propertyId);
 
@@ -64,18 +69,19 @@ export default function PropertyDetailsScreen() {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
       : undefined);
   const tenantFarmerId = propertyLease?.farmerId;
-  const agreementId = propertyLease?.id;
-  const cropCycleId = tenantFarmerId
-    ? getCropCycleByLand(propertyId, tenantFarmerId, propertyLease?.id)?.cropCycleId
+  const cropCycle = tenantFarmerId
+    ? getCropCycleByLand(propertyId, tenantFarmerId, propertyLease?.id)
     : undefined;
+  const cropCycleId = cropCycle?.cropCycleId;
 
   const handleShare = async () => {
     if (!property) return;
+    const managementStatus = getManagementStatus(property);
     const message = [
       `${property.title}`,
       `${property.acresLabel || `${property.acres} Acres`} • ${property.soilType}`,
       `${property.location}, ${property.district}, ${property.state}`,
-      `Tenure: ${property.tenure} • ${property.pricePerYear}/year`,
+      `Status: ${MANAGEMENT_STATUS_LABEL[managementStatus]}`,
       property.description ? `\n${property.description}` : '',
     ].join('\n');
     try {
@@ -105,10 +111,11 @@ export default function PropertyDetailsScreen() {
   }
 
   const bestCrops = getBestCrops(property.soilType);
-  const [activeTab, setActiveTab] = useState<LandDetailsTab>('lease');
+  const [activeTab, setActiveTab] = useState<LandDetailsTab>('management');
+  const managementStatus = getManagementStatus(property);
 
   const tabs: { key: LandDetailsTab; label: string; icon: string }[] = [
-    { key: 'lease', label: 'Lease history', icon: 'document-text-outline' },
+    { key: 'management', label: 'Management', icon: 'shield-checkmark-outline' },
     { key: 'crop', label: 'Crop grown', icon: 'leaf-outline' },
     { key: 'labor', label: 'Labor activity', icon: 'people-outline' },
     { key: 'revenue', label: 'Revenue', icon: 'bar-chart-outline' },
@@ -117,7 +124,7 @@ export default function PropertyDetailsScreen() {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScreenHeader
-        title="Property Details"
+        title="Land Details"
         onBack={() => navigation.goBack()}
         rightAction={{ icon: 'share-outline', onPress: handleShare }}
         rightIconColor={colors.primary}
@@ -138,9 +145,9 @@ export default function PropertyDetailsScreen() {
           <View
             style={[
               styles.statusBadge,
-              property.status === 'leased'
+              managementStatus === 'managed'
                 ? styles.statusLeased
-                : property.status === 'active'
+                : managementStatus === 'verified'
                 ? styles.statusAvailable
                 : styles.statusInactive,
             ]}
@@ -148,14 +155,14 @@ export default function PropertyDetailsScreen() {
             <Text
               style={[
                 styles.statusText,
-                property.status === 'leased'
+                managementStatus === 'managed'
                   ? styles.statusTextLeased
-                  : property.status === 'active'
+                  : managementStatus === 'verified'
                   ? styles.statusTextAvailable
                   : styles.statusTextInactive,
               ]}
             >
-              {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+              {MANAGEMENT_STATUS_LABEL[managementStatus]}
             </Text>
           </View>
         </View>
@@ -187,69 +194,33 @@ export default function PropertyDetailsScreen() {
         </ScrollView>
 
         {/* Tab content */}
-        {activeTab === 'lease' && (
+        {activeTab === 'management' && (
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Lease history</Text>
-            <DetailRow icon="document-text-outline" label="Status" value={property.status} />
-            <DetailRow icon="calendar-outline" label="Tenure" value={property.tenure} />
-            <DetailRow icon="cash-outline" label="Rent/Year" value={property.pricePerYear} />
-            <TouchableOpacity
-              style={styles.leaseTypeRow}
-              onPress={() => navigation.navigate('LeaseTypeDetails', { propertyId, selectedLeaseType: property.leaseType })}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-              <Text style={styles.detailLabel}>Lease type:</Text>
-              <Text style={styles.leaseTypeValue}>{property.leaseType || 'Select'}</Text>
-              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-            </TouchableOpacity>
-            {/* Lease offers the farmer will see */}
-            <View style={leaseOfferStyles.box}>
-              <View style={leaseOfferStyles.head}>
-                <Text style={leaseOfferStyles.title}>Lease offers ({offers.length})</Text>
-                {property.status === 'leased' ? (
-                  <Text style={leaseOfferStyles.lockedText}>Already leased</Text>
-                ) : (
-                  <TouchableOpacity
-                    onPress={() => navigation.navigate('AddLeaseOffer', { landId: propertyId, landTitle: property.title })}
-                    style={leaseOfferStyles.addBtn}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="add" size={15} color="#fff" />
-                    <Text style={leaseOfferStyles.addText}>Add / manage</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-              {offers.length === 0 ? (
-                <Text style={styles.noDataText}>
-                  {property.status === 'leased'
-                    ? 'This land is already leased — offers reopen once the current lease ends.'
-                    : 'No lease offers yet. Add one so farmers can apply.'}
-                </Text>
-              ) : (
-                offers.map((o) => {
-                  const canViewAgreement = property.status === 'leased' && !!agreementId;
-                  return (
-                    <TouchableOpacity
-                      key={o.id}
-                      style={leaseOfferStyles.row}
-                      activeOpacity={canViewAgreement ? 0.7 : 1}
-                      disabled={!canViewAgreement}
-                      onPress={() => canViewAgreement && navigation.navigate('AgreementDetails', { agreementId: agreementId! })}
-                    >
-                      <Text style={leaseOfferStyles.emoji}>{LEASE_TYPE_MAP[o.typeId].emoji}</Text>
-                      <View style={{ flex: 1 }}>
-                        <Text style={leaseOfferStyles.name}>{LEASE_TYPE_MAP[o.typeId].name}</Text>
-                        <Text style={leaseOfferStyles.sum}>{summarizeOffer(o)}</Text>
-                      </View>
-                      {canViewAgreement && (
-                        <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-            </View>
+            <Text style={styles.cardTitle}>Management</Text>
+            <DetailRow icon="shield-checkmark-outline" label="Status" value={MANAGEMENT_STATUS_LABEL[managementStatus]} />
+            {managementStatus === 'pending_verification' && (
+              <Text style={styles.noDataText}>
+                Verification Pending — AgriArambh is reviewing this land. It isn't shown to farmers yet.
+              </Text>
+            )}
+            {managementStatus === 'verified' && (
+              <Text style={styles.noDataText}>
+                Verified Land — available for Farm Management. AgriArambh will assign a farmer to manage it.
+              </Text>
+            )}
+            {managementStatus === 'managed' && (
+              <>
+                <DetailRow icon="person-outline" label="Assigned Farmer" value={propertyLease?.farmerName || 'Not available'} />
+                <DetailRow icon="leaf-outline" label="Current Crop" value={property.currentCrop || 'Not set'} />
+                <DetailRow
+                  icon="pulse-outline"
+                  label="Farm Health"
+                  value={cropCycle?.healthStatus ? HEALTH_LABEL[cropCycle.healthStatus] : 'No crop cycle yet'}
+                />
+                <Text style={[styles.cardSubtitle, { marginTop: spacing.md }]}>Recent Activities</Text>
+                <Text style={styles.noDataText}>No recent activity logged yet.</Text>
+              </>
+            )}
           </View>
         )}
         {activeTab === 'crop' && (
@@ -303,25 +274,8 @@ export default function PropertyDetailsScreen() {
           {property.waterSource && (
             <DetailRow icon="water-outline" label="Water" value={property.waterSource} />
           )}
-          <DetailRow icon="calendar-outline" label="Tenure" value={property.tenure} />
-          <DetailRow icon="cash-outline" label="Rent/Year" value={property.pricePerYear} />
-          <TouchableOpacity
-            style={styles.leaseTypeRow}
-            onPress={() =>
-              navigation.navigate('LeaseTypeDetails', {
-                propertyId,
-                selectedLeaseType: property.leaseType,
-              })
-            }
-            activeOpacity={0.7}
-          >
-            <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
-            <Text style={styles.detailLabel}>Lease type:</Text>
-            <Text style={styles.leaseTypeValue}>
-              {property.leaseType || 'Select lease type'}
-            </Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
+          <DetailRow icon="leaf-outline" label="Current Crop" value={property.currentCrop || 'Not set'} />
+          <DetailRow icon="shield-checkmark-outline" label="Verification" value={MANAGEMENT_STATUS_LABEL[managementStatus]} />
           {property.description ? (
             <View style={styles.descriptionRow}>
               <Ionicons name="document-text-outline" size={18} color={colors.textSecondary} />
@@ -480,18 +434,6 @@ const styles = StyleSheet.create({
     color: colors.textPrimary,
     flex: 1,
   },
-  leaseTypeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-    paddingVertical: spacing.xs,
-  },
-  leaseTypeValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textPrimary,
-    flex: 1,
-  },
   descriptionRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
@@ -592,17 +534,4 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: colors.surface,
   },
-});
-
-const leaseOfferStyles = StyleSheet.create({
-  box: { marginTop: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 12 },
-  head: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  title: { fontSize: 13, fontWeight: '800', color: colors.textPrimary },
-  addBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#0F4A28', borderRadius: 20, paddingHorizontal: 11, paddingVertical: 6 },
-  addText: { color: '#fff', fontSize: 11, fontWeight: '700' },
-  lockedText: { fontSize: 11, fontWeight: '700', color: colors.textMuted },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#F4F8F5', borderRadius: 10, padding: 10, marginBottom: 7 },
-  emoji: { fontSize: 18 },
-  name: { fontSize: 12, fontWeight: '700', color: colors.textPrimary },
-  sum: { fontSize: 11, color: colors.textSecondary, marginTop: 1 },
 });

@@ -14,11 +14,12 @@ import { AppHeader } from '../../components/molecules/AppHeader';
 import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
 import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
 import { Chip } from '../../components/atoms/Chip';
+import { getManagementStatus, MANAGEMENT_STATUS_LABEL } from '../../utils/farmManagementStatus';
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
 
-type PropertyFilterKey = 'All' | 'Available' | 'Leased' | 'Completed';
-const FILTER_KEYS: PropertyFilterKey[] = ['All', 'Available', 'Leased', 'Completed'];
+type PropertyFilterKey = 'All' | 'Pending' | 'Verified' | 'Managed' | 'Completed';
+const FILTER_KEYS: PropertyFilterKey[] = ['All', 'Pending', 'Verified', 'Managed', 'Completed'];
 
 export default function MyPropertiesScreen() {
   const navigation = useNavigation<NavigationProp>();
@@ -47,15 +48,17 @@ export default function MyPropertiesScreen() {
     () =>
       myListings.filter((p) => {
         switch (filter) {
-          case 'Leased':
-            return p.status === 'leased';
+          case 'Managed':
+            return getManagementStatus(p) === 'managed';
           case 'Completed':
             return p.status !== 'leased' && closedLeaseLandIds.has(p.id);
-          case 'Available':
-            // A completed (closed-lease) property is available to lease again
-            // too, so it belongs here as well as under Completed — just
-            // without the COMPLETED badge (added only for the Completed tab).
-            return p.status === 'active';
+          case 'Verified':
+            // A completed (closed-lease) land is verified again too, so it
+            // belongs here as well as under Completed — just without the
+            // COMPLETED badge (added only for the Completed tab).
+            return getManagementStatus(p) === 'verified';
+          case 'Pending':
+            return getManagementStatus(p) === 'pending_verification';
           default:
             return true;
         }
@@ -87,8 +90,8 @@ export default function MyPropertiesScreen() {
       <AppHeader
         data={{
           variant: 'default',
-          title: 'My Properties',
-          subtitle: `${filteredListings.length} listings`,
+          title: 'My Lands',
+          subtitle: `${filteredListings.length} lands`,
           // sshowBack: navigation.canGoBack(),
           languageShort,
           name: user?.name,
@@ -115,23 +118,25 @@ export default function MyPropertiesScreen() {
           <View style={styles.emptyState}>
             <Icon name="landscape" size={64} color={colors.textMuted} />
             <Text style={styles.emptyStateTitle}>
-              {myListings.length === 0 ? 'No Properties Listed' : 'No properties match this filter'}
+              {myListings.length === 0 ? 'No Lands Added' : 'No lands match this filter'}
             </Text>
             <Text style={styles.emptyStateText}>
               {myListings.length === 0
-                ? 'Start by adding your first farm listing from the Home tab'
+                ? 'Start by adding your first land for Farm Management from the Home tab'
                 : 'Try a different filter.'}
             </Text>
           </View>
         ) : (
-          filteredListings.map((property) => (
+          filteredListings.map((property) => {
+          const managementStatus = getManagementStatus(property);
+          return (
           <TouchableOpacity
             key={property.id}
             style={styles.propertyCard}
             onPress={() =>
               navigation.navigate('PropertyDetails', {
                 propertyId: property.id,
-                viewHistory: filter !== 'Available' && closedLeaseLandIds.has(property.id),
+                viewHistory: filter !== 'Verified' && closedLeaseLandIds.has(property.id),
               })
             }
             activeOpacity={0.7}
@@ -148,9 +153,9 @@ export default function MyPropertiesScreen() {
                   <View
                     style={[
                       styles.statusBadge,
-                      property.status === 'leased'
+                      managementStatus === 'managed'
                         ? styles.statusLeased
-                        : property.status === 'active'
+                        : managementStatus === 'verified'
                         ? styles.statusAvailable
                         : styles.statusInactive,
                     ]}
@@ -158,23 +163,23 @@ export default function MyPropertiesScreen() {
                     <Text
                       style={[
                         styles.statusText,
-                        property.status === 'leased'
+                        managementStatus === 'managed'
                           ? styles.statusTextLeased
-                          : property.status === 'active'
+                          : managementStatus === 'verified'
                           ? styles.statusTextAvailable
                           : styles.statusTextInactive,
                       ]}
                     >
-                      {property.status.charAt(0).toUpperCase() + property.status.slice(1)}
+                      {MANAGEMENT_STATUS_LABEL[managementStatus]}
                     </Text>
                   </View>
                 )}
-                {filter !== 'Available' && property.status !== 'leased' && closedLeaseLandIds.has(property.id) && (
+                {filter !== 'Verified' && property.status !== 'leased' && closedLeaseLandIds.has(property.id) && (
                   <View style={styles.completedPill}>
                     <Text style={styles.completedPillText}>COMPLETED</Text>
                   </View>
                 )}
-                {property.status !== 'leased' && (
+                {managementStatus !== 'managed' && (
                   <TouchableOpacity
                     style={styles.editButton}
                     onPress={() => handleEditPress(property)}
@@ -195,17 +200,20 @@ export default function MyPropertiesScreen() {
                 <Icon name="grass" size={18} color={colors.textSecondary} />
                 <Text style={styles.detailText}>Soil: {property.soilType}</Text>
               </View>
+              {!!property.waterSource && (
+                <View style={styles.detailRow}>
+                  <Icon name="water-drop" size={18} color={colors.textSecondary} />
+                  <Text style={styles.detailText}>Water: {property.waterSource}</Text>
+                </View>
+              )}
               <View style={styles.detailRow}>
-                <Icon name="schedule" size={18} color={colors.textSecondary} />
-                <Text style={styles.detailText}>Tenure: {property.tenure}</Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Icon name="attach-money" size={18} color={colors.textSecondary} />
-                <Text style={styles.detailText}>{property.pricePerYear}/year</Text>
+                <Icon name="eco" size={18} color={colors.textSecondary} />
+                <Text style={styles.detailText}>Current crop: {property.currentCrop || 'Not set'}</Text>
               </View>
             </View>
           </TouchableOpacity>
-        ))
+          );
+        })
         )}
       </ScrollView>
       <LanguagePickerModal visible={langOpen} onClose={() => setLangOpen(false)} />
