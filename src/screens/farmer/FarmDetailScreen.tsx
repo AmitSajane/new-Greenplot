@@ -221,7 +221,7 @@ export default function FarmDetailScreen() {
         </View>
 
         {/* Lease options (real offers the owner published) — not shown for a
-            Farm Management farm; Management Request (Step 4) replaces this. */}
+            Farm Management farm. */}
         {!isManagedFarm && (
           <LeaseOptionsSection
             landId={farmId}

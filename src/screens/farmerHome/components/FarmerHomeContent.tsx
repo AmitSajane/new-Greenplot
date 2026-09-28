@@ -16,7 +16,6 @@ import {
   CropHealthSection,
   FarmSnapshot,
   FarmsAvailableSection,
-  FindLandSection,
   MarketTicker,
   QuickActionsSection,
   SchemesNewsSection,
@@ -45,7 +44,6 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
   //Today's tasks — hidden from the farmer home page for now.
   // const onTasksViewAll = useCallback(() => onAction('notifications'), [onAction]);
   const onCrops = useCallback(() => onAction('crops'), [onAction]);
-  const onAllLands = useCallback(() => onAction('allLands'), [onAction]);
   const onMic = useCallback(() => onAction('aiAssistant'), [onAction]);
 
   return (
@@ -83,11 +81,6 @@ export const FarmerHomeContent: React.FC<FarmerHomeViewModel> = vm => {
         <QuickActionsSection items={vm.quickActions} onAction={onAction} />
         {/* <CropHealthSection items={vm.cropHealth} onPress={onCrops} onViewAll={onCrops} /> */}
         <ActivitySection items={vm.activities} onViewAll={vm.onActivityViewAll} />
-        <FindLandSection
-          listings={vm.featuredListings}
-          onListingPress={vm.onListingPress}
-          onViewAll={onAllLands}
-        />
         <FarmsAvailableSection
           farms={vm.availableFarms}
           onFarmPress={vm.onAvailableFarmPress}

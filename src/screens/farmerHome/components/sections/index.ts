@@ -7,7 +7,6 @@ export { TasksSection } from './TasksSection';
 export { ActivitySection } from './ActivitySection';
 export { QuickActionsSection } from './QuickActionsSection';
 export { CropHealthSection } from './CropHealthSection';
-export { FindLandSection } from './FindLandSection';
 export { FarmsAvailableSection } from './FarmsAvailableSection';
 export { SchemesNewsSection, NewsRow } from './SchemesNewsSection';
 export { VideosSection } from './VideosSection';

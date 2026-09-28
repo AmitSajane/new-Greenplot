@@ -64,7 +64,6 @@ interface FarmListingsContextType {
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
   getListingById: (id: string) => FarmListing | undefined;
-  getFeaturedListings: () => FarmListing[];
   getListingsByLocation: (location: string) => FarmListing[];
 }
 
@@ -303,10 +302,6 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
     [listings]
   );
 
-  const getFeaturedListings = useCallback(() => {
-    return listings.filter((listing) => listing.status === 'active' && !listing.selfFarmed).slice(0, 10);
-  }, [listings]);
-
   const getListingsByLocation = useCallback(
     (location: string) => {
       const searchTerm = location.toLowerCase();
@@ -337,7 +332,6 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
         updateListing,
         deleteListing,
         getListingById,
-        getFeaturedListings,
         getListingsByLocation,
       }}
     >

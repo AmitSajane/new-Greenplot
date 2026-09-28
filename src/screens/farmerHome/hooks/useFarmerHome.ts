@@ -33,20 +33,10 @@ type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'Farme
 /** Minimal shape we need from the parent tab navigator for cross-tab routing. */
 type ParentNav = { navigate: (name: string, params?: object) => void };
 
-export interface FarmerListingCard {
-  id: string;
-  title: string;
-  priceLabel: string;
-  locationLabel: string;
-  acresLabel: string;
-  leaseType?: string;
-  imageUri?: string;
-}
-
 export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { getFeaturedListings, listings, getListingById, availableForManagement } = useFarmListings();
+  const { listings, getListingById, availableForManagement } = useFarmListings();
   const { activeLeases, requests, agreements, closures } = useLeases();
   const { cropCycles } = useCropCycles();
 
@@ -115,11 +105,6 @@ export function useFarmerHome() {
   const onTickerPress = useCallback(
     (cropId: string) => goTab('Market', { screen: 'PriceTrend', params: { cropId } }),
     [goTab],
-  );
-
-  const onListingPress = useCallback(
-    (farmId: string) => navigation.navigate('FarmDetail', { farmId }),
-    [navigation],
   );
 
   // Reuses the same FarmDetail screen — "View Farm" for an AgriArambh-
@@ -191,22 +176,6 @@ export function useFarmerHome() {
       { id: 's4', emoji: '✅', value: 'Soon', label: 'Tasks due', tone: 'amber', action: 'tasks', disabled: true },
     ],
     [myActiveLeases.length, totalAcresFarmed, activeCropsCount],
-  );
-
-  const featuredListings: FarmerListingCard[] = useMemo(
-    () =>
-      getFeaturedListings()
-        .slice(0, 4)
-        .map(listing => ({
-          id: listing.id,
-          title: listing.title,
-          priceLabel: `${listing.pricePerYear}/yr`,
-          locationLabel: listing.locationLabel || `${listing.location}, ${listing.district}`,
-          acresLabel: listing.acresLabel || `${listing.acres} Acres`,
-          leaseType: listing.leaseType,
-          imageUri: listing.imageUrl,
-        })),
-    [getFeaturedListings],
   );
 
   // "Farms Available for Management" — already DB-scoped to
@@ -367,7 +336,6 @@ export function useFarmerHome() {
     nearbyChips: FARMER_NEARBY_CHIPS,
 
     // Dynamic
-    featuredListings,
     availableFarms,
     activities,
     query,
@@ -378,7 +346,6 @@ export function useFarmerHome() {
     // Stable handlers
     onAction,
     onTickerPress,
-    onListingPress,
     onAvailableFarmPress,
     onViewAllAvailableFarms,
     onOpenArticle,
