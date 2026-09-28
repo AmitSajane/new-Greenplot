@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -19,7 +19,8 @@ import MediaCarousel from '../../components/MediaCarousel';
 import { useLeases } from '../../context/LeaseContext';
 import { useCropCycles } from '../../context/CropCycleContext';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
-import { getManagementStatus, MANAGEMENT_STATUS_LABEL } from '../../utils/farmManagementStatus';
+import { getManagementStatus, MANAGEMENT_STATUS_LABEL, FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
+import { profilesApi } from '../../services/profilesApi';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
 type LandDetailsTab = 'management' | 'crop' | 'labor' | 'revenue';
@@ -73,6 +74,26 @@ export default function PropertyDetailsScreen() {
     ? getCropCycleByLand(propertyId, tenantFarmerId, propertyLease?.id)
     : undefined;
   const cropCycleId = cropCycle?.cropCycleId;
+
+  // New Farm Management pipeline — Admin sets `assigned_farmer_id` directly
+  // on `lands` (see supabase/add_farm_management_assigned_farmer.sql), with
+  // no name attached. Resolve it via the same profiles directory the owner's
+  // Tenants screen already uses, only when there's no legacy lease record to
+  // read a name from instead.
+  const [assignedFarmerName, setAssignedFarmerName] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!property?.assignedFarmerId || propertyLease?.farmerName) {
+      setAssignedFarmerName(undefined);
+      return;
+    }
+    let cancelled = false;
+    profilesApi.fetchFarmersByIds([property.assignedFarmerId]).then(farmers => {
+      if (!cancelled) setAssignedFarmerName(farmers[0]?.name);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [property?.assignedFarmerId, propertyLease?.farmerName]);
 
   const handleShare = async () => {
     if (!property) return;
@@ -210,7 +231,18 @@ export default function PropertyDetailsScreen() {
             )}
             {managementStatus === 'managed' && (
               <>
-                <DetailRow icon="person-outline" label="Assigned Farmer" value={propertyLease?.farmerName || 'Not available'} />
+                {isFarmManagementStage(property.managementStatus) && (
+                  <DetailRow
+                    icon="shield-checkmark-outline"
+                    label="Stage"
+                    value={FARM_MANAGEMENT_STAGE_LABEL[property.managementStatus]}
+                  />
+                )}
+                <DetailRow
+                  icon="person-outline"
+                  label="Assigned Farmer"
+                  value={propertyLease?.farmerName || assignedFarmerName || 'Not available'}
+                />
                 <DetailRow icon="leaf-outline" label="Current Crop" value={property.currentCrop || 'Not set'} />
                 <DetailRow
                   icon="pulse-outline"

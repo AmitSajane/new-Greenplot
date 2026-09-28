@@ -4,6 +4,14 @@ import FarmerHomeScreen from '../screens/farmerHome';
 import FarmDetailScreen from '../screens/farmer/FarmDetailScreen';
 import AllAvailableLandsScreen from '../screens/farmer/AllAvailableLandsScreen';
 import FarmsAvailableForManagementScreen from '../screens/farmer/FarmsAvailableForManagementScreen';
+import ManagementRequestFormScreen from '../screens/farmer/ManagementRequestFormScreen';
+import ManagementRequestReviewScreen from '../screens/farmer/ManagementRequestReviewScreen';
+import ManagementRequestSubmittedScreen from '../screens/farmer/ManagementRequestSubmittedScreen';
+import MyManagementRequestsScreen from '../screens/farmer/MyManagementRequestsScreen';
+import ManagementRequestDetailsScreen from '../screens/farmer/ManagementRequestDetailsScreen';
+import MyManagedFarmsScreen from '../screens/farmer/MyManagedFarmsScreen';
+import ManagedFarmDashboardScreen from '../screens/farmer/ManagedFarmDashboardScreen';
+import type { ManagementRequestDraft } from '../screens/farmer/managementRequestDraft';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
@@ -38,6 +46,13 @@ export type FarmerHomeStackParamList = {
   AgreementSign: { agreementId: string };
   AllAvailableLands: undefined;
   FarmsAvailableForManagement: undefined;
+  ManagementRequestForm: { farmId: string };
+  ManagementRequestReview: { farmId: string; draft: ManagementRequestDraft };
+  ManagementRequestSubmitted: { requestId: string };
+  MyManagementRequests: undefined;
+  ManagementRequestDetails: { requestId: string };
+  MyManagedFarms: undefined;
+  ManagedFarmDashboard: { farmId: string };
   LandListing: undefined;
   LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
   LeaseStatus: undefined;
@@ -98,6 +113,41 @@ export default function FarmerHomeStack() {
         name="FarmsAvailableForManagement"
         component={FarmsAvailableForManagementScreen}
         options={{ title: 'Farms Available for Management' }}
+      />
+      <Stack.Screen
+        name="ManagementRequestForm"
+        component={ManagementRequestFormScreen}
+        options={{ title: 'Request Farm Management' }}
+      />
+      <Stack.Screen
+        name="ManagementRequestReview"
+        component={ManagementRequestReviewScreen}
+        options={{ title: 'Review Request' }}
+      />
+      <Stack.Screen
+        name="ManagementRequestSubmitted"
+        component={ManagementRequestSubmittedScreen}
+        options={{ title: 'Request Submitted' }}
+      />
+      <Stack.Screen
+        name="MyManagementRequests"
+        component={MyManagementRequestsScreen}
+        options={{ title: 'My Management Requests' }}
+      />
+      <Stack.Screen
+        name="ManagementRequestDetails"
+        component={ManagementRequestDetailsScreen}
+        options={{ title: 'Request Details' }}
+      />
+      <Stack.Screen
+        name="MyManagedFarms"
+        component={MyManagedFarmsScreen}
+        options={{ title: 'My Managed Farms' }}
+      />
+      <Stack.Screen
+        name="ManagedFarmDashboard"
+        component={ManagedFarmDashboardScreen}
+        options={{ title: 'Managed Farm' }}
       />
       <Stack.Screen name="LeaseApplication" component={LeaseApplicationScreen} options={{ title: 'Lease Application' }} />
       <Stack.Screen name="LeaseStatus" component={LeaseStatusScreen} options={{ title: 'Lease Status' }} />

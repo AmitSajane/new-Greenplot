@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -16,8 +17,13 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import { useFarmListings } from '../../context/FarmListingsContext';
+import { useAuth } from '../../context/AuthContext';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
-import { LeaseOptionsSection } from './components/LeaseOptionsSection';
+import {
+  managementRequestsApi,
+  MANAGEMENT_REQUEST_STATUS_LABEL,
+  type ManagementRequest,
+} from '../../services/managementRequestsApi';
 import MediaCarousel from '../../components/MediaCarousel';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
@@ -32,8 +38,61 @@ export default function FarmDetailScreen() {
   const route = useRoute<RouteProp>();
   const { farmId } = route.params;
   const { getListingById } = useFarmListings();
+  const { user } = useAuth();
 
   const farm = getListingById(farmId);
+  // True only for a farm that came through the new Farm Management pipeline
+  // (Operations Admin approved it AND made it available) — false for every
+  // legacy lease listing, so this screen renders exactly as it always has
+  // for those.
+  const isManagedFarm = farm?.verificationStatus === 'APPROVED' && farm?.managementStatus === 'AVAILABLE_FOR_MANAGEMENT';
+
+  // Only true once Admin has actually assigned THIS signed-in farmer to this
+  // farm — not just that some farmer has been assigned, and not just that
+  // this farmer requested it. Contact details stay hidden until then.
+  const isAssignedToMe =
+    !!user?.id &&
+    farm?.assignedFarmerId === user.id &&
+    (farm?.managementStatus === 'FARMER_ASSIGNED' || farm?.managementStatus === 'ACTIVE_MANAGEMENT');
+
+  const [requestState, setRequestState] = useState<'checking' | 'none' | 'has-request'>('checking');
+  const [existingRequest, setExistingRequest] = useState<ManagementRequest | undefined>(undefined);
+
+  // Every hook above/below this line runs unconditionally (before the
+  // `if (!farm)` early return further down) — `farm` being undefined just
+  // resolves this effect to 'none' rather than skipping it.
+  useEffect(() => {
+    if (!user?.id) {
+      setRequestState('none');
+      return;
+    }
+    let cancelled = false;
+    setRequestState('checking');
+    managementRequestsApi
+      .fetchMine(user.id)
+      .then(mine => {
+        if (cancelled) return;
+        const forThisFarm = mine.find(r => r.landId === farmId);
+        setExistingRequest(forThisFarm);
+        setRequestState(forThisFarm ? 'has-request' : 'none');
+      })
+      .catch(() => {
+        if (!cancelled) setRequestState('none');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id, farmId]);
+
+  // Section 9 — an existing request (any status) takes the farmer straight
+  // to it instead of letting them start a second one for the same farm.
+  const handleRequestManagement = useCallback(() => {
+    if (existingRequest) {
+      navigation.navigate('ManagementRequestDetails', { requestId: existingRequest.id });
+      return;
+    }
+    navigation.navigate('ManagementRequestForm', { farmId });
+  }, [navigation, existingRequest, farmId]);
 
   if (!farm) {
     return (
@@ -56,12 +115,6 @@ export default function FarmDetailScreen() {
   // Falls back to `currentCrop` (single crop) for older listings saved before
   // the full list was persisted.
   const bestCrops = farm.crops?.length ? farm.crops : farm.currentCrop ? [farm.currentCrop] : [];
-
-  // True only for a farm that came through the new Farm Management pipeline
-  // (Operations Admin approved it AND made it available) — false for every
-  // legacy lease listing, so this screen renders exactly as it always has
-  // for those, no lease UI is removed from them.
-  const isManagedFarm = farm.verificationStatus === 'APPROVED' && farm.managementStatus === 'AVAILABLE_FOR_MANAGEMENT';
 
   const handleContactOwner = () => {
     Alert.alert('Contact Owner', 'Are you sure you want to contact the owner?', [
@@ -136,7 +189,7 @@ export default function FarmDetailScreen() {
           <View style={[styles.detailCard, shadow.card]}>
             <Ionicons name="calendar-outline" size={24} color={colors.warning} />
             <Text style={styles.detailValue}>{farm.tenure}</Text>
-            <Text style={styles.detailLabel}>Lease Period</Text>
+            <Text style={styles.detailLabel}>Management Period</Text>
           </View>
           )}
           {!isManagedFarm && (
@@ -161,7 +214,7 @@ export default function FarmDetailScreen() {
             >
               <Ionicons name="document-text-outline" size={24} color={colors.primary} />
               <Text style={styles.detailValue}>{farm.leaseType}</Text>
-              <Text style={styles.detailLabel}>Lease Type</Text>
+              <Text style={styles.detailLabel}>Agreement Type</Text>
               <Ionicons
                 name="chevron-forward"
                 size={20}
@@ -220,26 +273,63 @@ export default function FarmDetailScreen() {
           </View>
         </View>
 
-        {/* Lease options (real offers the owner published) — not shown for a
-            Farm Management farm; Management Request (Step 4) replaces this. */}
-        {!isManagedFarm && (
-          <LeaseOptionsSection
-            landId={farmId}
-            landTitle={farm.title}
-            ownerId={farm.ownerId}
-            ownerName={farm.ownerName}
-          />
+        {/* Request Management — only offered once AgriArambh has actually
+            approved this farm and made it available (Step 4 §2). Deciding/
+            assigning happens in the separate Admin portal; this screen only
+            ever creates or reopens the request. */}
+        {isManagedFarm && (
+          <TouchableOpacity
+            style={[styles.requestButton, requestState === 'checking' && styles.requestButtonDisabled]}
+            onPress={handleRequestManagement}
+            activeOpacity={0.8}
+            disabled={requestState === 'checking'}
+          >
+            {requestState === 'checking' ? (
+              <ActivityIndicator color={colors.surface} />
+            ) : (
+              <>
+                <Ionicons
+                  name={existingRequest ? 'document-text' : 'hand-left'}
+                  size={20}
+                  color={colors.surface}
+                />
+                <Text style={styles.contactButtonText}>
+                  {existingRequest ? MANAGEMENT_REQUEST_STATUS_LABEL[existingRequest.status] : 'Request Management'}
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
         )}
 
-        {/* Contact Button */}
-        <TouchableOpacity
-          style={styles.contactButton}
-          onPress={handleContactOwner}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="call" size={20} color={colors.surface} />
-          <Text style={styles.contactButtonText}>Contact Owner</Text>
-        </TouchableOpacity>
+        {/* Contact Button — stays hidden until AgriArambh has actually
+            assigned this farmer to this farm, not just approved/requested it. */}
+        {isAssignedToMe ? (
+          <>
+            <TouchableOpacity
+              style={styles.requestButton}
+              onPress={() => navigation.navigate('ManagedFarmDashboard', { farmId })}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="leaf" size={20} color={colors.surface} />
+              <Text style={styles.contactButtonText}>Open Managed Farm</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.contactButton}
+              onPress={handleContactOwner}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="call" size={20} color={colors.surface} />
+              <Text style={styles.contactButtonText}>Contact Owner</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.contactLockedNote}>
+            <Ionicons name="lock-closed-outline" size={16} color={colors.textMuted} />
+            <Text style={styles.contactLockedNoteText}>
+              Owner contact unlocks once AgriArambh assigns you to manage this farm.
+            </Text>
+          </View>
+        )}
         {/* View in Map button */}
         <TouchableOpacity
           style={styles.viewMapButton}
@@ -385,6 +475,20 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
   },
+  requestButton: {
+    backgroundColor: '#1A6B3A',
+    borderRadius: radius.md,
+    paddingVertical: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    gap: spacing.sm,
+  },
+  requestButtonDisabled: {
+    opacity: 0.7,
+  },
   contactButton: {
     backgroundColor: colors.primary,
     borderRadius: radius.md,
@@ -395,6 +499,24 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xl,
     marginTop: spacing.lg,
     gap: spacing.sm,
+  },
+  contactLockedNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginHorizontal: spacing.xl,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    backgroundColor: colors.surface,
+  },
+  contactLockedNoteText: {
+    flex: 1,
+    fontSize: 12,
+    color: colors.textMuted,
   },
   viewMapButton: {
     backgroundColor: colors.map,

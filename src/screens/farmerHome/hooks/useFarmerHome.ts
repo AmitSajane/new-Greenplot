@@ -46,7 +46,7 @@ export interface FarmerListingCard {
 export function useFarmerHome() {
   const navigation = useNavigation<NavigationProp>();
   const { user } = useAuth();
-  const { getFeaturedListings, listings, getListingById, availableForManagement } = useFarmListings();
+  const { getFeaturedListings, listings, getListingById, availableForManagement, myManagedFarms } = useFarmListings();
   const { activeLeases, requests, agreements, closures } = useLeases();
   const { cropCycles } = useCropCycles();
 
@@ -99,6 +99,10 @@ export function useFarmerHome() {
           return navigation.navigate('AIAssistant');
         case 'allLands':
           return navigation.navigate('AllAvailableLands');
+        case 'myManagementRequests':
+          return navigation.navigate('MyManagementRequests');
+        case 'myManagedFarms':
+          return navigation.navigate('MyManagedFarms');
         case 'notifications':
           return navigation.navigate('NotificationsCenter');
         case 'hub':
@@ -185,12 +189,12 @@ export function useFarmerHome() {
   // cards on CropDetailsScreen.
   const snapshot: SnapStat[] = useMemo(
     () => [
-      { id: 's1', emoji: '📄', value: String(myActiveLeases.length), label: 'Active leases', action: 'leases' },
+      { id: 's1', emoji: '📄', value: String(myManagedFarms.length), label: 'Managed farms', action: 'myManagedFarms' },
       { id: 's2', emoji: '🌾', value: formatAcres(totalAcresFarmed), label: 'Acres farmed', action: 'crops' },
       { id: 's3', emoji: '🌱', value: String(activeCropsCount), label: 'Crops', action: 'crops' },
       { id: 's4', emoji: '✅', value: 'Soon', label: 'Tasks due', tone: 'amber', action: 'tasks', disabled: true },
     ],
-    [myActiveLeases.length, totalAcresFarmed, activeCropsCount],
+    [myManagedFarms.length, totalAcresFarmed, activeCropsCount],
   );
 
   const featuredListings: FarmerListingCard[] = useMemo(
@@ -276,10 +280,10 @@ export function useFarmerHome() {
           ...visual,
           title:
             r.status === 'accepted'
-              ? 'Lease request accepted'
+              ? 'Management request accepted'
               : r.status === 'rejected'
-                ? 'Lease request rejected'
-                : 'Lease request sent',
+                ? 'Management request rejected'
+                : 'Management request sent',
           sub: `${r.landTitle} · ${r.ownerName}`,
           time: relativeTime(r.createdAt),
           actionLabel: r.status === 'pending' ? 'Track' : 'View',
@@ -299,7 +303,7 @@ export function useFarmerHome() {
           id: `signed-${a.id}`,
           icon: 'key',
           tone: 'green',
-          title: 'Leased land',
+          title: 'Started managing land',
           sub: `${a.landTitle} · from ${a.ownerName}`,
           time: relativeTime(a.farmerSignedAt!),
           actionLabel: 'View',
@@ -317,7 +321,7 @@ export function useFarmerHome() {
             id: `closure-req-${c.id}`,
             icon: 'exit-outline',
             tone: 'amber',
-            title: 'Requested lease closure',
+            title: 'Requested to end management',
             sub: `${c.landTitle} · ${c.reason}`,
             time: relativeTime(c.requestedAt),
             actionLabel: 'Manage',
@@ -332,7 +336,7 @@ export function useFarmerHome() {
               id: `closure-done-${c.id}`,
               icon: 'checkmark-done-circle',
               tone: 'red',
-              title: 'Lease terminated',
+              title: 'Management ended',
               sub: `${c.landTitle} · closure completed`,
               time: relativeTime(c.updatedAt),
               actionLabel: 'View',
