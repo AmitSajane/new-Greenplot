@@ -46,6 +46,7 @@ const landToApp = (r: any): FarmListing => ({
   // ManagementStatus in src/utils/farmManagementStatus.ts.
   verificationStatus: r.verification_status || undefined,
   managementStatus: r.management_status || undefined,
+  assignedFarmerId: r.assigned_farmer_id || undefined,
 });
 
 const toRow = (l: Partial<FarmListing>) => {

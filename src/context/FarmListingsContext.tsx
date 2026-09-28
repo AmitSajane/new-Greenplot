@@ -53,6 +53,8 @@ export interface FarmListing {
   // client-derived ManagementStatus in src/utils/farmManagementStatus.ts.
   verificationStatus?: string;
   managementStatus?: string;
+  /** Set only by the separate Admin backend once a farmer is assigned — mirrors `verifiedBy`. */
+  assignedFarmerId?: string;
 }
 
 interface FarmListingsContextType {
@@ -60,6 +62,8 @@ interface FarmListingsContextType {
   ownerListings: FarmListing[];
   /** Farms Available for Management — DB-scoped (see landsApi.fetchAvailableForManagement), not client-filtered. */
   availableForManagement: FarmListing[];
+  /** Farms the signed-in farmer has actually been assigned to manage (Step 5) — client-filtered from `listings`, same pattern as `ownerListings`. */
+  myManagedFarms: FarmListing[];
   addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => Promise<string>;
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
@@ -322,12 +326,26 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
     ? listings.filter((listing) => listing.ownerId === user?.id)
     : listings.filter((listing) => listing.status === 'active');
 
+  // Farms this farmer has actually been assigned (Step 5) — Admin-set
+  // `assignedFarmerId` + `managementStatus`, not the legacy lease model.
+  // No real backing concept exists in mock mode, so this stays empty there
+  // rather than fabricating an assignment.
+  const myManagedFarms = isSupabaseConfigured
+    ? listings.filter(
+        (listing) =>
+          !!user?.id &&
+          listing.assignedFarmerId === user.id &&
+          (listing.managementStatus === 'FARMER_ASSIGNED' || listing.managementStatus === 'ACTIVE_MANAGEMENT'),
+      )
+    : [];
+
   return (
     <FarmListingsContext.Provider
       value={{
         listings,
         ownerListings,
         availableForManagement,
+        myManagedFarms,
         addListing,
         updateListing,
         deleteListing,

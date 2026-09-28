@@ -341,7 +341,7 @@ export default function MyCropsScreen() {
           <View style={styles.emptyCrop}>
             <Text style={styles.emptyCropText}>
               {opts.completed ? (
-                'No crop was recorded for this lease'
+                'No crop was recorded for this management period'
               ) : (
                 <>
                   <Text style={styles.emptyCropBold}>No crop added</Text> for this plot yet
@@ -461,7 +461,7 @@ export default function MyCropsScreen() {
             onPress={() => setActiveTab('leased')}
           >
             <Icon name="document-text-outline" size={18} color={!isOwn ? '#FFFFFF' : colors.textSecondary} />
-            <Text style={[styles.tabBtnText, !isOwn && styles.tabBtnTextActive]}>Leased Land</Text>
+            <Text style={[styles.tabBtnText, !isOwn && styles.tabBtnTextActive]}>Managed Land</Text>
             <View style={[styles.tabCountBadge, !isOwn && styles.tabCountBadgeActive]}>
               <Text style={[styles.tabCountText, !isOwn && styles.tabCountTextActive]}>{myLeasedPlots.length}</Text>
             </View>
@@ -473,7 +473,7 @@ export default function MyCropsScreen() {
             <View style={[styles.sectionIcon, { backgroundColor: isOwn ? OWN_COLOR : LEASED_COLOR }]}>
               <Icon name={isOwn ? 'home-outline' : 'document-text-outline'} size={17} color="#FFFFFF" />
             </View>
-            <Text style={styles.sectionTitle}>{isOwn ? 'My Own Land' : 'Leased Land'}</Text>
+            <Text style={styles.sectionTitle}>{isOwn ? 'My Own Land' : 'Managed Land'}</Text>
             <Text style={styles.sectionCount}>({activeList.length})</Text>
           </View>
           {isOwn ? (
@@ -484,7 +484,7 @@ export default function MyCropsScreen() {
           ) : (
             <View style={styles.syncChip}>
               <Icon name="sync-outline" size={11} color={LEASED_COLOR} />
-              <Text style={styles.syncChipText}>LEASE-SYNCED</Text>
+              <Text style={styles.syncChipText}>MANAGEMENT-SYNCED</Text>
             </View>
           )}
         </View>
@@ -493,12 +493,12 @@ export default function MyCropsScreen() {
           <View style={[styles.emptyState, shadow.card]}>
             <Icon name={isOwn ? 'home-outline' : 'document-text-outline'} size={28} color={colors.textMuted} />
             <Text style={styles.emptyStateTitle}>
-              {isOwn ? "You haven't added any land you own yet" : 'No active leases yet'}
+              {isOwn ? "You haven't added any land you own yet" : 'No managed land yet'}
             </Text>
             <Text style={styles.emptyStateBody}>
               {isOwn
                 ? 'Add land you farm yourself to start tracking crops on it.'
-                : "Once a lease you've signed becomes active, it'll show up here."}
+                : "Once your management assignment becomes active, it'll show up here."}
             </Text>
             {isOwn && (
               <TouchableOpacity style={[styles.addCropBtn, styles.emptyStateAddBtn]} onPress={openLandSheet}>
@@ -532,10 +532,10 @@ export default function MyCropsScreen() {
               landId: lease.landId,
               plotName: lease.landTitle,
               areaAcres: listing ? parseFloat(listing.acres) || 0 : 0,
-              metaLine1: `Landlord: ${lease.ownerName}`,
+              metaLine1: `Landowner: ${lease.ownerName}`,
               metaLine2: completed
-                ? `${lease.typeName} Lease · closed`
-                : `${lease.typeName} Lease · since ${lease.startDate}`,
+                ? `${lease.typeName} · closed`
+                : `${lease.typeName} · since ${lease.startDate}`,
               ownerId: lease.ownerId,
               ownerLabel: lease.ownerName,
               imageUrl: listing?.imageUrl || undefined,

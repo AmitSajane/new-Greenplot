@@ -26,7 +26,9 @@ export type FarmerAction =
   | 'hub'
   | 'settings'
   | 'mandiCompare'
-  | 'soilAdvisory';
+  | 'soilAdvisory'
+  | 'myManagementRequests'
+  | 'myManagedFarms';
 
 export type Tone = 'green' | 'amber' | 'red' | 'blue' | 'purple' | 'neutral';
 
@@ -143,12 +145,14 @@ export const FARMER_TICKER: readonly TickerItem[] = [
 export const FARMER_TASKS: readonly TaskItem[] = [
   { id: 'tk1', tone: 'blue', icon: 'water', title: 'Irrigation due · North plot', sub: 'Best before 9 AM', actionLabel: 'Schedule', action: 'satellite' },
   { id: 'tk2', tone: 'amber', icon: 'people', title: 'Confirm 3 laborers · Harvest', sub: 'Applied for tomorrow', actionLabel: 'Confirm', action: 'labor' },
-  { id: 'tk3', tone: 'red', icon: 'document-text', title: 'Lease expiring · Suresh', sub: 'In 20 days · renew now', actionLabel: 'Renew', action: 'leases' },
+  { id: 'tk3', tone: 'red', icon: 'document-text', title: 'Management ending · Suresh', sub: 'In 20 days · renew now', actionLabel: 'Renew', action: 'leases' },
   { id: 'tk4', tone: 'green', icon: 'flask', title: 'Soil test result ready', sub: 'AgriLab · pH & NPK report', actionLabel: 'View', action: 'soil' },
 ];
 
 export const FARMER_QUICK_ACTIONS: readonly QuickAction[] = [
   { id: 'q1', label: 'Add Crop', icon: 'add-circle', tone: 'green', action: 'addCrop' },
+  { id: 'q10', label: 'My Requests', icon: 'document-text', tone: 'blue', action: 'myManagementRequests' },
+  { id: 'q11', label: 'My Managed Farms', icon: 'leaf', tone: 'green', action: 'myManagedFarms' },
   //{ id: 'q2', label: 'Create Work', icon: 'create', tone: 'blue', action: 'createWork' },
   //{ id: 'q3', label: 'Hire Labor', icon: 'people', tone: 'amber', action: 'labor' },
   //{ id: 'q4', label: 'Lease Status', icon: 'document-text', tone: 'purple', action: 'leaseStatus' },
