@@ -20,7 +20,19 @@ import { useLeases } from '../../context/LeaseContext';
 import { useCropCycles } from '../../context/CropCycleContext';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 import { getManagementStatus, MANAGEMENT_STATUS_LABEL, FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
+import { CROP_STAGE_LABEL, relativeDayLabel, stageProgressPercent } from '../../utils/cropStages';
+import { CROP_HEALTH_LABEL, deriveCropHealth } from '../../utils/cropHealth';
 import { profilesApi } from '../../services/profilesApi';
+import { cropActivityApi } from '../../services/cropActivityApi';
+import { farmActivityApi } from '../../services/farmActivityApi';
+import { farmObservationApi } from '../../services/farmObservationApi';
+import { fetchSoilData } from '../../services/soilService';
+import { fetchWeatherByLocation } from '../../services/weatherApi';
+import { harvestApi } from '../../services/harvestApi';
+import { resolveFarmCoordinates } from '../../utils/geo/farmLocation';
+import type { SoilResponse } from '../../types/soil';
+import type { WeatherInfo } from '../farmerHome/constants/farmerDashboardData';
+import type { CropActivity, FarmActivity, FarmObservation, HarvestRecord } from '../../modules/work/types';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
 
 type LandDetailsTab = 'management' | 'crop' | 'labor' | 'revenue';
@@ -29,6 +41,14 @@ const HEALTH_LABEL: Record<string, string> = {
   healthy: 'Good',
   needs_water: 'Needs Water',
   pest_alert: 'Pest Alert',
+};
+
+const CROP_CYCLE_STATUS_LABEL: Record<string, string> = {
+  active: 'Active',
+  harvest_ready: 'Ready for Harvest',
+  harvested: 'Harvested',
+  completed: 'Completed',
+  fallow: 'Fallow',
 };
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'PropertyDetails'>;
@@ -53,7 +73,7 @@ export default function PropertyDetailsScreen() {
   const { propertyId, viewHistory } = route.params;
   const { getListingById } = useFarmListings();
   const { activeLeases } = useLeases();
-  const { getCropCycleByLand } = useCropCycles();
+  const { cropCycles, getCropCycleByLand } = useCropCycles();
 
   const property = getListingById(propertyId);
 
@@ -70,10 +90,144 @@ export default function PropertyDetailsScreen() {
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0]
       : undefined);
   const tenantFarmerId = propertyLease?.farmerId;
-  const cropCycle = tenantFarmerId
+  const leaseCropCycle = tenantFarmerId
     ? getCropCycleByLand(propertyId, tenantFarmerId, propertyLease?.id)
     : undefined;
+  // Farm Management has no lease at all — resolve its crop cycle the same
+  // way the farmer side does, via assignedFarmerId with no leaseId.
+  const managementCropCycle = !leaseCropCycle && property?.assignedFarmerId
+    ? getCropCycleByLand(propertyId, property.assignedFarmerId)
+    : undefined;
+  const cropCycle = leaseCropCycle || managementCropCycle;
   const cropCycleId = cropCycle?.cropCycleId;
+
+  const [recentActivities, setRecentActivities] = useState<CropActivity[]>([]);
+  useEffect(() => {
+    if (!cropCycleId) {
+      setRecentActivities([]);
+      return;
+    }
+    let cancelled = false;
+    cropActivityApi
+      .fetchByCropCycle(cropCycleId)
+      .then((activities) => {
+        if (!cancelled) {
+          setRecentActivities([...activities].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 3));
+        }
+      })
+      .catch(() => {
+        // Supabase not configured (mock mode) or a network hiccup — leave empty.
+        if (!cancelled) setRecentActivities([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cropCycleId]);
+
+  // Step 7 — read-only for the owner: scheduled activities + observations
+  // for this crop cycle, same services the farmer's dashboard uses.
+  const [farmActivities, setFarmActivities] = useState<FarmActivity[]>([]);
+  const [recentObservations, setRecentObservations] = useState<FarmObservation[]>([]);
+  useEffect(() => {
+    if (!cropCycleId) {
+      setFarmActivities([]);
+      return;
+    }
+    let cancelled = false;
+    farmActivityApi.fetchByCropCycle(cropCycleId).then((activities) => {
+      if (!cancelled) setFarmActivities(activities);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cropCycleId]);
+  useEffect(() => {
+    const ids = farmActivities.map((a) => a.activityId);
+    if (ids.length === 0) {
+      setRecentObservations([]);
+      return;
+    }
+    let cancelled = false;
+    farmObservationApi.fetchRecentForActivities(ids, 3).then((obs) => {
+      if (!cancelled) setRecentObservations(obs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [farmActivities]);
+  const upcomingFarmActivities = farmActivities
+    .filter((a) => a.status === 'PENDING' && a.scheduledDate > new Date().toISOString().slice(0, 10))
+    .sort((a, b) => a.scheduledDate.localeCompare(b.scheduledDate))
+    .slice(0, 3);
+  const cropHealth = farmActivities.length > 0 ? deriveCropHealth(farmActivities) : undefined;
+  const observationPhotos = recentObservations.filter((o) => o.photoUrl);
+
+  // Step 8 — read-only Soil/Weather summary, same services + fallback
+  // chain the farmer's Monitoring tab uses, fetched once per property.
+  const [soilData, setSoilData] = useState<SoilResponse | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherInfo | null>(null);
+  useEffect(() => {
+    if (!property || !cropCycleId) return;
+    let cancelled = false;
+    resolveFarmCoordinates(property)
+      .then((coords) => (coords ? fetchSoilData(coords.lat, coords.lon) : null))
+      .then((data) => { if (!cancelled) setSoilData(data); })
+      .catch(() => { if (!cancelled) setSoilData(null); });
+    fetchWeatherByLocation(property.location)
+      .then((data) => { if (!cancelled) setWeatherData(data); })
+      .catch(() => { if (!cancelled) setWeatherData(null); });
+    return () => {
+      cancelled = true;
+    };
+  }, [property, cropCycleId]);
+  const soilPh = soilData?.chemical?.ph_h2o;
+  const soilStatusLabel = soilPh == null ? undefined : soilPh >= 5.5 && soilPh <= 8.0 ? 'Good' : 'Attention Required';
+
+  // Step 9 — read-only Harvest / Crop History for the owner.
+  const [harvestRecords, setHarvestRecords] = useState<HarvestRecord[]>([]);
+  useEffect(() => {
+    if (!cropCycleId) {
+      setHarvestRecords([]);
+      return;
+    }
+    let cancelled = false;
+    harvestApi.fetchByCropCycle(cropCycleId).then((records) => {
+      if (!cancelled) setHarvestRecords(records);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [cropCycleId]);
+  const latestHarvest = harvestRecords[0];
+  const latestYield =
+    latestHarvest?.quantity && latestHarvest?.harvestedArea && latestHarvest.harvestedArea > 0
+      ? Math.round((latestHarvest.quantity / latestHarvest.harvestedArea) * 100) / 100
+      : undefined;
+  const cropStartIso = cropCycle?.sownDate || cropCycle?.plannedPlantingDate;
+  const cropDurationDays =
+    latestHarvest && cropStartIso
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(latestHarvest.harvestDate + 'T00:00:00').getTime() - new Date(cropStartIso + 'T00:00:00').getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : undefined;
+
+  const cropHistory = cropCycles
+    .filter((c) => c.landId === propertyId && c.status !== 'active')
+    .sort((a, b) => b.cropCycleId.localeCompare(a.cropCycleId));
+  const [historyHarvests, setHistoryHarvests] = useState<Record<string, HarvestRecord[]>>({});
+  useEffect(() => {
+    const ids = cropHistory.map((c) => c.cropCycleId);
+    if (ids.length === 0) {
+      setHistoryHarvests({});
+      return;
+    }
+    harvestApi.fetchByCropCycleIds(ids).then(setHistoryHarvests);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cropHistory.map((c) => c.cropCycleId).join(',')]);
 
   // New Farm Management pipeline — Admin sets `assigned_farmer_id` directly
   // on `lands` (see supabase/add_farm_management_assigned_farmer.sql), with
@@ -243,16 +397,131 @@ export default function PropertyDetailsScreen() {
                   label="Assigned Farmer"
                   value={propertyLease?.farmerName || assignedFarmerName || 'Not available'}
                 />
-                <DetailRow icon="leaf-outline" label="Current Crop" value={property.currentCrop || 'Not set'} />
+                <DetailRow icon="leaf-outline" label="Current Crop" value={cropCycle?.cropName || property.currentCrop || 'Not set'} />
+                {!!cropCycle?.currentStage && (
+                  <>
+                    <DetailRow
+                      icon="trending-up-outline"
+                      label="Crop Stage"
+                      value={CROP_STAGE_LABEL[cropCycle.currentStage as keyof typeof CROP_STAGE_LABEL] || cropCycle.currentStage}
+                    />
+                    <View style={styles.progressTrack}>
+                      <View style={[styles.progressFill, { width: `${stageProgressPercent(cropCycle.currentStage)}%` }]} />
+                    </View>
+                    <Text style={styles.progressText}>{stageProgressPercent(cropCycle.currentStage)}% complete</Text>
+                  </>
+                )}
                 <DetailRow
                   icon="pulse-outline"
                   label="Farm Health"
                   value={cropCycle?.healthStatus ? HEALTH_LABEL[cropCycle.healthStatus] : 'No crop cycle yet'}
                 />
+                {!!cropHealth && (
+                  <DetailRow icon="heart-outline" label="Crop Health" value={CROP_HEALTH_LABEL[cropHealth]} />
+                )}
+                {!!cropCycle?.status && (
+                  <DetailRow icon="flag-outline" label="Crop Cycle Status" value={CROP_CYCLE_STATUS_LABEL[cropCycle.status] || cropCycle.status} />
+                )}
+                <DetailRow icon="layers-outline" label="Soil Status" value={soilStatusLabel || 'Data not available'} />
+                <DetailRow
+                  icon="partly-sunny-outline"
+                  label="Weather"
+                  value={weatherData ? `${weatherData.condition}, ${weatherData.tempC}°C` : 'Data not available'}
+                />
+
+                <Text style={[styles.cardSubtitle, { marginTop: spacing.md }]}>Upcoming Activities</Text>
+                {upcomingFarmActivities.length === 0 ? (
+                  <Text style={styles.noDataText}>No upcoming activities yet.</Text>
+                ) : (
+                  upcomingFarmActivities.map((a) => (
+                    <View key={a.activityId} style={styles.detailRow}>
+                      <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.detailLabel}>{relativeDayLabel(a.scheduledDate)}:</Text>
+                      <Text style={styles.detailValue}>{a.title}</Text>
+                    </View>
+                  ))
+                )}
+
+                <Text style={[styles.cardSubtitle, { marginTop: spacing.md }]}>Recent Observations</Text>
+                {recentObservations.length === 0 ? (
+                  <Text style={styles.noDataText}>No observations recorded yet.</Text>
+                ) : (
+                  recentObservations.map((o) => (
+                    <View key={o.observationId} style={styles.detailRow}>
+                      <Ionicons name="chatbox-ellipses-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.detailValue}>{o.observation || 'Photo added'}</Text>
+                    </View>
+                  ))
+                )}
+
+                {observationPhotos.length > 0 && (
+                  <View style={styles.photoStripRow}>
+                    {observationPhotos.map((o) => (
+                      <Image key={o.observationId} source={{ uri: o.photoUrl }} style={styles.photoStripThumb} />
+                    ))}
+                  </View>
+                )}
+
                 <Text style={[styles.cardSubtitle, { marginTop: spacing.md }]}>Recent Activities</Text>
-                <Text style={styles.noDataText}>No recent activity logged yet.</Text>
+                {recentActivities.length === 0 ? (
+                  <Text style={styles.noDataText}>No recent activity logged yet.</Text>
+                ) : (
+                  recentActivities.map((activity) => (
+                    <View key={activity.activityId} style={styles.detailRow}>
+                      <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+                      <Text style={styles.detailLabel}>{activity.date}:</Text>
+                      <Text style={styles.detailValue}>{activity.title || activity.type}</Text>
+                    </View>
+                  ))
+                )}
+
+                {latestHarvest && (
+                  <>
+                    <Text style={[styles.cardSubtitle, { marginTop: spacing.md }]}>Harvest</Text>
+                    <DetailRow icon="calendar-outline" label="Harvest Date" value={latestHarvest.harvestDate} />
+                    <DetailRow
+                      icon="basket-outline"
+                      label="Quantity"
+                      value={latestHarvest.quantity !== undefined ? `${latestHarvest.quantity} ${latestHarvest.unit || ''}`.trim() : 'Data not available'}
+                    />
+                    <DetailRow
+                      icon="stats-chart-outline"
+                      label="Yield"
+                      value={latestYield !== undefined ? `${latestYield} ${latestHarvest.unit || ''} / Acre`.trim() : 'Yield data unavailable'}
+                    />
+                    <DetailRow
+                      icon="time-outline"
+                      label="Crop Duration"
+                      value={cropDurationDays !== undefined ? `${cropDurationDays} Days` : 'Data not available'}
+                    />
+                  </>
+                )}
               </>
             )}
+          </View>
+        )}
+
+        {activeTab === 'management' && managementStatus === 'managed' && cropHistory.length > 0 && (
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Crop History</Text>
+            {cropHistory.map((c) => {
+              const harvest = historyHarvests[c.cropCycleId]?.[0];
+              return (
+                <View key={c.cropCycleId} style={styles.historyCard}>
+                  <View style={styles.historyTopRow}>
+                    <Text style={styles.detailValue}>{c.cropName}</Text>
+                    <View style={styles.historyStatusPill}>
+                      <Text style={styles.historyStatusText}>{CROP_CYCLE_STATUS_LABEL[c.status] || c.status}</Text>
+                    </View>
+                  </View>
+                  {!!c.plannedPlantingDate && (
+                    <Text style={styles.noDataText}>
+                      {c.plannedPlantingDate}{harvest ? ` – ${harvest.harvestDate}` : ''}
+                    </Text>
+                  )}
+                </View>
+              );
+            })}
           </View>
         )}
         {activeTab === 'crop' && (
@@ -328,7 +597,17 @@ export default function PropertyDetailsScreen() {
             onPress={() => navigation.navigate('CropDetails', { cropCycleId })}
           >
             <Ionicons name="leaf-outline" size={22} color={colors.surface} />
-            <Text style={styles.shareButtonText}>Crop Details</Text>
+            <Text style={styles.shareButtonText}>View Full Activity Log</Text>
+          </TouchableOpacity>
+        )}
+
+        {managementStatus === 'managed' && (
+          <TouchableOpacity
+            style={[styles.shareButton, styles.cropButton]}
+            onPress={() => navigation.navigate('SatelliteMap', { farmId: propertyId })}
+          >
+            <Ionicons name="map-outline" size={22} color={colors.surface} />
+            <Text style={styles.shareButtonText}>View on Map</Text>
           </TouchableOpacity>
         )}
 
@@ -522,6 +801,31 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     fontStyle: 'italic',
   },
+  progressTrack: {
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.border,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  progressFill: { height: 8, borderRadius: 4, backgroundColor: colors.primary },
+  progressText: { fontSize: 11, color: colors.textMuted, marginTop: 4, marginBottom: spacing.sm },
+  photoStripRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm },
+  photoStripThumb: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.border },
+  historyCard: {
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  historyTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  historyStatusPill: {
+    backgroundColor: colors.softGreen,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  historyStatusText: { fontSize: 10.5, fontWeight: '700', color: colors.success },
   shareButton: {
     flexDirection: 'row',
     alignItems: 'center',

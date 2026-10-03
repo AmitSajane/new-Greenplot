@@ -9,6 +9,8 @@ import AddLeaseOfferScreen from '../screens/owner/AddLeaseOfferScreen';
 import AddFarmScreen from '../screens/owner/AddFarmScreen';
 import LandSubmittedScreen from '../screens/owner/LandSubmittedScreen';
 import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
+import CreateWorkScreen from '../modules/work/screens/CreateWorkScreen';
+import SatelliteMapScreen from '../screens/satelliteMap';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
 import ClosureRequestedScreen from '../screens/leaseClosure/ClosureRequestedScreen';
@@ -33,6 +35,7 @@ export type MyPropertiesStackParamList = {
     | { draftLand: Omit<FarmListing, 'id' | 'createdAt'>; landTitle?: string; landId?: undefined; initialAvailableFrom?: string };
   AddFarm: { editListingId: string };
   LandSubmitted: { propertyId: string };
+  CreateWork: { cropCycleId?: string };
   CropDetails: {
     cropCycleId?: string;
     landId?: string;
@@ -43,6 +46,7 @@ export type MyPropertiesStackParamList = {
     ownerLabel?: string;
     areaAcres?: number;
   };
+  SatelliteMap: { farmId?: string; returnTo?: string } | undefined;
   AgreementDetails: { agreementId: string };
   LeaseClosureRequest: { leaseId: string };
   // Step 1 (request + owner response) — every entry point lands here first.
@@ -72,6 +76,8 @@ export default function MyPropertiesStack() {
       <Stack.Screen name="AddFarm" component={AddFarmScreen} />
       <Stack.Screen name="LandSubmitted" component={LandSubmittedScreen} options={{ title: 'Land Submitted' }} />
       <Stack.Screen name="CropDetails" component={CropDetailsScreen} options={{ title: 'Crop Details' }} />
+      <Stack.Screen name="CreateWork" component={CreateWorkScreen} options={{ title: 'Create Work' }} />
+      <Stack.Screen name="SatelliteMap" component={SatelliteMapScreen} options={{ title: 'Satellite Monitoring' }} />
       <Stack.Screen
         name="AgreementDetails"
         component={AgreementDetailsScreen}

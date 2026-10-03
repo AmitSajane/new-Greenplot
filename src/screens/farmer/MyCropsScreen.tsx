@@ -24,8 +24,9 @@ import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
 import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
 import { useAuth } from '../../context/AuthContext';
 import { useLeases } from '../../context/LeaseContext';
-import { useFarmListings } from '../../context/FarmListingsContext';
+import { useFarmListings, type FarmListing } from '../../context/FarmListingsContext';
 import { useCropCycles } from '../../context/CropCycleContext';
+import { FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
 import type { CropHealthStatus } from '../../modules/work/types';
 
 const DARK = '#153D26';
@@ -69,7 +70,7 @@ export default function MyCropsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<MyCropsStackParamList, 'MyCrops'>>();
   const { user } = useAuth();
   const { activeLeases } = useLeases();
-  const { listings, getListingById } = useFarmListings();
+  const { listings, getListingById, myManagedFarms } = useFarmListings();
   const { getCropCycleByLand, saveCropCycle, removeCropCycle } = useCropCycles();
   const { i18n } = useTranslation();
   const languageShort = LANGUAGE_SHORT_LABELS[i18n.language] || 'EN';
@@ -93,6 +94,10 @@ export default function MyCropsScreen() {
     [activeLeases, user?.id],
   );
   const myLeasedPlots = useMemo(() => [...myLeases, ...myCompletedLeases], [myLeases, myCompletedLeases]);
+  // Same source the "My Managed Farms" home-screen tile reads (Admin-assigned
+  // Farm Management, not the legacy lease model) — shown here too so
+  // "Managed Land" reflects the same managed farms, not just old leases.
+  const managedLandCount = myLeasedPlots.length + myManagedFarms.length;
 
   const overview = useMemo(() => {
     const ownArea = myOwnLands.reduce((sum, l) => sum + (parseFloat(l.acres) || 0), 0);
@@ -100,11 +105,12 @@ export default function MyCropsScreen() {
       const listing = getListingById(l.landId);
       return sum + (listing ? parseFloat(listing.acres) || 0 : 0);
     }, 0);
+    const managedFarmArea = myManagedFarms.reduce((sum, f) => sum + (parseFloat(f.acres) || 0), 0);
     return {
-      totalPlots: myOwnLands.length + myLeases.length,
-      totalArea: ownArea + leasedArea,
+      totalPlots: myOwnLands.length + myLeases.length + myManagedFarms.length,
+      totalArea: ownArea + leasedArea + managedFarmArea,
     };
-  }, [myOwnLands, myLeases, getListingById]);
+  }, [myOwnLands, myLeases, myManagedFarms, getListingById]);
 
   // ── crop sheet state ──────────────────────────────────────────────────────
   const [sheetTarget, setSheetTarget] = useState<PlotTarget | null>(null);
@@ -385,8 +391,100 @@ export default function MyCropsScreen() {
     );
   };
 
+  // Opens the actual Farm Management Dashboard — the same screen the "My
+  // Managed Farms" home-screen tile opens — since that's where a Farm
+  // Management crop plan is actually created/viewed, not this legacy sheet
+  // (saving through this screen's Add/Edit Crop modal would blank out a
+  // managed farm's plan fields it doesn't know about).
+  const openManagedFarmDashboard = (farmId: string) =>
+    (navigation.getParent() as any)?.navigate('FarmerHome', { screen: 'ManagedFarmDashboard', params: { farmId } });
+
+  // ── Farm Management card — same data/destination as the home-screen tile,
+  // no local add/edit/remove-crop actions (those go through the real Crop
+  // Plan flow: SelectCrop → CropPlanForm → CropPlanReview, reached via the
+  // dashboard button below). ─────────────────────────────────────────────
+  const renderManagedFarmCard = (farm: FarmListing) => {
+    const crop = user ? getCropCycleByLand(farm.id, user.id) : undefined;
+    const statusMeta = crop ? STATUS_META[crop.healthStatus ?? 'healthy'] : null;
+    const stageLabel = isFarmManagementStage(farm.managementStatus)
+      ? FARM_MANAGEMENT_STAGE_LABEL[farm.managementStatus]
+      : 'Farm Assigned';
+
+    return (
+      <View key={farm.id} style={[styles.plotCard, shadow.card]}>
+        {!!farm.imageUrl && <Image source={{ uri: farm.imageUrl }} style={styles.plotImage} />}
+        <View style={styles.plotCardBody}>
+          <View style={styles.plotHeaderRow}>
+            <View style={styles.plotHeaderText}>
+              <Text style={styles.plotName}>{farm.title}</Text>
+              <Text style={styles.plotLandlord}>Landowner: {farm.ownerName}</Text>
+              <Text style={styles.plotLeaseMeta}>{stageLabel}</Text>
+            </View>
+            <View style={styles.plotHeaderActions}>
+              <View style={styles.areaPill}>
+                <Text style={styles.areaPillText}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+              </View>
+            </View>
+          </View>
+
+          {crop && statusMeta ? (
+            <>
+              <View style={[styles.cropPanel, { backgroundColor: statusMeta.bg }]}>
+                <View style={styles.cropIconBox}>
+                  <Icon name={statusMeta.icon} size={24} color={colors.primary} />
+                </View>
+                <View style={styles.cropTextCol}>
+                  <Text style={styles.cropLabel} numberOfLines={1}>CURRENT CROP</Text>
+                  <Text style={styles.cropName} numberOfLines={1} ellipsizeMode="tail">
+                    {crop.cropName}
+                  </Text>
+                </View>
+                <View style={styles.statusCol}>
+                  <View style={styles.statusRow}>
+                    <View style={[styles.statusDot, { backgroundColor: statusMeta.color }]} />
+                    <Text style={[styles.statusText, { color: statusMeta.color }]} numberOfLines={1}>
+                      {statusMeta.label}
+                    </Text>
+                  </View>
+                  <Text style={styles.statusNote} numberOfLines={1} ellipsizeMode="tail">
+                    {crop.sownDate ? `Sown ${crop.sownDate}` : 'Planting Not Started'}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={styles.viewDetailsBtn}
+                accessibilityRole="button"
+                accessibilityLabel={`View details for ${farm.title}`}
+                onPress={() => openManagedFarmDashboard(farm.id)}
+              >
+                <Text style={styles.viewDetailsText}>VIEW DETAILS</Text>
+                <Icon name="arrow-forward" size={18} color="#FFFFFF" />
+              </TouchableOpacity>
+            </>
+          ) : (
+            <View style={styles.emptyCrop}>
+              <Text style={styles.emptyCropText}>
+                <Text style={styles.emptyCropBold}>No crop plan yet</Text> for this farm
+              </Text>
+              <TouchableOpacity
+                style={styles.addCropBtn}
+                onPress={() => openManagedFarmDashboard(farm.id)}
+                accessibilityRole="button"
+                accessibilityLabel={`Create crop plan for ${farm.title}`}
+              >
+                <Icon name="add" size={17} color="#FFFFFF" />
+                <Text style={styles.addCropBtnText}>CREATE CROP PLAN</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   const isOwn = activeTab === 'own';
-  const activeList = isOwn ? myOwnLands : myLeasedPlots;
+  const activeList = isOwn ? myOwnLands : [...myLeasedPlots, ...myManagedFarms];
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['left', 'right', 'bottom']}>
@@ -463,7 +561,7 @@ export default function MyCropsScreen() {
             <Icon name="document-text-outline" size={18} color={!isOwn ? '#FFFFFF' : colors.textSecondary} />
             <Text style={[styles.tabBtnText, !isOwn && styles.tabBtnTextActive]}>Managed Land</Text>
             <View style={[styles.tabCountBadge, !isOwn && styles.tabCountBadgeActive]}>
-              <Text style={[styles.tabCountText, !isOwn && styles.tabCountTextActive]}>{myLeasedPlots.length}</Text>
+              <Text style={[styles.tabCountText, !isOwn && styles.tabCountTextActive]}>{managedLandCount}</Text>
             </View>
           </TouchableOpacity>
         </View>
@@ -543,6 +641,8 @@ export default function MyCropsScreen() {
               completed,
             });
           })}
+
+        {!isOwn && myManagedFarms.map((farm) => renderManagedFarmCard(farm))}
       </ScrollView>
 
       {/* ── Add/Edit Crop sheet ──────────────────────────────────────────── */}

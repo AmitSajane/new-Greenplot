@@ -63,7 +63,9 @@ export const cropActivityApi = {
   subscribe(cropCycleId: string, onChange: () => void): () => void {
     const c = db();
     const channel = c
-      .channel(`crop-activities-${cropCycleId}`)
+      // Unique per call — same reason as farmActivityApi.subscribe: a fixed
+      // name can reuse a still-subscribed channel and make .on() throw.
+      .channel(`crop-activities-${cropCycleId}-${Date.now()}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'crop_activities', filter: `crop_cycle_id=eq.${cropCycleId}` },

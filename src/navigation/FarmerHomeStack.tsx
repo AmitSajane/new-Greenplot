@@ -11,7 +11,13 @@ import MyManagementRequestsScreen from '../screens/farmer/MyManagementRequestsSc
 import ManagementRequestDetailsScreen from '../screens/farmer/ManagementRequestDetailsScreen';
 import MyManagedFarmsScreen from '../screens/farmer/MyManagedFarmsScreen';
 import ManagedFarmDashboardScreen from '../screens/farmer/ManagedFarmDashboardScreen';
+import SelectCropScreen from '../screens/farmer/SelectCropScreen';
+import CropPlanFormScreen from '../screens/farmer/CropPlanFormScreen';
+import CropPlanReviewScreen from '../screens/farmer/CropPlanReviewScreen';
+import CropDetailsScreen from '../modules/work/screens/CropDetailsScreen';
+import CreateWorkScreen from '../modules/work/screens/CreateWorkScreen';
 import type { ManagementRequestDraft } from '../screens/farmer/managementRequestDraft';
+import type { CropPlanDraft } from '../screens/farmer/cropPlanDraft';
 import LeaseAgreementsScreen from '../screens/LeaseAgreementsScreen';
 import AgreementDetailsScreen from '../screens/AgreementDetailsScreen';
 import RequestLeaseClosureScreen from '../screens/leaseClosure/RequestLeaseClosureScreen';
@@ -53,6 +59,20 @@ export type FarmerHomeStackParamList = {
   ManagementRequestDetails: { requestId: string };
   MyManagedFarms: undefined;
   ManagedFarmDashboard: { farmId: string };
+  SelectCrop: { farmId: string };
+  CropPlanForm: { farmId: string; cropId: string; cropName: string };
+  CropPlanReview: { farmId: string; draft: CropPlanDraft };
+  CreateWork: { cropCycleId?: string };
+  CropDetails: {
+    cropCycleId?: string;
+    landId?: string;
+    farmerId?: string;
+    leaseId?: string;
+    ownerId?: string;
+    plotName?: string;
+    ownerLabel?: string;
+    areaAcres?: number;
+  };
   LandListing: undefined;
   LeaseApplication: { propertyId?: string; leaseTypeId?: string; leaseTypeTitle?: string } | undefined;
   LeaseStatus: undefined;
@@ -149,6 +169,11 @@ export default function FarmerHomeStack() {
         component={ManagedFarmDashboardScreen}
         options={{ title: 'Managed Farm' }}
       />
+      <Stack.Screen name="SelectCrop" component={SelectCropScreen} options={{ title: 'Select Crop' }} />
+      <Stack.Screen name="CropPlanForm" component={CropPlanFormScreen} options={{ title: 'Crop Plan' }} />
+      <Stack.Screen name="CropPlanReview" component={CropPlanReviewScreen} options={{ title: 'Review Crop Plan' }} />
+      <Stack.Screen name="CropDetails" component={CropDetailsScreen} options={{ title: 'Crop Details' }} />
+      <Stack.Screen name="CreateWork" component={CreateWorkScreen} options={{ title: 'Create Work' }} />
       <Stack.Screen name="LeaseApplication" component={LeaseApplicationScreen} options={{ title: 'Lease Application' }} />
       <Stack.Screen name="LeaseStatus" component={LeaseStatusScreen} options={{ title: 'Lease Status' }} />
       <Stack.Screen

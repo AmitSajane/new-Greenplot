@@ -64,6 +64,8 @@ interface FarmListingsContextType {
   availableForManagement: FarmListing[];
   /** Farms the signed-in farmer has actually been assigned to manage (Step 5) — client-filtered from `listings`, same pattern as `ownerListings`. */
   myManagedFarms: FarmListing[];
+  /** This owner's lands that have moved into Farm Management — client-filtered from `ownerListings`. */
+  myManagedLands: FarmListing[];
   addListing: (listing: Omit<FarmListing, 'id' | 'createdAt'>) => Promise<string>;
   updateListing: (id: string, updates: Partial<FarmListing>) => void;
   deleteListing: (id: string) => void;
@@ -339,6 +341,18 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
       )
     : [];
 
+  // Owner-side analog of myManagedFarms: this owner's lands that have moved
+  // into Farm Management (farmer assigned/managing/done), for the "monitor
+  // my managed farms" view. Also empty in mock mode for the same reason.
+  const myManagedLands = isSupabaseConfigured
+    ? ownerListings.filter(
+        (listing) =>
+          listing.managementStatus === 'FARMER_ASSIGNED' ||
+          listing.managementStatus === 'ACTIVE_MANAGEMENT' ||
+          listing.managementStatus === 'COMPLETED',
+      )
+    : [];
+
   return (
     <FarmListingsContext.Provider
       value={{
@@ -346,6 +360,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
         ownerListings,
         availableForManagement,
         myManagedFarms,
+        myManagedLands,
         addListing,
         updateListing,
         deleteListing,

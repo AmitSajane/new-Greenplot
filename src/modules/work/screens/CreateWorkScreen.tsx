@@ -19,6 +19,7 @@ import { WorkType } from '../types';
 import { requirePermission } from '../../../middleware/permissions/checkRolePermission';
 import { useAuth } from '../../../context/AuthContext';
 import { useCropCycles } from '../../../context/CropCycleContext';
+import { CURRENT_STATUSES } from '../../../services/cropCycleApi';
 import { useLeases } from '../../../context/LeaseContext';
 
 const WORK_TYPES: WorkType[] = [
@@ -52,7 +53,7 @@ export default function CreateWorkScreen() {
   const myCropCycles = useMemo(
     () =>
       cropCycles.filter((c) => {
-        if (c.farmerId !== user?.id || c.status !== 'active') return false;
+        if (c.farmerId !== user?.id || !CURRENT_STATUSES.includes(c.status)) return false;
         if (!c.leaseId) return true;
         return activeLeases.find((l) => l.id === c.leaseId)?.status === 'active';
       }),

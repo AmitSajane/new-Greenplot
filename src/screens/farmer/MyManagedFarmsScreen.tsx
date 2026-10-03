@@ -8,6 +8,8 @@ import { colors, radius, shadow, spacing } from '../../theme/tokens';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
 import { EmptyState } from '../../components/molecules/EmptyState';
 import { useFarmListings, type FarmListing } from '../../context/FarmListingsContext';
+import { useCropCycles } from '../../context/CropCycleContext';
+import { useAuth } from '../../context/AuthContext';
 import { FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 
@@ -16,6 +18,8 @@ type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'MyMan
 export default function MyManagedFarmsScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { myManagedFarms } = useFarmListings();
+  const { getCropCycleByLand } = useCropCycles();
+  const { user } = useAuth();
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -31,14 +35,28 @@ export default function MyManagedFarmsScreen() {
           data={myManagedFarms}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
-          renderItem={({ item }) => <ManagedFarmCard farm={item} onPress={() => navigation.navigate('ManagedFarmDashboard', { farmId: item.id })} />}
+          renderItem={({ item }) => (
+            <ManagedFarmCard
+              farm={item}
+              currentCrop={(user?.id && getCropCycleByLand(item.id, user.id)?.cropName) || item.currentCrop}
+              onPress={() => navigation.navigate('ManagedFarmDashboard', { farmId: item.id })}
+            />
+          )}
         />
       )}
     </SafeAreaView>
   );
 }
 
-function ManagedFarmCard({ farm, onPress }: { farm: FarmListing; onPress: () => void }) {
+function ManagedFarmCard({
+  farm,
+  currentCrop,
+  onPress,
+}: {
+  farm: FarmListing;
+  currentCrop?: string;
+  onPress: () => void;
+}) {
   const stageLabel = isFarmManagementStage(farm.managementStatus)
     ? FARM_MANAGEMENT_STAGE_LABEL[farm.managementStatus]
     : 'Farm Assigned';
@@ -56,7 +74,7 @@ function ManagedFarmCard({ farm, onPress }: { farm: FarmListing; onPress: () => 
       </View>
       <View style={styles.metaRow}>
         <Ionicons name="leaf-outline" size={13} color={colors.textMuted} />
-        <Text style={styles.metaText}>Current Crop: {farm.currentCrop || 'Not set yet'}</Text>
+        <Text style={styles.metaText}>Current Crop: {currentCrop || 'Not set yet'}</Text>
       </View>
       <View style={styles.footerRow}>
         <View style={styles.statusPill}>

@@ -2,7 +2,7 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { CropCycle } from '../modules/work/types';
 import { MOCK_CROP_CYCLES } from '../modules/work/mockData/cropCycles';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
-import { cropCycleApi, SaveCropCycleInput } from '../services/cropCycleApi';
+import { cropCycleApi, CURRENT_STATUSES, SaveCropCycleInput } from '../services/cropCycleApi';
 
 export type { SaveCropCycleInput } from '../services/cropCycleApi';
 
@@ -15,9 +15,13 @@ interface CropCycleContextType {
    *  the plot is leased so a new lease on the same land never picks up a
    *  previous lease's crop cycle. Omit only for self-farmed (own) land. */
   getCropCycleByLand: (landId: string, farmerId: string, leaseId?: string) => CropCycle | undefined;
-  /** Resolves once the save has actually landed (or rejects with the real
-   *  error) — callers should await this before telling the user it saved. */
-  saveCropCycle: (input: SaveCropCycleInput) => Promise<void>;
+  /** Resolves with the cycle's id once the save has actually landed (or
+   *  rejects with the real error) — callers should await this before
+   *  telling the user it saved. */
+  saveCropCycle: (input: SaveCropCycleInput) => Promise<string>;
+  /** Status/stage transitions (Advance Stage, Record Harvest, Complete Crop
+   *  Cycle) — a direct by-id update, not the find-or-create upsert `saveCropCycle` does. */
+  updateCropCycle: (cropCycleId: string, fields: { status?: CropCycle['status']; currentStage?: string }) => Promise<void>;
   removeCropCycle: (landId: string, farmerId: string, leaseId?: string) => Promise<void>;
 }
 
@@ -52,7 +56,7 @@ export function CropCycleProvider({ children }: { children: ReactNode }) {
         (c) =>
           c.landId === landId &&
           c.farmerId === farmerId &&
-          c.status === 'active' &&
+          CURRENT_STATUSES.includes(c.status) &&
           (leaseId ? c.leaseId === leaseId : !c.leaseId),
       ),
     [cropCycles],
@@ -61,23 +65,37 @@ export function CropCycleProvider({ children }: { children: ReactNode }) {
   const saveCropCycle = useCallback(
     async (input: SaveCropCycleInput) => {
       if (supabase) {
-        await cropCycleApi.save(input);
+        const id = await cropCycleApi.save(input);
         await refetch();
-        return;
+        return id;
       }
+      const existing = cropCycles.find(
+        (c) =>
+          c.landId === input.landId &&
+          c.farmerId === input.farmerId &&
+          CURRENT_STATUSES.includes(c.status) &&
+          (input.leaseId ? c.leaseId === input.leaseId : !c.leaseId),
+      );
+      const id = existing?.cropCycleId ?? uid('cc');
       setCropCycles((prev) => {
-        const existing = prev.find(
-          (c) =>
-            c.landId === input.landId &&
-            c.farmerId === input.farmerId &&
-            c.status === 'active' &&
-            (input.leaseId ? c.leaseId === input.leaseId : !c.leaseId),
-        );
         if (existing) {
           return prev.map((c) => (c.cropCycleId === existing.cropCycleId ? { ...c, ...input } : c));
         }
-        return [{ cropCycleId: uid('cc'), status: 'active', ...input }, ...prev];
+        return [{ cropCycleId: id, status: 'active', ...input }, ...prev];
       });
+      return id;
+    },
+    [refetch, cropCycles],
+  );
+
+  const updateCropCycle = useCallback(
+    async (cropCycleId: string, fields: { status?: CropCycle['status']; currentStage?: string }) => {
+      if (supabase) {
+        await cropCycleApi.updateFields(cropCycleId, fields);
+        await refetch();
+        return;
+      }
+      setCropCycles((prev) => prev.map((c) => (c.cropCycleId === cropCycleId ? { ...c, ...fields } : c)));
     },
     [refetch],
   );
@@ -105,8 +123,8 @@ export function CropCycleProvider({ children }: { children: ReactNode }) {
   );
 
   const value = useMemo(
-    () => ({ cropCycles, getCropCycleById, getCropCycleByLand, saveCropCycle, removeCropCycle }),
-    [cropCycles, getCropCycleById, getCropCycleByLand, saveCropCycle, removeCropCycle],
+    () => ({ cropCycles, getCropCycleById, getCropCycleByLand, saveCropCycle, updateCropCycle, removeCropCycle }),
+    [cropCycles, getCropCycleById, getCropCycleByLand, saveCropCycle, updateCropCycle, removeCropCycle],
   );
 
   return <CropCycleContext.Provider value={value}>{children}</CropCycleContext.Provider>;

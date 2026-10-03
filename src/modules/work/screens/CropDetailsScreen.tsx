@@ -17,7 +17,9 @@ import { useLeases } from '../../../context/LeaseContext';
 import { useAuth } from '../../../context/AuthContext';
 import { workJobApi } from '../services/workJobApi';
 import { useCropActivities } from '../hooks/useCropActivities';
-import { CropActivity, CropActivityType } from '../types';
+import { CropActivity, CropActivityType, FarmActivity } from '../types';
+import { farmActivityApi } from '../../../services/farmActivityApi';
+import { isHarvestStage, laterStage, LOG_ACTIVITY_STAGE } from '../../../utils/cropStages';
 
 type CropDetailsRoute = RouteProp<
   {
@@ -70,7 +72,7 @@ export default function CropDetailsScreen() {
   } = route.params;
   const { user } = useAuth();
   const [jobCount, setJobCount] = useState(0);
-  const { getCropCycleById, getCropCycleByLand } = useCropCycles();
+  const { getCropCycleById, getCropCycleByLand, saveCropCycle, updateCropCycle } = useCropCycles();
   const { activeLeases } = useLeases();
 
   // A cropCycleId is passed once a crop actually exists; otherwise resolve by
@@ -87,6 +89,23 @@ export default function CropDetailsScreen() {
   useEffect(() => {
     if (!cropCycleId) return;
     workJobApi.getJobsByCropCycle(cropCycleId).then((jobs) => setJobCount(jobs.length));
+  }, [cropCycleId]);
+
+  // Completed scheduled (Farm Management) activities. The log below merges
+  // these in directly so it always reflects them — including ones completed
+  // outside the app's Complete sheet, which never wrote a mirrored log row.
+  const [completedFarmActivities, setCompletedFarmActivities] = useState<FarmActivity[]>([]);
+  useEffect(() => {
+    if (!cropCycleId) {
+      setCompletedFarmActivities([]);
+      return;
+    }
+    const load = () =>
+      farmActivityApi
+        .fetchByCropCycle(cropCycleId)
+        .then((rows) => setCompletedFarmActivities(rows.filter((a) => a.status === 'COMPLETED')));
+    load();
+    return farmActivityApi.subscribe(cropCycleId, load);
   }, [cropCycleId]);
 
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -131,6 +150,46 @@ export default function CropDetailsScreen() {
       note: note.trim() || undefined,
       date,
     });
+    // Keep the crop plan in step with what was actually done. Sowing records
+    // the real planting date (clears "Planting Not Started"); Sowing/Harvest
+    // also move the stage forward (never back) so the Crop Plan's stage and
+    // "Advance to…" button follow the activity log instead of drifting apart.
+    // Only Farm Management plans carry a currentStage; legacy cycles skip it.
+    if (crop) {
+      const impliedStage = LOG_ACTIVITY_STAGE[selectedType];
+      const planHasStage = !!crop.currentStage;
+      const newStage = impliedStage && planHasStage ? laterStage(crop.currentStage, impliedStage) : undefined;
+      const stageChanged = !!newStage && newStage !== crop.currentStage;
+      try {
+        if (selectedType === 'sowing' && !crop.sownDate) {
+          await saveCropCycle({
+            landId: crop.landId,
+            leaseId: crop.leaseId,
+            farmerId: crop.farmerId,
+            ownerId: crop.ownerId,
+            plotName: crop.plotName,
+            areaAcres: crop.areaAcres,
+            landlord: crop.landlord,
+            cropName: crop.cropName,
+            sownDate: date,
+            healthStatus: crop.healthStatus || 'healthy',
+            healthNote: crop.healthNote,
+            cropId: crop.cropId,
+            variety: crop.variety,
+            plannedPlantingDate: crop.plannedPlantingDate,
+            expectedHarvestDate: crop.expectedHarvestDate,
+            currentStage: newStage ?? crop.currentStage,
+          });
+        } else if (stageChanged && newStage) {
+          await updateCropCycle(crop.cropCycleId, {
+            currentStage: newStage,
+            status: isHarvestStage(newStage) && crop.status === 'active' ? 'harvest_ready' : undefined,
+          });
+        }
+      } catch {
+        // The activity itself is already logged; stage sync is best-effort.
+      }
+    }
     closeSheet();
     showToast(`${selectedType === 'other' ? title.trim() : ACTIVITY_META[selectedType].label} logged`);
   };
@@ -195,8 +254,26 @@ export default function CropDetailsScreen() {
   const leaseClosed = !!crop.leaseId && lease?.status !== 'active';
   const canLog = !!user && user.id === crop.farmerId && !leaseClosed;
 
-  const hasLoggedSowing = activities.some((a) => a.type === 'sowing');
-  const sorted = [...activities].sort((a, b) => a.date.localeCompare(b.date));
+  // Completed scheduled activities, shaped like log entries. "Sowing /
+  // Transplanting" is a Sowing entry (same rule the Complete sheet uses when
+  // it mirrors); the rest keep their own title. Anything already mirrored into
+  // the log (same label + date) is skipped so nothing shows twice.
+  const mirroredKeys = new Set(activities.map((a) => `${a.date}|${activityLabel(a)}`));
+  const fromScheduled: CropActivity[] = completedFarmActivities
+    .map((a): CropActivity => ({
+      activityId: `farm_${a.activityId}`,
+      cropCycleId: a.cropCycleId,
+      farmerId: a.farmerId,
+      ownerId: a.ownerId,
+      type: a.title === 'Sowing / Transplanting' ? 'sowing' : 'other',
+      title: a.title,
+      note: a.farmerNotes,
+      date: a.completedDate || a.scheduledDate,
+      createdAt: a.updatedAt,
+    }))
+    .filter((a) => !mirroredKeys.has(`${a.date}|${activityLabel(a)}`));
+  const hasLoggedSowing = [...activities, ...fromScheduled].some((a) => a.type === 'sowing');
+  const sorted = [...activities, ...fromScheduled].sort((a, b) => a.date.localeCompare(b.date));
   const timelineEntries: Array<Pick<CropActivity, 'type' | 'title' | 'note'> & { key: string; dateLabel: string }> = [
     ...(!hasLoggedSowing && crop.sownDate
       ? [{ key: '__sown__', type: 'sowing' as CropActivityType, title: undefined, note: undefined, dateLabel: crop.sownDate }]
