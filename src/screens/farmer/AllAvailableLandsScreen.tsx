@@ -18,6 +18,7 @@ import { useFarmListings } from '../../context/FarmListingsContext';
 import { LandFiltersPanel } from '../../components/leases/LandFiltersPanel';
 import { BlockchainVerifiedBadge } from '../../components/leases/BlockchainVerifiedBadge';
 import { ScreenHeader } from '../../components/molecules/ScreenHeader';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 
@@ -94,7 +95,7 @@ export default function AllAvailableLandsScreen() {
       <View style={styles.listingContent}>
         <View style={styles.listingHeader}>
           <View style={styles.acresBadge}>
-            <Text style={styles.acresText}>{item.acresLabel || `${item.acres} Acres`}</Text>
+            <Text style={styles.acresText}>{formatArea(item.acres)}</Text>
           </View>
           {isLeased ? (
             <View style={styles.leasedBadge}>

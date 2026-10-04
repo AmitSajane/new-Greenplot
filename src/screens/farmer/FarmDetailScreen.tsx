@@ -26,6 +26,7 @@ import {
   type ManagementRequest,
 } from '../../services/managementRequestsApi';
 import MediaCarousel from '../../components/MediaCarousel';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList>;
 type RouteProp = {
@@ -171,7 +172,7 @@ export default function FarmDetailScreen() {
         <View style={styles.detailsGrid}>
           <View style={[styles.detailCard, shadow.card]}>
             <Ionicons name="resize-outline" size={24} color={colors.primary} />
-            <Text style={styles.detailValue}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+            <Text style={styles.detailValue}>{formatArea(farm.acres)}</Text>
             <Text style={styles.detailLabel}>Area</Text>
           </View>
           <View style={[styles.detailCard, shadow.card]}>

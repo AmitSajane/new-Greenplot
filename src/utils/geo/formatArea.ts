@@ -22,3 +22,24 @@ export function formatAcresGuntas(acres: number): string {
 
   return `${combined} (${acres.toFixed(2)} acres)`;
 }
+
+/**
+ * Compact area label for cards and detail rows: "1 acre 2 guntas", "22 guntas",
+ * "5 acres". Accepts the decimal acres as a number or the string stored on a
+ * listing; returns an em dash when there's no usable value.
+ */
+export function formatArea(acres: number | string | undefined | null): string {
+  const n = typeof acres === 'number' ? acres : parseFloat(String(acres ?? ''));
+  if (!Number.isFinite(n) || n <= 0) return '—';
+
+  let wholeAcres = Math.floor(n + 1e-9);
+  let guntas = Math.round((n - wholeAcres) * GUNTAS_PER_ACRE);
+  if (guntas >= GUNTAS_PER_ACRE) {
+    wholeAcres += 1;
+    guntas = 0;
+  }
+
+  const acresPart = wholeAcres > 0 ? `${wholeAcres} ${wholeAcres === 1 ? 'acre' : 'acres'}` : '';
+  const guntasPart = guntas > 0 ? `${guntas} ${guntas === 1 ? 'gunta' : 'guntas'}` : '';
+  return [acresPart, guntasPart].filter(Boolean).join(' ') || '0 guntas';
+}

@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { formatAcresGuntas } from '../../utils/geo';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -84,6 +85,22 @@ export default function AddFarmScreen() {
     const initialAcres = route?.params?.acres;
     return initialAcres ? String(initialAcres) : '';
   });
+  // `acres` stays the decimal source of truth (everything downstream reads it),
+  // but it's entered/shown as acres + guntas (1 acre = 40 guntas) — a drawn
+  // boundary like 1.05 acres reads as "1 acre 2 guntas", not a decimal.
+  const areaNum = parseFloat(acres) || 0;
+  let areaWholeAcres = Math.floor(areaNum + 1e-9);
+  let areaGuntas = Math.round((areaNum - areaWholeAcres) * 40);
+  if (areaGuntas >= 40) {
+    areaWholeAcres += 1;
+    areaGuntas = 0;
+  }
+  const setAreaParts = (whole: string, guntas: string) => {
+    const w = parseInt(whole.replace(/D/g, ''), 10) || 0;
+    const g = Math.min(parseInt(guntas.replace(/D/g, ''), 10) || 0, 39);
+    const hasInput = whole.replace(/D/g, '') !== '' || guntas.replace(/D/g, '') !== '';
+    setAcres(hasInput ? String(Number((w + g / 40).toFixed(3))) : '');
+  };
 
  
   const [pincode, setPincode] = useState('');
@@ -449,7 +466,9 @@ export default function AddFarmScreen() {
       return;
     }
     setSubmitting(false);
-    navigation.navigate('LandSubmitted', { propertyId: newLandId });
+    // replace so the filled-in form isn't left under the confirmation screen
+    // (Back would reopen it and a second submit would create a duplicate land).
+    navigation.replace('LandSubmitted', { propertyId: newLandId });
   }, [submitting, buildListingData, addListing, navigation]);
 
   const handlePrimarySubmit = isEditMode
@@ -854,17 +873,35 @@ export default function AddFarmScreen() {
               <Text style={styles.label}>Acres *</Text>
               <TextInput
                 style={styles.input}
-                placeholder="e.g., 5"
+                placeholder="e.g., 1"
                 placeholderTextColor={colors.textMuted}
-                value={acres}
-                onChangeText={setAcres}
-                keyboardType="numeric"
+                value={acres ? String(areaWholeAcres) : ''}
+                onChangeText={(t) => setAreaParts(t, acres ? String(areaGuntas) : '')}
+                keyboardType="number-pad"
               />
             </View>
             <View style={[styles.formGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Soil Type *</Text>
-              {renderDropdown(soilType, 'Select Soil Type', () => setShowSoilPicker(true))}
+              <Text style={styles.label}>Guntas</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="0 – 39"
+                placeholderTextColor={colors.textMuted}
+                value={acres ? String(areaGuntas) : ''}
+                onChangeText={(t) => setAreaParts(acres ? String(areaWholeAcres) : '', t)}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
             </View>
+          </View>
+          {!!acres && areaNum > 0 && (
+            <Text style={[styles.label, { marginTop: -8, marginBottom: 12 }]}>
+              Area: {formatAcresGuntas(areaNum)}
+            </Text>
+          )}
+
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Soil Type *</Text>
+            {renderDropdown(soilType, 'Select Soil Type', () => setShowSoilPicker(true))}
           </View>
 
           <View style={styles.formGroup}>

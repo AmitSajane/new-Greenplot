@@ -3,6 +3,7 @@ import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { colors, radius, spacing } from '../../../../theme/tokens';
 import type { FarmListing } from '../../../../context/FarmListingsContext';
+import { formatArea } from '../../../../utils/geo';
 
 interface Props {
   farm: FarmListing;
@@ -44,7 +45,7 @@ export const AvailableFarmCard = React.memo(({ farm, onPress, compact }: Props) 
       <View style={styles.body}>
         <Text style={styles.title} numberOfLines={1}>{farm.title}</Text>
         <Row icon="location" text={`${farm.location}, ${farm.district}`} />
-        <Row icon="resize-outline" text={farm.acresLabel || `${farm.acres} Acres`} />
+        <Row icon="resize-outline" text={formatArea(farm.acres)} />
         <Row icon="leaf-outline" text={farm.soilType} />
         {!!farm.waterSource && <Row icon="water-outline" text={farm.waterSource} />}
         {!!farm.currentCrop && <Row icon="flower-outline" text={farm.currentCrop} />}

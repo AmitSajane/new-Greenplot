@@ -475,7 +475,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // Already registered → sign the returning user back in.
           const signIn = await supabase.auth.signInWithPassword({ email, password });
           if (signIn.error || !signIn.data.user) {
-            return { success: false, error: 'This number is already registered, but login could not be restored.' };
+            // signUp can fail for reasons other than "already exists" (a
+            // failing signup trigger, rate limit, …). Only claim the number
+            // is registered when Supabase actually said so; otherwise show
+            // the real reason instead of a misleading generic message.
+            const reason = signUp.error.message || '';
+            const alreadyExists = /already|registered|exists/i.test(reason);
+            return {
+              success: false,
+              error: alreadyExists
+                ? 'This number is already registered, but login could not be restored.'
+                : `Sign-up failed: ${reason || 'unknown error'}`,
+            };
           }
           uid = signIn.data.user.id;
           signedInUser = signIn.data.user;

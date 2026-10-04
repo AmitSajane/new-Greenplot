@@ -17,6 +17,7 @@ import {
 } from '../../services/managementRequestsApi';
 import { MANAGEMENT_REQUEST_STATUS_META } from './managementRequestStatusMeta';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'MyManagementRequests'>;
 
@@ -83,7 +84,7 @@ export default function MyManagementRequestsScreen() {
                 {!!farm && (
                   <View style={styles.metaRow}>
                     <Ionicons name="resize-outline" size={13} color={colors.textMuted} />
-                    <Text style={styles.metaText}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+                    <Text style={styles.metaText}>{formatArea(farm.acres)}</Text>
                   </View>
                 )}
                 <View style={styles.metaRow}>

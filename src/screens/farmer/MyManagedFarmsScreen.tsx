@@ -12,6 +12,7 @@ import { useCropCycles } from '../../context/CropCycleContext';
 import { useAuth } from '../../context/AuthContext';
 import { FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'MyManagedFarms'>;
 
@@ -70,7 +71,7 @@ function ManagedFarmCard({
       </View>
       <View style={styles.metaRow}>
         <Ionicons name="resize-outline" size={13} color={colors.textMuted} />
-        <Text style={styles.metaText}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+        <Text style={styles.metaText}>{formatArea(farm.acres)}</Text>
       </View>
       <View style={styles.metaRow}>
         <Ionicons name="leaf-outline" size={13} color={colors.textMuted} />

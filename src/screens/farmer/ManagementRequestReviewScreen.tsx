@@ -10,6 +10,7 @@ import { useFarmListings } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
 import { managementRequestsApi, ManagementRequestError } from '../../services/managementRequestsApi';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'ManagementRequestReview'>;
 type Route = RouteProp<FarmerHomeStackParamList, 'ManagementRequestReview'>;
@@ -49,7 +50,12 @@ export default function ManagementRequestReviewScreen() {
         expectedDuration: draft.expectedDuration,
         farmerNotes: draft.farmerNotes || undefined,
       });
-      navigation.replace('ManagementRequestSubmitted', { requestId });
+      // Reset (not replace): replace would only swap this Review screen, leaving
+      // the request form underneath for Back to return to after submitting.
+      navigation.reset({
+        index: 1,
+        routes: [{ name: 'FarmerHome' }, { name: 'ManagementRequestSubmitted', params: { requestId } }],
+      });
     } catch (e) {
       setSubmitting(false);
       if (e instanceof ManagementRequestError && e.code === 'UNAVAILABLE') {
@@ -64,7 +70,11 @@ export default function ManagementRequestReviewScreen() {
           e.existingRequestId
             ? {
                 text: 'View Request',
-                onPress: () => navigation.replace('ManagementRequestDetails', { requestId: e.existingRequestId! }),
+                onPress: () =>
+                  navigation.reset({
+                    index: 1,
+                    routes: [{ name: 'FarmerHome' }, { name: 'ManagementRequestDetails', params: { requestId: e.existingRequestId! } }],
+                  }),
               }
             : { text: 'OK' },
         ]);
@@ -91,7 +101,7 @@ export default function ManagementRequestReviewScreen() {
         <View style={[styles.card, shadow.card]}>
           <Row label="Farm" value={farm.title} />
           <Row label="Location" value={`${farm.location}, ${farm.district}`} />
-          <Row label="Area" value={farm.acresLabel || `${farm.acres} Acres`} />
+          <Row label="Area" value={formatArea(farm.acres)} />
           <Row label="Preferred Crop" value={draft.preferredCrop || 'Not decided yet'} />
           <Row label="Experience" value={draft.farmingExperience} />
           <Row label="Preferred Start Date" value={draft.preferredStartDateLabel} />

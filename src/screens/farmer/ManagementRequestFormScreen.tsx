@@ -13,6 +13,7 @@ import { useFarmListings } from '../../context/FarmListingsContext';
 import { useAuth } from '../../context/AuthContext';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import type { ManagementRequestDraft } from './managementRequestDraft';
+import { formatArea } from '../../utils/geo';
 
 const CROP_OPTIONS = ['Not decided yet', 'Wheat', 'Paddy', 'Cotton', 'Sugarcane', 'Soybean', 'Other'] as const;
 const EXPERIENCE_OPTIONS = ['Beginner', 'Some Experience', 'Experienced'] as const;
@@ -110,7 +111,7 @@ export default function ManagementRequestFormScreen() {
           <Text style={styles.farmName}>{farm.title}</Text>
           <Text style={styles.farmMeta}>{farm.location}, {farm.district}</Text>
           <View style={styles.farmDetailRow}>
-            <Text style={styles.farmDetailChip}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+            <Text style={styles.farmDetailChip}>{formatArea(farm.acres)}</Text>
             <Text style={styles.farmDetailChip}>{farm.soilType}</Text>
             {!!farm.waterSource && <Text style={styles.farmDetailChip}>{farm.waterSource}</Text>}
           </View>

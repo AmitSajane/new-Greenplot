@@ -16,6 +16,7 @@ import {
 } from '../../services/managementRequestsApi';
 import { MANAGEMENT_REQUEST_STATUS_META } from './managementRequestStatusMeta';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'ManagementRequestDetails'>;
 type Route = RouteProp<FarmerHomeStackParamList, 'ManagementRequestDetails'>;
@@ -140,7 +141,7 @@ export default function ManagementRequestDetailsScreen() {
         <View style={[styles.card, shadow.card]}>
           <Row label="Farm" value={farm?.title || '—'} />
           <Row label="Location" value={farm ? `${farm.location}, ${farm.district}` : '—'} />
-          <Row label="Area" value={farm ? farm.acresLabel || `${farm.acres} Acres` : '—'} />
+          <Row label="Area" value={farm ? formatArea(farm.acres) : '—'} />
         </View>
 
         <Text style={styles.sectionTitle}>Request Information</Text>

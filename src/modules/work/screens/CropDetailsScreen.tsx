@@ -20,6 +20,7 @@ import { useCropActivities } from '../hooks/useCropActivities';
 import { CropActivity, CropActivityType, FarmActivity } from '../types';
 import { farmActivityApi } from '../../../services/farmActivityApi';
 import { isHarvestStage, laterStage, LOG_ACTIVITY_STAGE } from '../../../utils/cropStages';
+import { formatArea } from '../../../utils/geo';
 
 type CropDetailsRoute = RouteProp<
   {
@@ -214,7 +215,7 @@ export default function CropDetailsScreen() {
               {typeof areaAcres === 'number' && (
                 <View style={styles.row}>
                   <Ionicons name="resize-outline" size={18} color={colors.primary} />
-                  <Text style={styles.rowText}>{areaAcres} Acres</Text>
+                  <Text style={styles.rowText}>{formatArea(areaAcres)}</Text>
                 </View>
               )}
               {!!ownerLabel && (
@@ -295,7 +296,7 @@ export default function CropDetailsScreen() {
           <Text style={styles.cropName}>{crop.cropName}</Text>
           <View style={styles.row}>
             <Ionicons name="resize-outline" size={18} color={colors.primary} />
-            <Text style={styles.rowText}>{crop.areaAcres} Acres</Text>
+            <Text style={styles.rowText}>{formatArea(crop.areaAcres)}</Text>
           </View>
           <View style={styles.row}>
             <Ionicons name="person-outline" size={18} color={colors.primary} />

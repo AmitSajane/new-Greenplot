@@ -15,6 +15,7 @@ import { LANGUAGE_SHORT_LABELS } from '../../localization/i18n';
 import { LanguagePickerModal } from '../farmerHome/components/LanguagePickerModal';
 import { Chip } from '../../components/atoms/Chip';
 import { getManagementStatus, MANAGEMENT_STATUS_LABEL } from '../../utils/farmManagementStatus';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<MyPropertiesStackParamList, 'MyPropertiesList'>;
 
@@ -194,7 +195,7 @@ export default function MyPropertiesScreen() {
             <View style={styles.propertyDetails}>
               <View style={styles.detailRow}>
                 <Icon name="straighten" size={18} color={colors.textSecondary} />
-                <Text style={styles.detailText}>{property.acresLabel || `${property.acres} Acres`}</Text>
+                <Text style={styles.detailText}>{formatArea(property.acres)}</Text>
               </View>
               <View style={styles.detailRow}>
                 <Icon name="grass" size={18} color={colors.textSecondary} />

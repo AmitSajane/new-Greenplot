@@ -12,6 +12,7 @@ import { FilterChipRow } from '../../components/molecules/FilterChipRow';
 import { useFarmListings } from '../../context/FarmListingsContext';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
 import type { CropPlanDraft } from './cropPlanDraft';
+import { formatArea } from '../../utils/geo';
 
 const IRRIGATION_OPTIONS = ['Drip', 'Sprinkler', 'Flood', 'Rain-fed', 'Other'] as const;
 
@@ -43,7 +44,7 @@ export default function CropPlanFormScreen() {
     const areaNum = parseFloat(area);
     if (!area.trim() || Number.isNaN(areaNum) || areaNum <= 0) missing.push('Area to Cultivate');
     if (farm && !Number.isNaN(areaNum) && areaNum > Number(farm.acres)) {
-      Alert.alert('Area too large', `This farm is only ${farm.acresLabel || `${farm.acres} Acres`}.`);
+      Alert.alert('Area too large', `This farm is only ${formatArea(farm.acres)}.`);
       return;
     }
     if (!irrigation) missing.push('Irrigation Method');
@@ -164,7 +165,7 @@ export default function CropPlanFormScreen() {
         <Text style={styles.fieldLabel}>Area to Cultivate (Acres) *</Text>
         <TextInput
           style={styles.input}
-          placeholder={`Up to ${farm.acresLabel || `${farm.acres} Acres`}`}
+          placeholder={`Up to ${formatArea(farm.acres)}`}
           placeholderTextColor={colors.textMuted}
           value={area}
           onChangeText={setArea}

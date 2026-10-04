@@ -5,4 +5,4 @@ export {
   calculatePolygonBounds,
   estimateZoomForPolygon,
 } from './polygonCentroid';
-export { formatAcresGuntas } from './formatArea';
+export { formatAcresGuntas, formatArea } from './formatArea';

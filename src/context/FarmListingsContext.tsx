@@ -3,6 +3,7 @@ import { ImageSourcePropType } from 'react-native';
 import { supabase, isSupabaseConfigured } from '../services/supabase';
 import { landsApi } from '../services/landsApi';
 import { useAuth } from './AuthContext';
+import { formatArea } from '../utils/geo';
 
 export interface FarmListing {
   id: string;
@@ -82,7 +83,7 @@ const INITIAL_LISTINGS: FarmListing[] = [
     title: 'Fertile Wheat Land',
     soilType: 'Alluvial Soil',
     acres: '5',
-    acresLabel: '5 Acres',
+    acresLabel: '5 acres',
     location: 'Kasba',
     district: 'Purnea',
     state: 'Bihar',
@@ -127,7 +128,7 @@ const INITIAL_LISTINGS: FarmListing[] = [
     title: 'Paddy Land',
     soilType: 'Clay Soil',
     acres: '2.5',
-    acresLabel: '2.5 Acres',
+    acresLabel: '2 acres 20 guntas',
     location: 'Banmankhi',
     district: 'Purnea',
     state: 'Bihar',
@@ -172,7 +173,7 @@ const INITIAL_LISTINGS: FarmListing[] = [
     title: 'Black Soil Land',
     soilType: 'Black Soil',
     acres: '10',
-    acresLabel: '10 Acres',
+    acresLabel: '10 acres',
     location: 'Jategaon',
     district: 'Maharashtra',
     state: 'Maharashtra',
@@ -256,7 +257,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
         ...listing,
         id,
         createdAt: new Date(),
-        acresLabel: `${listing.acres} Acres`,
+        acresLabel: formatArea(listing.acres),
         locationLabel: `${listing.location}, ${listing.district}`,
       };
       setListings((prev) => [newListing, ...prev]);
@@ -277,7 +278,7 @@ export function FarmListingsProvider({ children }: FarmListingsProviderProps) {
             ? {
                 ...listing,
                 ...updates,
-                acresLabel: updates.acres ? `${updates.acres} Acres` : listing.acresLabel,
+                acresLabel: updates.acres ? formatArea(updates.acres) : listing.acresLabel,
                 locationLabel:
                   updates.location || updates.district
                     ? `${updates.location || listing.location}, ${updates.district || listing.district}`

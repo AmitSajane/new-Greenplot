@@ -11,6 +11,7 @@ import { useCropCycles } from '../../context/CropCycleContext';
 import { useAuth } from '../../context/AuthContext';
 import { farmActivityApi } from '../../services/farmActivityApi';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 type NavigationProp = NativeStackNavigationProp<FarmerHomeStackParamList, 'CropPlanReview'>;
 type Route = RouteProp<FarmerHomeStackParamList, 'CropPlanReview'>;
@@ -69,7 +70,10 @@ export default function CropPlanReviewScreen() {
       } catch {
         /* non-fatal — Today's Guidance will just be empty until this succeeds later */
       }
-      navigation.navigate('ManagedFarmDashboard', { farmId });
+      // popTo, not navigate: the dashboard is already lower in the stack, and
+      // navigate would push a second copy on top of Select Crop → form →
+      // review, so Back would reopen the submitted plan flow.
+      navigation.popTo('ManagedFarmDashboard', { farmId });
     } catch (e) {
       setSubmitting(false);
       // Supabase throws plain PostgrestError objects, not Error instances.
@@ -95,7 +99,7 @@ export default function CropPlanReviewScreen() {
         <View style={[styles.card, shadow.card]}>
           <Row label="Crop" value={draft.cropName} />
           <Row label="Variety" value={draft.variety || 'Not specified'} />
-          <Row label="Area" value={`${draft.areaToCultivate} Acres`} />
+          <Row label="Area" value={formatArea(draft.areaToCultivate)} />
           <Row label="Planting Date" value={draft.plannedPlantingDateLabel} />
           <Row label="Expected Harvest" value={draft.expectedHarvestDateLabel} />
           <Row label="Irrigation Method" value={draft.irrigationMethod} />

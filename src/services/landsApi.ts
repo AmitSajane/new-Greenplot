@@ -5,6 +5,7 @@
  */
 import { supabase } from './supabase';
 import type { FarmListing } from '../context/FarmListingsContext';
+import { formatArea } from '../utils/geo';
 
 function db() {
   if (!supabase) throw new Error('Supabase not configured');
@@ -16,7 +17,7 @@ const landToApp = (r: any): FarmListing => ({
   title: r.title,
   soilType: r.soil_type || '',
   acres: r.acres != null ? String(r.acres) : '',
-  acresLabel: r.acres != null ? `${r.acres} Acres` : undefined,
+  acresLabel: r.acres != null ? formatArea(r.acres) : undefined,
   location: r.location || '',
   district: r.district || '',
   state: r.state || '',

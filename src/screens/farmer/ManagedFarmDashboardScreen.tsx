@@ -52,6 +52,7 @@ import type { SoilResponse } from '../../types/soil';
 import type { WeatherInfo } from '../farmerHome/constants/farmerDashboardData';
 import type { CropActivity, FarmActivity, FarmActivityPriority, FarmObservation, HarvestRecord } from '../../modules/work/types';
 import type { FarmerHomeStackParamList } from '../../navigation/FarmerHomeStack';
+import { formatArea } from '../../utils/geo';
 
 // Defensive optional require, same guard as AddFarmScreen.tsx.
 let ImagePicker: { launchImageLibrary?: Function } | null;
@@ -204,13 +205,11 @@ function ActivityCard({
   overdue,
   stageLabel,
   onComplete,
-  onSkip,
 }: {
   activity: FarmActivity;
   overdue: boolean;
   stageLabel?: string;
   onComplete: () => void;
-  onSkip: () => void;
 }) {
   const priorityMeta = PRIORITY_META[activity.priority];
   return (
@@ -235,9 +234,6 @@ function ActivityCard({
         <TouchableOpacity style={[styles.completeBtn, styles.activityActionFlex]} onPress={onComplete} activeOpacity={0.85}>
           <Ionicons name="checkmark-circle-outline" size={16} color={colors.surface} />
           <Text style={styles.completeBtnText}>Mark as Completed</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.skipBtn} onPress={onSkip} activeOpacity={0.85}>
-          <Text style={styles.skipBtnText}>Skip</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -647,25 +643,6 @@ export default function ManagedFarmDashboardScreen() {
     }
   };
 
-  const handleSkipActivity = (activity: FarmActivity) => {
-    Alert.alert('Skip this activity?', `"${activity.title}" will be marked as skipped.`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Skip',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await farmActivityApi.updateStatus(activity.activityId, 'SKIPPED');
-            refetchActivities();
-          } catch (e) {
-            const reason = getErrorMessage(e);
-            Alert.alert('Could not skip activity', reason || 'Please check your connection and try again.');
-          }
-        },
-      },
-    ]);
-  };
-
   const handleCompleteCycle = () => {
     if (!cropCycle) return;
     Alert.alert(
@@ -764,9 +741,11 @@ export default function ManagedFarmDashboardScreen() {
     );
   }
 
-  const stageLabel = isFarmManagementStage(farm.managementStatus)
-    ? FARM_MANAGEMENT_STAGE_LABEL[farm.managementStatus]
-    : 'Active Management';
+  const stageLabel = farm.selfFarmed
+    ? 'Own Farm'
+    : isFarmManagementStage(farm.managementStatus)
+      ? FARM_MANAGEMENT_STAGE_LABEL[farm.managementStatus]
+      : 'Active Management';
   const currentCropName = cropCycle?.cropName || farm.currentCrop || 'Not set yet';
   const progressPercent = cropCycle ? stageProgressPercent(cropCycle.currentStage) : 0;
   const stageLabelText = cropCycle?.currentStage
@@ -827,7 +806,6 @@ export default function ManagedFarmDashboardScreen() {
       ? Math.round((latestHarvest.quantity / latestHarvest.harvestedArea) * 100) / 100
       : undefined;
   const activitiesCompletedCount = activities.filter((a) => a.status === 'COMPLETED').length;
-  const activitiesSkippedCount = activities.filter((a) => a.status === 'SKIPPED').length;
 
   const rainForecastSoon = (weatherData?.forecast || [])
     .slice(0, 2)
@@ -885,7 +863,7 @@ export default function ManagedFarmDashboardScreen() {
           <>
             <View style={[styles.card, shadow.card]}>
               <Text style={styles.cardTitle}>Farm Overview</Text>
-              <InfoRow icon="resize-outline" label="Area" value={farm.acresLabel || `${farm.acres} Acres`} />
+              <InfoRow icon="resize-outline" label="Area" value={formatArea(farm.acres)} />
               <InfoRow icon="leaf-outline" label="Current Crop" value={currentCropName} />
               {!!farm.waterSource && <InfoRow icon="water-outline" label="Water Source" value={farm.waterSource} />}
             </View>
@@ -1012,7 +990,7 @@ export default function ManagedFarmDashboardScreen() {
               )}
               {canAdvanceStage && pendingInCurrentStage.length > 0 && (
                 <Text style={styles.plantingNote}>
-                  {pendingInCurrentStage.length} pending in {stageLabelText || 'the current stage'} — finish or skip
+                  {pendingInCurrentStage.length} pending in {stageLabelText || 'the current stage'} — complete
                   {pendingInCurrentStage.length === 1 ? ' it' : ' them'} in Activities first.
                 </Text>
               )}
@@ -1053,7 +1031,7 @@ export default function ManagedFarmDashboardScreen() {
                   <InfoRow
                     icon="resize-outline"
                     label="Cultivated Area"
-                    value={latestHarvest.harvestedArea ? `${latestHarvest.harvestedArea} Acres` : `${cropCycle.areaAcres} Acres`}
+                    value={latestHarvest.harvestedArea ? formatArea(latestHarvest.harvestedArea) : formatArea(cropCycle.areaAcres)}
                   />
                   <DataRow icon="time-outline" label="Crop Duration" value={cropDurationDays !== undefined ? `${cropDurationDays} Days` : undefined} />
                   <DataRow
@@ -1067,7 +1045,6 @@ export default function ManagedFarmDashboardScreen() {
                     value={yieldPerAcre !== undefined ? `${yieldPerAcre} ${latestHarvest.unit || ''} / Acre`.trim() : 'Yield data unavailable'}
                   />
                   <InfoRow icon="checkmark-done-outline" label="Activities Completed" value={String(activitiesCompletedCount)} />
-                  <InfoRow icon="close-circle-outline" label="Activities Skipped" value={String(activitiesSkippedCount)} />
                 </View>
               )}
 
@@ -1203,7 +1180,6 @@ export default function ManagedFarmDashboardScreen() {
                     overdue={a.scheduledDate < today}
                     stageLabel={stageLabelFor(a)}
                     onComplete={() => openCompleteSheet(a)}
-                    onSkip={() => handleSkipActivity(a)}
                   />
                 ))
               )}
@@ -1893,14 +1869,6 @@ const styles = StyleSheet.create({
   completeBtnText: { fontSize: 12.5, fontWeight: '700', color: colors.surface },
   activityActionsRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.md },
   activityActionFlex: { flex: 1, marginTop: 0 },
-  skipBtn: {
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  skipBtnText: { fontSize: 12.5, fontWeight: '700', color: colors.textSecondary },
   disabledBtn: { opacity: 0.6 },
   readyBanner: {
     flexDirection: 'row',

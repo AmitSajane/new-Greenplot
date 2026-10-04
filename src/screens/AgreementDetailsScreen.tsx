@@ -24,6 +24,7 @@ import { profilesApi, FarmerProfile } from '../services/profilesApi';
 import { ScreenHeader } from '../components/molecules/ScreenHeader';
 import { buildTermsAndConditions, TermsClauseRole, TermsSourceRecord } from '../constants/leaseTermsAndConditions';
 import { CLOSURE_STATUS_LABELS, CLOSURE_STATUS_TONE, OWNER_RESPONSE_LABELS } from '../constants/leaseClosure';
+import { formatArea } from '../utils/geo';
 
 const ROLE_BADGE: Record<TermsClauseRole, { label: string; bg: string; fg: string }> = {
   owner: { label: 'OWNER', bg: '#FFF1DC', fg: '#B87214' },
@@ -205,7 +206,7 @@ export default function AgreementDetailsScreen({ navigation, route }: Props) {
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Total Area</Text>
-              <Text style={styles.infoValue}>{land ? land.acresLabel || `${land.acres} Acres` : '—'}</Text>
+              <Text style={styles.infoValue}>{land ? formatArea(land.acres) : '—'}</Text>
             </View>
             <View style={styles.infoItem}>
               <Text style={styles.infoLabel}>Location</Text>

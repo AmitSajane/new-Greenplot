@@ -28,6 +28,7 @@ import { useFarmListings, type FarmListing } from '../../context/FarmListingsCon
 import { useCropCycles } from '../../context/CropCycleContext';
 import { FARM_MANAGEMENT_STAGE_LABEL, isFarmManagementStage } from '../../utils/farmManagementStatus';
 import type { CropHealthStatus } from '../../modules/work/types';
+import { formatArea } from '../../utils/geo';
 
 const DARK = '#153D26';
 const OWN_COLOR = colors.primary;
@@ -270,7 +271,7 @@ export default function MyCropsScreen() {
               </View>
             )}
             <View style={styles.areaPill}>
-              <Text style={styles.areaPillText}>{opts.areaAcres.toFixed(1)} Acres</Text>
+              <Text style={styles.areaPillText}>{formatArea(opts.areaAcres)}</Text>
             </View>
             {opts.onEditPress && (
               <TouchableOpacity
@@ -403,12 +404,16 @@ export default function MyCropsScreen() {
   // no local add/edit/remove-crop actions (those go through the real Crop
   // Plan flow: SelectCrop → CropPlanForm → CropPlanReview, reached via the
   // dashboard button below). ─────────────────────────────────────────────
-  const renderManagedFarmCard = (farm: FarmListing) => {
+  // `own` renders the farmer's self-farmed land with the same card and the same
+  // dashboard (crop plan, activities, monitoring, history) — it's just the
+  // farmer's own land, so there's no landowner or assignment involved.
+  const renderManagedFarmCard = (farm: FarmListing, own = false) => {
     const crop = user ? getCropCycleByLand(farm.id, user.id) : undefined;
     const statusMeta = crop ? STATUS_META[crop.healthStatus ?? 'healthy'] : null;
     const stageLabel = isFarmManagementStage(farm.managementStatus)
       ? FARM_MANAGEMENT_STAGE_LABEL[farm.managementStatus]
       : 'Farm Assigned';
+    const stageText = own ? 'Own farm' : stageLabel;
 
     return (
       <View key={farm.id} style={[styles.plotCard, shadow.card]}>
@@ -417,13 +422,23 @@ export default function MyCropsScreen() {
           <View style={styles.plotHeaderRow}>
             <View style={styles.plotHeaderText}>
               <Text style={styles.plotName}>{farm.title}</Text>
-              <Text style={styles.plotLandlord}>Landowner: {farm.ownerName}</Text>
-              <Text style={styles.plotLeaseMeta}>{stageLabel}</Text>
+              <Text style={styles.plotLandlord}>{own ? 'Owned by you' : `Landowner: ${farm.ownerName}`}</Text>
+              <Text style={styles.plotLeaseMeta}>{stageText}</Text>
             </View>
             <View style={styles.plotHeaderActions}>
               <View style={styles.areaPill}>
-                <Text style={styles.areaPillText}>{farm.acresLabel || `${farm.acres} Acres`}</Text>
+                <Text style={styles.areaPillText}>{formatArea(farm.acres)}</Text>
               </View>
+              {own && (
+                <TouchableOpacity
+                  style={styles.editLandBtn}
+                  onPress={() => openEditLandSheet(farm.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Edit ${farm.title}`}
+                >
+                  <Icon name="pencil-outline" size={15} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -607,20 +622,7 @@ export default function MyCropsScreen() {
           </View>
         )}
 
-        {isOwn &&
-          myOwnLands.map((land) =>
-            renderPlotCard({
-              landId: land.id,
-              plotName: land.title,
-              areaAcres: parseFloat(land.acres) || 0,
-              metaLine1: `Soil: ${land.soilType}`,
-              metaLine2: `Survey No. ${land.surveyNumber || '—'} · Owned by you`,
-              ownerId: land.ownerId,
-              ownerLabel: 'Owned by you',
-              imageUrl: land.imageUrl || undefined,
-              onEditPress: () => openEditLandSheet(land.id),
-            }),
-          )}
+        {isOwn && myOwnLands.map((land) => renderManagedFarmCard(land, true))}
 
         {!isOwn &&
           myLeasedPlots.map((lease) => {

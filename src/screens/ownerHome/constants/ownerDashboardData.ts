@@ -2,6 +2,7 @@
 import type { FarmListing } from '../../../context/FarmListingsContext';
 import type { ActiveLease } from '../../../types/lease';
 import { getManagementStatus, MANAGEMENT_STATUS_LABEL, type ManagementStatus } from '../../../utils/farmManagementStatus';
+import { formatArea } from '../../../utils/geo';
 
 // pendingDues* kept for reference — the Pending dues tile is hidden until a
 // real payments-tracking flow exists (leases.next_payment is never populated
@@ -29,7 +30,7 @@ export interface PropertySnapshot {
  *  listing's real Farm Management status. */
 export function buildPropertySnapshots(listings: FarmListing[], activeLeases: ActiveLease[]): PropertySnapshot[] {
   return listings.map(l => {
-    const acres = l.acresLabel || `${l.acres} acres`;
+    const acres = formatArea(l.acres);
     const status = getManagementStatus(l);
     const lease = status === 'managed' ? activeLeases.find(al => al.landId === l.id) : undefined;
     return {

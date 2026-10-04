@@ -34,6 +34,7 @@ import type { SoilResponse } from '../../types/soil';
 import type { WeatherInfo } from '../farmerHome/constants/farmerDashboardData';
 import type { CropActivity, FarmActivity, FarmObservation, HarvestRecord } from '../../modules/work/types';
 import type { MyPropertiesStackParamList } from '../../navigation/MyPropertiesStack';
+import { formatArea } from '../../utils/geo';
 
 type LandDetailsTab = 'management' | 'crop' | 'labor' | 'revenue';
 
@@ -254,7 +255,7 @@ export default function PropertyDetailsScreen() {
     const managementStatus = getManagementStatus(property);
     const message = [
       `${property.title}`,
-      `${property.acresLabel || `${property.acres} Acres`} • ${property.soilType}`,
+      `${formatArea(property.acres)} • ${property.soilType}`,
       `${property.location}, ${property.district}, ${property.state}`,
       `Status: ${MANAGEMENT_STATUS_LABEL[managementStatus]}`,
       property.description ? `\n${property.description}` : '',
@@ -570,7 +571,7 @@ export default function PropertyDetailsScreen() {
         {/* Details card (summary) */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Details</Text>
-          <DetailRow icon="resize-outline" label="Area" value={property.acresLabel || `${property.acres} Acres`} />
+          <DetailRow icon="resize-outline" label="Area" value={formatArea(property.acres)} />
           <DetailRow icon="leaf-outline" label="Soil" value={property.soilType} />
           {property.waterSource && (
             <DetailRow icon="water-outline" label="Water" value={property.waterSource} />
